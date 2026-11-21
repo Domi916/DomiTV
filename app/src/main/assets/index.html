@@ -146,9 +146,27 @@ body.lite .shade2,body.lite .shade3{display:none}
 body.lite .shade1{background:radial-gradient(ellipse 1500px 1000px at 60% 35%,rgba(3,3,5,0) 35%,rgba(3,3,5,.72) 100%),linear-gradient(90deg,rgba(3,3,5,.6) 0%,rgba(3,3,5,0) 45%),linear-gradient(180deg,rgba(3,3,5,.4) 0%,rgba(3,3,5,0) 20%,rgba(3,3,5,0) 50%,rgba(3,3,5,.92) 100%)}
 .card.hint .art{background:linear-gradient(155deg,#2a2a30 0%,#121215 80%)}
 body.lite .iglow{-webkit-filter:none;filter:none;background:radial-gradient(circle at 35% 42%,rgba(224,27,42,.75) 0%,rgba(224,27,42,0) 50%),radial-gradient(circle at 66% 40%,rgba(90,122,255,.75) 0%,rgba(90,122,255,0) 50%),radial-gradient(circle at 50% 68%,rgba(26,166,220,.65) 0%,rgba(26,166,220,0) 50%),radial-gradient(circle at 50% 30%,rgba(255,58,120,.5) 0%,rgba(255,58,120,0) 45%)}
-body.lite #intro.play .igreet{animation-name:igreetLite}
-body.lite .isweep{box-shadow:none}
-@keyframes igreetLite{0%{opacity:0;transform:scale(1.15)}34%{opacity:0;transform:scale(1.15)}58%{opacity:1;transform:none}74%{opacity:1;transform:none}92%{opacity:0;transform:translateY(-36px)}100%{opacity:0;transform:translateY(-36px)}}
+/* Lite-Intro: nur opacity/transform (läuft auf der GPU, kein Neuzeichnen) */
+body.lite #intro{background:#030305;contain:strict}
+body.lite #intro.play{animation:introOutL 2.4s linear .1s both}
+body.lite #intro.play .iglow{animation:iglowL 2.4s ease-out .1s both}
+body.lite #intro.play .isweep{animation:isweepL 2.4s ease-out .1s both}
+body.lite #intro.play .iring{animation:iringL 2.4s ease-out .1s both}
+body.lite #intro.play .iring circle.draw{animation:none;stroke-dashoffset:0}
+body.lite #intro.play .igreet{animation:igreetL 2.4s ease-out .1s both}
+body.lite #intro.play .isub{animation:isubL 2.4s ease-out .1s both}
+body.lite .iglow{width:1000px;height:1000px;left:460px;top:40px;border-radius:0;filter:none;-webkit-filter:none;will-change:transform,opacity;background:radial-gradient(circle 300px at 38% 44%,rgba(224,27,42,.5),rgba(224,27,42,0)),radial-gradient(circle 300px at 62% 42%,rgba(90,122,255,.5),rgba(90,122,255,0)),radial-gradient(circle 280px at 50% 62%,rgba(26,166,220,.42),rgba(26,166,220,0))}
+body.lite .isweep{width:1500px;box-shadow:none;transform:translateX(-50%) scaleX(0);will-change:transform,opacity}
+body.lite .iring{will-change:transform,opacity}
+body.lite .igreet{background:none;-webkit-background-clip:border-box;background-clip:border-box;color:#fff;will-change:transform,opacity}
+body.lite .isub{will-change:transform,opacity}
+body.lite.introing #scenes,body.lite.introing #beam,body.lite.introing header,body.lite.introing #lift,body.lite.introing #cont,body.lite.introing #chev,body.lite.introing .shade1{visibility:hidden}
+@keyframes introOutL{0%{opacity:1}88%{opacity:1}100%{opacity:0}}
+@keyframes iglowL{0%{opacity:0;transform:scale(.6)}40%{opacity:.9;transform:scale(1)}80%{opacity:.9;transform:scale(1.12)}100%{opacity:0;transform:scale(1.3)}}
+@keyframes isweepL{0%{opacity:0;transform:translateX(-50%) scaleX(0)}20%{opacity:1;transform:translateX(-50%) scaleX(0)}45%{opacity:1;transform:translateX(-50%) scaleX(1)}65%{opacity:0;transform:translateX(-50%) scaleX(1)}100%{opacity:0;transform:translateX(-50%) scaleX(1)}}
+@keyframes iringL{0%{opacity:0;transform:scale(.85)}25%{opacity:1;transform:scale(1)}70%{opacity:1;transform:scale(1.05)}95%{opacity:0;transform:scale(1.8)}100%{opacity:0;transform:scale(1.8)}}
+@keyframes igreetL{0%{opacity:0;transform:scale(1.12)}30%{opacity:0;transform:scale(1.12)}55%{opacity:1;transform:none}76%{opacity:1;transform:none}94%{opacity:0;transform:translateY(-30px)}100%{opacity:0;transform:translateY(-30px)}}
+@keyframes isubL{0%{opacity:0;transform:translateY(10px)}42%{opacity:0;transform:translateY(10px)}62%{opacity:1;transform:none}76%{opacity:1;transform:none}94%{opacity:0}100%{opacity:0}}
 </style>
 </head>
 <body>
@@ -491,9 +509,10 @@ body.lite .isweep{box-shadow:none}
     var el = $('intro');
     el.classList.remove('play'); void el.offsetWidth; el.classList.add('play');
     introOn = true; clearTimeout(introT);
-    introT = setTimeout(stopIntro, 3000);
+    document.body.classList.add('introing');
+    introT = setTimeout(stopIntro, LITE ? 2600 : 3000);
   }
-  function stopIntro() { introOn = false; clearTimeout(introT); $('intro').classList.remove('play'); }
+  function stopIntro() { introOn = false; clearTimeout(introT); $('intro').classList.remove('play'); document.body.classList.remove('introing'); }
 
   // ---------- Qualität ----------
   // auto: Auf schwachen Geräten (Fire TV Stick bis 1,5 GB RAM) immer leicht.
@@ -520,13 +539,17 @@ body.lite .isweep{box-shadow:none}
 
   LITE = pickLite();
   document.body.classList.toggle('lite', LITE);
+  // Erst schwarzer Intro-Hintergrund, dann UI aufbauen, dann Animation starten
+  // (so fällt der Aufbau-Ruckler in den schwarzen Moment, nicht in die Animation)
+  var withIntro = C.intro !== 'aus';
+  if (withIntro) { $('intro').style.display = 'block'; document.body.classList.add('introing'); }
+  clock();
   build();
   resolveApps();
-  clock();
   buildCards();
   render();
   setInterval(clock, 10000);
-  if (C.intro !== 'aus') playIntro();
+  if (withIntro) requestAnimationFrame(function () { requestAnimationFrame(function () { setTimeout(function () { $('intro').style.display = ''; playIntro(); }, 60); }); });
 })();
 </script>
 </body>
