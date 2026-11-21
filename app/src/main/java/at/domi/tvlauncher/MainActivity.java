@@ -127,8 +127,11 @@ public class MainActivity extends Activity {
     final View[] heroes = new View[APPS.length];
     final Slot[] slots = new Slot[APPS.length];
     ImageView beam, iGlow, iRing;
-    View iSweep;
-    TextView greet, date, time, toast, contSub, iGreet, iSub;
+    View iSweep, iBack;
+    final ImageView[] dots = new ImageView[5];
+    LinearLayout iWords;
+    final List<TextView> words = new ArrayList<>();
+    TextView greet, date, time, toast, contSub, iSub;
     Gfx.Icon chev;
     FrameLayout btnHome, btnSettings;
     Gfx.Icon icHome, icSettings;
@@ -367,9 +370,12 @@ public class MainActivity extends Activity {
 
         // --- Startanimation ---
         intro = new FrameLayout(this);
-        intro.setBackgroundColor(BG);
         intro.setVisibility(View.GONE);
+        intro.setClipChildren(false);
         root.addView(intro, new FrameLayout.LayoutParams(-1, -1));
+        iBack = new View(this);
+        iBack.setBackgroundColor(BG);
+        intro.addView(iBack, new FrameLayout.LayoutParams(-1, -1));
         iGlow = new ImageView(this);
         iGlow.setScaleType(ImageView.ScaleType.FIT_XY);
         try {
@@ -385,12 +391,37 @@ public class MainActivity extends Activity {
         iRing.setImageBitmap(Gfx.introRing());
         iRing.setScaleType(ImageView.ScaleType.FIT_XY);
         intro.addView(iRing, atD(790, 370, 340, 340));
-        iGreet = text("", 96, "ExtraBold", Color.WHITE, -0.03f);
-        iGreet.setGravity(Gravity.CENTER);
-        intro.addView(iGreet, atD(0, 452, 1920, 124));
+        for (int d = 0; d < dots.length; d++) {
+            ImageView dot = new ImageView(this);
+            dot.setImageBitmap(Gfx.dot(APPS[d % APPS.length].glow));
+            dot.setScaleType(ImageView.ScaleType.FIT_XY);
+            intro.addView(dot, atD(960 - 45, 540 - 45, 90, 90));
+            dots[d] = dot;
+        }
+        iWords = new LinearLayout(this);
+        iWords.setOrientation(LinearLayout.HORIZONTAL);
+        iWords.setGravity(Gravity.CENTER);
+        intro.addView(iWords, atD(0, 452, 1920, 124));
         iSub = text("", 28, "Medium", Gfx.a(TXT, 0.62f), 0.02f);
         iSub.setGravity(Gravity.CENTER);
         intro.addView(iSub, atD(0, 598, 1920, 40));
+    }
+
+    String wordsText = "";
+
+    void setWords(String t) {
+        if (t.equals(wordsText)) return;
+        wordsText = t;
+        iWords.removeAllViews();
+        words.clear();
+        String[] parts = t.split(" ");
+        for (int i = 0; i < parts.length; i++) {
+            TextView w = text(parts[i], 96, "ExtraBold", Color.WHITE, -0.03f);
+            LinearLayout.LayoutParams l = new LinearLayout.LayoutParams(-2, -2);
+            if (i > 0) l.leftMargin = px(24);
+            iWords.addView(w, l);
+            words.add(w);
+        }
     }
 
     FrameLayout iconButton(int type) {
@@ -802,7 +833,7 @@ public class MainActivity extends Activity {
         greet.setText(gr);
         date.setText(d);
         time.setText(t);
-        iGreet.setText(gr);
+        setWords(gr);
         iSub.setText(t + " · " + d);
         ui.removeCallbacks(clockRun);
         ui.postDelayed(clockRun, 10000);
@@ -813,20 +844,27 @@ public class MainActivity extends Activity {
     // =====================================================================
     ValueAnimator introAnim;
     boolean revealed = true;
+    static final float INTRO_S = 4.6f;
+    float flyX, flyY, flyK;
+    boolean flyReady = false, greetShown = false;
 
     void playIntro(boolean withSound) {
         if (introAnim != null) introAnim.cancel();
         clockTick();
         if (withSound) playSound();
+        intro.animate().cancel();
         intro.setVisibility(View.VISIBLE);
         intro.setAlpha(1f);
-        iGreet.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        for (TextView w : words) w.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         iSub.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         setMainVisible(false);
+        greet.setAlpha(0f);
         revealed = false;
+        flyReady = false;
+        greetShown = false;
         introFrame(0);
-        introAnim = ValueAnimator.ofFloat(0f, 1f);
-        introAnim.setDuration(4400);
+        introAnim = ValueAnimator.ofFloat(0f, INTRO_S);
+        introAnim.setDuration(Math.round(INTRO_S * 1000));
         introAnim.setStartDelay(100);
         introAnim.setInterpolator(new LinearInterpolator());
         introAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
@@ -841,31 +879,80 @@ public class MainActivity extends Activity {
         introAnim.start();
     }
 
-    /** Ein Bild der Startanimation (p = 0..1). Nur Transparenz, Größe, Drehung, Position. */
-    void introFrame(float p) {
-        iGlow.setAlpha(kf(p, new float[]{0, .30f, .80f, .97f}, new float[]{0, .95f, .95f, 0}));
-        float gs = kf(p, new float[]{0, .30f, .80f, .97f}, new float[]{.55f, 1f, 1.1f, 1.5f});
-        iGlow.setScaleX(gs); iGlow.setScaleY(gs);
-        iGlow.setRotation(kf(p, new float[]{0, .30f, .80f, .97f}, new float[]{-30, 0, 25, 35}));
-
-        iSweep.setAlpha(kf(p, new float[]{0, .14f, .18f, .36f, .52f}, new float[]{0, 0, 1, 1, 0}));
-        iSweep.setScaleX(kf(p, new float[]{0, .14f, .18f, .36f}, new float[]{0, 0, .05f, 1}));
-
-        iRing.setAlpha(kf(p, new float[]{0, .08f, .32f, .80f, .97f}, new float[]{0, 0, 1, 1, 0}));
-        float rs = kf(p, new float[]{0, .08f, .32f, .80f, .97f}, new float[]{.7f, .7f, 1, 1.04f, 4f});
+    /** Ein Bild der Startanimation, s = Sekunden. Nur Transparenz, Größe, Drehung, Position. */
+    void introFrame(float s) {
+        // 1) Fünf Lichtpunkte in den App-Farben kreisen spiralförmig zur Mitte
+        for (int d = 0; d < dots.length; d++) {
+            float a0 = (float) (d * Math.PI * 2 / dots.length) - 0.6f;
+            float spin = kf(s, new float[]{0.15f, 1.55f}, new float[]{0, 4.4f});
+            float r = kf(s, new float[]{0.15f, 1.55f}, new float[]{560, 150});
+            ImageView dot = dots[d];
+            dot.setTranslationX(px(r * (float) Math.cos(a0 + spin)));
+            dot.setTranslationY(px(r * 0.62f * (float) Math.sin(a0 + spin)) + px((1 - r / 560f) * 0));
+            dot.setAlpha(kf(s, new float[]{0.15f, 0.6f, 1.35f, 1.7f}, new float[]{0, 1, 1, 0}));
+            float ds = kf(s, new float[]{0.15f, 1.35f, 1.7f}, new float[]{0.6f, 1f, 1.8f});
+            dot.setScaleX(ds); dot.setScaleY(ds);
+        }
+        // 2) Ring entsteht, wo die Punkte ankommen; am Ende öffnet er sich wie ein Portal
+        iRing.setAlpha(kf(s, new float[]{1.25f, 1.7f, 3.35f, 4.05f}, new float[]{0, 1, 1, 0}));
+        float rs = kf(s, new float[]{1.25f, 1.7f, 3.35f, 4.05f}, new float[]{0.8f, 1f, 1.05f, 7f});
         iRing.setScaleX(rs); iRing.setScaleY(rs);
-        iRing.setRotation(kf(p, new float[]{0, .08f, .32f, .80f, .97f}, new float[]{-120, -120, 0, 40, 70}));
+        iRing.setRotation(kf(s, new float[]{1.25f, 4.05f}, new float[]{-90, 160}));
+        // 3) Farbschein blüht auf und dreht sich langsam
+        iGlow.setAlpha(kf(s, new float[]{1.0f, 2.1f, 3.35f, 4.1f}, new float[]{0, 0.95f, 0.95f, 0}));
+        float gs = kf(s, new float[]{1.0f, 2.1f, 3.35f, 4.1f}, new float[]{0.45f, 1f, 1.08f, 2.3f});
+        iGlow.setScaleX(gs); iGlow.setScaleY(gs);
+        iGlow.setRotation(kf(s, new float[]{1.0f, 4.1f}, new float[]{-40, 70}));
+        // 4) Lichtlinie
+        iSweep.setAlpha(kf(s, new float[]{1.35f, 1.5f, 1.95f, 2.6f}, new float[]{0, 1, 1, 0}));
+        iSweep.setScaleX(kf(s, new float[]{1.35f, 2.0f}, new float[]{0, 1}));
+        // 5) Gruß: Wort für Wort
+        for (int i = 0; i < words.size(); i++) {
+            float st = 1.5f + i * 0.16f;
+            TextView w = words.get(i);
+            w.setAlpha(kf(s, new float[]{st, st + 0.55f}, new float[]{0, 1}));
+            w.setTranslationY(px(kf(s, new float[]{st, st + 0.75f}, new float[]{56, 0})));
+            float ws = kf(s, new float[]{st, st + 0.75f}, new float[]{1.12f, 1f});
+            w.setScaleX(ws); w.setScaleY(ws);
+        }
+        iSub.setAlpha(kf(s, new float[]{2.2f, 2.7f, 3.3f, 3.6f}, new float[]{0, 1, 1, 0}));
+        iSub.setTranslationY(px(kf(s, new float[]{2.2f, 2.8f}, new float[]{14, 0})));
 
-        iGreet.setAlpha(kf(p, new float[]{0, .26f, .46f, .80f, .94f}, new float[]{0, 0, 1, 1, 0}));
-        float ts = kf(p, new float[]{0, .26f, .46f}, new float[]{1.14f, 1.14f, 1f});
-        iGreet.setScaleX(ts); iGreet.setScaleY(ts);
-        iGreet.setTranslationY(px(kf(p, new float[]{0, .80f, .94f}, new float[]{0, 0, -34})));
+        // 6) Übergang: Hintergrund öffnet sich, Gruß fliegt an seinen Platz oben links
+        if (!revealed && s >= 3.3f) reveal(true);
+        iBack.setAlpha(kf(s, new float[]{3.35f, 4.15f}, new float[]{1, 0}));
+        if (s >= 3.3f && !flyReady) prepareFly();
+        float f = flyReady ? kf(s, new float[]{3.35f, 4.35f}, new float[]{0, 1}) : 0;
+        iWords.setTranslationX(flyX * f);
+        iWords.setTranslationY(flyY * f);
+        float k = 1 + (flyK - 1) * f;
+        iWords.setScaleX(k); iWords.setScaleY(k);
+        iWords.setAlpha(kf(s, new float[]{4.2f, 4.5f}, new float[]{1, 0}));
+        if (s >= 4.15f && !greetShown) {
+            greetShown = true;
+            greet.animate().alpha(1f).setDuration(350).setStartDelay(0).start();
+        }
+    }
 
-        iSub.setAlpha(kf(p, new float[]{0, .36f, .52f, .80f, .94f}, new float[]{0, 0, 1, 1, 0}));
-        iSub.setTranslationY(px(kf(p, new float[]{0, .36f, .52f, .80f, .94f}, new float[]{12, 12, 0, 0, -20})));
-
-        intro.setAlpha(kf(p, new float[]{0, .87f, 1f}, new float[]{1, 1, 0}));
-        if (!revealed && p >= 0.84f) reveal(true);
+    /** Berechnet, wohin der große Gruß fliegen muss (Position des kleinen Grußes oben). */
+    void prepareFly() {
+        flyReady = true;
+        if (iWords.getChildCount() == 0) return;
+        View first = iWords.getChildAt(0), last = iWords.getChildAt(iWords.getChildCount() - 1);
+        float textL = iWords.getLeft() + first.getLeft();
+        float textR = iWords.getLeft() + last.getRight();
+        float textT = iWords.getTop() + first.getTop();
+        float textH = first.getHeight();
+        View who = (View) greet.getParent();
+        float gL = who.getLeft() + greet.getLeft();
+        float gT = who.getTop() + greet.getTop();
+        float gH = greet.getHeight();
+        flyK = gH > 0 && textH > 0 ? gH / textH : 28f / 96f;
+        iWords.setPivotX(textL - iWords.getLeft());
+        iWords.setPivotY(textT - iWords.getTop());
+        flyX = gL - textL;
+        flyY = gT - textT;
+        if (textR - textL <= 0) flyReady = false;
     }
 
     /** Wert zwischen Stützpunkten, jeweils weich auslaufend. */
@@ -891,36 +978,63 @@ public class MainActivity extends Activity {
         if (on) kenBurns.resume(); else kenBurns.pause();
     }
 
+    /** Startseite fährt ins Bild: Hintergrund zoomt heran, Leiste gleitet hoch. */
     void reveal(boolean anim) {
         revealed = true;
         setMainVisible(true);
         if (!kenBurns.isStarted()) kenBurns.start();
         kenBurns.resume();
+        View pill = header.getChildAt(header.getChildCount() - 1);
+        View avatar = header.getChildAt(0);
         if (anim) {
-            header.setAlpha(0f);
-            header.setTranslationY(-px(16));
-            header.animate().alpha(1f).translationY(0).setDuration(1000).setStartDelay(0).setInterpolator(EASE).start();
-            lift.setAlpha(0f);
-            lift.setTranslationY(px(40));
-            lift.animate().alpha(1f).translationY(0).setDuration(1100).setStartDelay(80).setInterpolator(EASE).start();
+            ImageView bg = bgs[shownBg >= 0 ? shownBg : sel];
+            bg.setScaleX(1.18f); bg.setScaleY(1.18f);
+            bg.animate().scaleX(1f).scaleY(1f).setDuration(1500).setStartDelay(0).setInterpolator(EASE).start();
+            header.setAlpha(1f); header.setTranslationY(0);
+            for (View v : new View[]{pill, avatar, date}) {
+                v.setAlpha(0f);
+                v.setTranslationY(-px(18));
+                v.animate().alpha(1f).translationY(0).setDuration(900).setStartDelay(500).setInterpolator(EASE).start();
+            }
+            lift.setAlpha(1f); lift.setTranslationY(0);
+            heroWrap.setAlpha(0f);
+            heroWrap.setTranslationX(-px(60));
+            heroWrap.animate().alpha(1f).translationX(0).setDuration(1100).setStartDelay(450).setInterpolator(EASE).start();
+            dock.setAlpha(0f);
+            dock.setTranslationY(px(140));
+            dock.animate().alpha(1f).translationY(0).setDuration(1100).setStartDelay(300).setInterpolator(EASE).start();
+            beam.setAlpha(0f);
+            beam.animate().alpha(1f).setDuration(900).setStartDelay(800).start();
+            chev.setAlpha(0f);
+            chev.animate().alpha(0.4f).setDuration(800).setStartDelay(900).start();
         } else {
             header.setAlpha(1f); header.setTranslationY(0);
+            for (View v : new View[]{pill, avatar, date}) { v.setAlpha(1f); v.setTranslationY(0); }
             lift.setAlpha(1f); lift.setTranslationY(0);
+            heroWrap.setAlpha(1f); heroWrap.setTranslationX(0);
+            dock.setAlpha(1f); dock.setTranslationY(0);
+            beam.setAlpha(1f);
+            chev.setAlpha(0.4f);
         }
     }
 
     void endIntro() {
         if (!revealed) reveal(false);
+        greet.animate().alpha(1f).setDuration(200).start();
         intro.setVisibility(View.GONE);
-        iGreet.setLayerType(View.LAYER_TYPE_NONE, null);
+        iWords.setTranslationX(0); iWords.setTranslationY(0);
+        iWords.setScaleX(1); iWords.setScaleY(1); iWords.setAlpha(1);
+        iBack.setAlpha(1f);
+        for (TextView w : words) w.setLayerType(View.LAYER_TYPE_NONE, null);
         iSub.setLayerType(View.LAYER_TYPE_NONE, null);
     }
 
     void skipIntro() {
         if (introAnim != null) introAnim.cancel();
         if (!revealed) reveal(true);
-        intro.animate().alpha(0f).setDuration(300).withEndAction(new Runnable() {
-            public void run() { endIntro(); }
+        greet.animate().alpha(1f).setDuration(400).start();
+        intro.animate().alpha(0f).setDuration(350).withEndAction(new Runnable() {
+            public void run() { endIntro(); intro.setAlpha(1f); }
         }).start();
     }
 

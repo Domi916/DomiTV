@@ -52,6 +52,19 @@ final class Gfx {
         return b;
     }
 
+    /** Leuchtender Punkt (Startanimation). */
+    static Bitmap dot(int color) {
+        int S = 90;
+        Bitmap b = Bitmap.createBitmap(S, S, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(b);
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        p.setShader(new RadialGradient(S / 2f, S / 2f, S / 2f,
+                new int[]{Color.WHITE, a(color, 0.95f), a(color, 0.35f), a(color, 0)},
+                new float[]{0, 0.12f, 0.35f, 1}, Shader.TileMode.CLAMP));
+        c.drawCircle(S / 2f, S / 2f, S / 2f, p);
+        return b;
+    }
+
     /** Lichtkegel über der gewählten Kachel. */
     static Bitmap beam() {
         int W = 360, H = 540;
