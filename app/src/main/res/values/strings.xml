@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Domi TV</string>
+    <string name="watcher_name">Domi TV Startbildschirm</string>
+    <string name="watcher_desc">Öffnet Domi TV automatisch, wenn die Amazon-Startseite erscheint (Home-Taste oder Einschalten). Liest keine Inhalte vom Bildschirm.</string>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kachel in der Fire-TV-App-Liste (320x180) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="320dp" android:height="180dp"
+    android:viewportWidth="320" android:viewportHeight="180">
+    <path android:pathData="M0,0h320v180h-320z" android:fillColor="#07070A"/>
+    <path android:pathData="M160,30a60,60 0,1 1,0 120a60,60 0,1 1,0 -120" android:strokeWidth="5" android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear" android:startX="100" android:startY="30" android:endX="220" android:endY="150">
+                <item android:offset="0" android:color="#FFE01B2A"/>
+                <item android:offset="0.3" android:color="#FFFF3A78"/>
+                <item android:offset="0.6" android:color="#FF5A7AFF"/>
+                <item android:offset="1" android:color="#FF1AA6DC"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M146,66h12c14,0 24,9 24,24s-10,24 -24,24h-12zM156,76v28h2c8,0 14,-5 14,-14s-6,-14 -14,-14z" android:fillColor="#FFF5F5F7" android:fillType="evenOdd"/>
+</vector>
