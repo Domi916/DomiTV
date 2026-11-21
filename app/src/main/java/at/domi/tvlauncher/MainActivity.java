@@ -46,7 +46,6 @@ public class MainActivity extends Activity {
         web.setBackgroundColor(Color.parseColor("#030305"));
         web.setFocusable(false);
         web.setFocusableInTouchMode(false);
-        web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -175,6 +174,19 @@ public class MainActivity extends Activity {
                 if (labels.containsKey(pkg)) continue;
                 CharSequence l = r.loadLabel(pm);
                 labels.put(pkg, l == null ? "" : l.toString().toLowerCase(Locale.ROOT).trim());
+            }
+        }
+
+        /** "high" bei Geräten mit viel Arbeitsspeicher, sonst "low" (z. B. Fire TV Stick 3. Gen). */
+        @JavascriptInterface
+        public String deviceTier() {
+            try {
+                android.app.ActivityManager am = (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
+                android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
+                am.getMemoryInfo(mi);
+                return (mi.totalMem >= 1800L * 1024 * 1024 && !am.isLowRamDevice()) ? "high" : "low";
+            } catch (Exception e) {
+                return "low";
             }
         }
 

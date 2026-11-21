@@ -11,8 +11,8 @@ window.CONFIG = {
   //  'aus'       = nie
   intro: 'aufwachen',
 
-  // Grafik-Qualität: 'auto' misst die Leistung und schaltet bei Ruckeln
-  // automatisch auf 'lite'. Mit 'hoch' oder 'lite' legst du es fest.
+  // Grafik-Qualität: 'auto' nimmt auf schwachen Geräten (Fire TV Stick mit 1 GB)
+  // automatisch die flüssige Variante. Mit 'hoch' oder 'lite' legst du es fest.
   qualitaet: 'auto',
 
   // Deine Apps in dieser Reihenfolge.
