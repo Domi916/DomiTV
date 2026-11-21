@@ -183,6 +183,8 @@ public class MainActivity extends Activity {
         S = Math.min(sw / 1920f, sh / 1080f);
 
         resolveApps();
+        // Nur für den automatischen Test im Emulator: erste Kachel öffnet Domi TV selbst
+        if (getIntent() != null && getIntent().getBooleanExtra("fx_test", false)) APPS[0].pkg = getPackageName();
         buildUi();
         intro.setVisibility(View.VISIBLE);
         setMainVisible(false);
@@ -927,10 +929,13 @@ public class MainActivity extends Activity {
         iWords.setTranslationY(flyY * f);
         float k = 1 + (flyK - 1) * f;
         iWords.setScaleX(k); iWords.setScaleY(k);
-        iWords.setAlpha(kf(s, new float[]{4.2f, 4.5f}, new float[]{1, 0}));
-        if (s >= 4.15f && !greetShown) {
+        if (s >= 4.35f && !greetShown) {
             greetShown = true;
-            greet.animate().alpha(1f).setDuration(350).setStartDelay(0).start();
+            greet.animate().cancel();
+            greet.setAlpha(1f);      // kleiner Gruß übernimmt genau an derselben Stelle
+            iWords.setAlpha(0f);
+        } else if (!greetShown) {
+            iWords.setAlpha(1f);
         }
     }
 
@@ -1066,6 +1071,7 @@ public class MainActivity extends Activity {
     }
 
     void key(String k) {
+        if (launching) return;
         if (introRunning() && !"menu".equals(k)) { skipIntro(); return; }
         int n = APPS.length;
         if ("apps".equals(zone)) {
@@ -1073,7 +1079,7 @@ public class MainActivity extends Activity {
             else if ("right".equals(k)) sel = Math.min(n - 1, sel + 1);
             else if ("down".equals(k)) { if (!cards.isEmpty()) zone = "cont"; }
             else if ("up".equals(k)) { zone = "top"; tSel = 0; }
-            else if ("ok".equals(k)) openApp(APPS[sel]);
+            else if ("ok".equals(k)) openAppFx(APPS[sel], slots[sel].tile);
             prefs.edit().putInt("sel", sel).apply();
         } else if ("cont".equals(zone)) {
             if ("left".equals(k)) cSel = Math.max(0, cSel - 1);
@@ -1082,7 +1088,7 @@ public class MainActivity extends Activity {
             else if ("ok".equals(k) && cSel < cards.size()) {
                 Card c = cards.get(cSel);
                 if (c.hint) showToast("Öffne eine App, dann erscheint sie hier");
-                else openApp(c.app);
+                else openAppFx(c.app, c.view);
             }
         } else if ("top".equals(zone)) {
             if ("left".equals(k)) tSel = 0;
@@ -1110,13 +1116,109 @@ public class MainActivity extends Activity {
     // =====================================================================
     // Apps öffnen
     // =====================================================================
-    void openApp(AppDef a) {
-        if (a.pkg == null) { showToast(a.name + " ist nicht installiert"); return; }
+    boolean openApp(AppDef a) {
+        if (a.pkg == null) { showToast(a.name + " ist nicht installiert"); return false; }
         PackageManager pm = getPackageManager();
         Intent i = pm.getLeanbackLaunchIntentForPackage(a.pkg);
         if (i == null) i = pm.getLaunchIntentForPackage(a.pkg);
-        if (i == null || !start(i)) { showToast(a.name + " lässt sich nicht öffnen"); return; }
+        if (i == null || !start(i)) { showToast(a.name + " lässt sich nicht öffnen"); return false; }
+        overridePendingTransition(0, 0);
         remember(a.id);
+        return true;
+    }
+
+    // ---------- Kachel zieht auf Vollbild auf und blendet dunkel aus ----------
+    FrameLayout launchFx;
+    ValueAnimator launchAnim;
+    boolean launching = false;
+
+    void openAppFx(final AppDef a, View src) {
+        if (launching) return;
+        if (a.pkg == null) { showToast(a.name + " ist nicht installiert"); return; }
+        launching = true;
+        final int W = root.getWidth(), H = root.getHeight();
+        float[] c = centerOf(src);
+        final float cx = c[0], cy = c[1];
+        final float sx0 = src.getWidth() * src.getScaleX() / W, sy0 = src.getHeight() * src.getScaleY() / H;
+
+        final FrameLayout fx = new FrameLayout(this);
+        fx.setBackground(new LayerDrawable(new Drawable[]{
+                new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{a.t1, a.t2}),
+                new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.w(0.18f), Gfx.w(0), Gfx.w(0)}),
+        }));
+        final float[] rad = {px(30) / sx0};
+        fx.setOutlineProvider(new ViewOutlineProvider() {
+            @Override
+            public void getOutline(View v, Outline o) { o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), rad[0]); }
+        });
+        fx.setClipToOutline(true);
+        final TextView lbl = text(a.name, 32, "Bold", TXT, -0.035f);
+        lbl.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(32) / sx0);
+        FrameLayout.LayoutParams ll = new FrameLayout.LayoutParams(-2, -2);
+        ll.gravity = Gravity.CENTER;
+        fx.addView(lbl, ll);
+        final View dark = new View(this);
+        dark.setBackgroundColor(Color.BLACK);
+        dark.setAlpha(0f);
+        fx.addView(dark, new FrameLayout.LayoutParams(-1, -1));
+        fx.setPivotX(W / 2f);
+        fx.setPivotY(H / 2f);
+        fx.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        root.addView(fx, new FrameLayout.LayoutParams(-1, -1));
+        launchFx = fx;
+
+        launchAnim = ValueAnimator.ofFloat(0f, 1f);
+        launchAnim.setDuration(680);
+        launchAnim.setInterpolator(new LinearInterpolator());
+        launchAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator va) {
+                float t = (Float) va.getAnimatedValue();
+                float e = EASE.getInterpolation(Math.min(1f, t / 0.72f));
+                float sx = sx0 + (1 - sx0) * e, sy = sy0 + (1 - sy0) * e;
+                fx.setScaleX(sx);
+                fx.setScaleY(sy);
+                fx.setTranslationX((cx - W / 2f) * (1 - e));
+                fx.setTranslationY((cy - H / 2f) * (1 - e));
+                rad[0] = px(30) * (1 - e) / Math.max(sx, 0.01f);
+                fx.invalidateOutline();
+                lbl.setAlpha(Math.max(0f, 1f - t / 0.28f));
+                dark.setAlpha(kf(t, new float[]{0.3f, 1f}, new float[]{0f, 1f}));
+            }
+        });
+        launchAnim.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator an) {
+                if (!openApp(a)) clearLaunchFx(true);
+            }
+        });
+        launchAnim.start();
+    }
+
+    /** Mittelpunkt einer Ansicht auf dem Bildschirm (inkl. Verschiebungen). */
+    float[] centerOf(View v) {
+        float x = v.getLeft() + v.getTranslationX() + v.getWidth() / 2f;
+        float y = v.getTop() + v.getTranslationY() + v.getHeight() / 2f;
+        View p = (View) v.getParent();
+        while (p != null && p != root) {
+            x += p.getLeft() + p.getTranslationX();
+            y += p.getTop() + p.getTranslationY();
+            p = p.getParent() instanceof View ? (View) p.getParent() : null;
+        }
+        return new float[]{x, y};
+    }
+
+    void clearLaunchFx(boolean anim) {
+        launching = false;
+        if (launchAnim != null) launchAnim.cancel();
+        final FrameLayout fx = launchFx;
+        launchFx = null;
+        if (fx == null) return;
+        if (anim) {
+            fx.animate().alpha(0f).setDuration(450).setStartDelay(80).withEndAction(new Runnable() {
+                public void run() { root.removeView(fx); }
+            }).start();
+        } else root.removeView(fx);
     }
 
     void openAmazonHome() {
@@ -1271,7 +1373,9 @@ public class MainActivity extends Activity {
         zone = "apps";
         cSel = 0;
         applyAll(false);
-        if (woke || away > 120000) playIntro(woke);
+        boolean intro = woke || away > 120000;
+        clearLaunchFx(!intro);
+        if (intro) playIntro(woke);
         else kenBurns.resume();
     }
 
