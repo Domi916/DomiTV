@@ -2,7 +2,13 @@ package at.domi.tvlauncher;
 
 import android.app.Activity;
 import android.content.ComponentName;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.res.AssetFileDescriptor;
+import android.media.AudioAttributes;
+import android.media.SoundPool;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Color;
@@ -34,10 +40,24 @@ public class MainActivity extends Activity {
     private WebView web;
     private boolean pageReady = false;
     private long pausedAt = 0;
+    private boolean wokeUp = false;
+
+    // Startsound
+    private SoundPool pool;
+    private int introId = 0;
+    private volatile boolean introLoaded = false;
+    private volatile float pendingVol = -1f;
+
+    private final BroadcastReceiver screenOn = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context c, Intent i) { wokeUp = true; }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        loadSound();
+        registerReceiver(screenOn, new IntentFilter(Intent.ACTION_SCREEN_ON));
         Window w = getWindow();
         w.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.parseColor("#030305")));
@@ -67,6 +87,37 @@ public class MainActivity extends Activity {
         hideSystemUi();
     }
 
+    /** Lädt den Startsound vorab, damit er ohne Verzögerung abspielt. */
+    private void loadSound() {
+        try {
+            AudioAttributes aa = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build();
+            pool = new SoundPool.Builder().setMaxStreams(1).setAudioAttributes(aa).build();
+            pool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
+                @Override
+                public void onLoadComplete(SoundPool p, int id, int status) {
+                    if (status != 0) return;
+                    introLoaded = true;
+                    if (pendingVol >= 0) { p.play(id, pendingVol, pendingVol, 1, 0, 1f); pendingVol = -1f; }
+                }
+            });
+            AssetFileDescriptor fd = getAssets().openFd("intro.ogg");
+            introId = pool.load(fd, 1);
+            fd.close();
+        } catch (Exception e) {
+            Log.e(HomeWatcherService.TAG, "Startsound", e);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        try { unregisterReceiver(screenOn); } catch (Exception ignored) { }
+        if (pool != null) pool.release();
+        super.onDestroy();
+    }
+
     private void hideSystemUi() {
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_FULLSCREEN
@@ -81,7 +132,9 @@ public class MainActivity extends Activity {
         hideSystemUi();
         HomeWatcherService.allowAmazonHome = false;
         long away = pausedAt == 0 ? 0 : SystemClock.elapsedRealtime() - pausedAt;
-        if (pageReady) js("window.tv&&tv.onResume(" + away + ")");
+        boolean woke = wokeUp;
+        wokeUp = false;
+        if (pageReady) js("window.tv&&tv.onResume(" + away + "," + woke + ")");
     }
 
     @Override
@@ -188,6 +241,14 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 return "low";
             }
+        }
+
+        @JavascriptInterface
+        public void playIntroSound(float vol) {
+            if (pool == null || introId == 0) return;
+            float v = Math.max(0f, Math.min(1f, vol));
+            if (introLoaded) pool.play(introId, v, v, 1, 0, 1f);
+            else pendingVol = v;
         }
 
         @JavascriptInterface

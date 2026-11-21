@@ -11,6 +11,11 @@ window.CONFIG = {
   //  'aus'       = nie
   intro: 'aufwachen',
 
+  // Startsound: spielt beim Starten der App und wenn du den Fernseher einschaltest.
+  //  'an' oder 'aus'.  lautstaerke: 0.0 (still) bis 1.0 (voll)
+  ton: 'an',
+  lautstaerke: 0.8,
+
   // Grafik-Qualität: 'auto' nimmt auf schwachen Geräten (Fire TV Stick mit 1 GB)
   // automatisch die flüssige Variante. Mit 'hoch' oder 'lite' legst du es fest.
   qualitaet: 'auto',
