@@ -268,13 +268,13 @@ public class MainActivity extends Activity {
         header.addView(avatar, atD(96, 68, 58, 58));
         LinearLayout who = new LinearLayout(this);
         who.setOrientation(LinearLayout.VERTICAL);
-        greet = text("", 28, "SemiBold", TXT, -0.02f);
+        greet = text("", 28, "SemiBold", TXT, -0.01f);
         date = text("", 20, "Medium", Gfx.a(TXT, 0.6f), 0);
         who.addView(greet);
         LinearLayout.LayoutParams dl = new LinearLayout.LayoutParams(-2, -2);
         dl.topMargin = px(5);
         who.addView(date, dl);
-        header.addView(who, atD(172, 68, -2, -2));
+        header.addView(who, atD(172, 66, 900, 70));
 
         LinearLayout pill = new LinearLayout(this);
         pill.setOrientation(LinearLayout.HORIZONTAL);
