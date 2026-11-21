@@ -139,7 +139,12 @@ body.lite .card{-webkit-filter:none;filter:none;box-shadow:none;transition:trans
 body.lite .card.on{box-shadow:0 0 0 3px rgba(255,255,255,.92)}
 body.lite .hero,body.lite .hero.on{-webkit-filter:none!important;filter:none!important;transition:opacity .35s ease,transform .45s cubic-bezier(.2,.8,.2,1)}
 body.lite #heroes{-webkit-filter:none!important;filter:none!important}
-body.lite .scene{will-change:opacity}
+body.lite .scene{will-change:opacity;transition:opacity .45s ease,visibility 0s linear .45s}
+body.lite .scene.on{transition:opacity .45s ease,visibility 0s}
+body.lite .scene *{animation:none!important;will-change:auto!important}
+body.lite .shade2,body.lite .shade3{display:none}
+body.lite .shade1{background:radial-gradient(ellipse 1500px 1000px at 60% 35%,rgba(3,3,5,0) 35%,rgba(3,3,5,.72) 100%),linear-gradient(90deg,rgba(3,3,5,.6) 0%,rgba(3,3,5,0) 45%),linear-gradient(180deg,rgba(3,3,5,.4) 0%,rgba(3,3,5,0) 20%,rgba(3,3,5,0) 50%,rgba(3,3,5,.92) 100%)}
+.card.hint .art{background:linear-gradient(155deg,#2a2a30 0%,#121215 80%)}
 body.lite .iglow{-webkit-filter:none;filter:none;background:radial-gradient(circle at 35% 42%,rgba(224,27,42,.75) 0%,rgba(224,27,42,0) 50%),radial-gradient(circle at 66% 40%,rgba(90,122,255,.75) 0%,rgba(90,122,255,0) 50%),radial-gradient(circle at 50% 68%,rgba(26,166,220,.65) 0%,rgba(26,166,220,0) 50%),radial-gradient(circle at 50% 30%,rgba(255,58,120,.5) 0%,rgba(255,58,120,0) 45%)}
 body.lite #intro.play .igreet{animation-name:igreetLite}
 body.lite .isweep{box-shadow:none}
@@ -380,8 +385,16 @@ body.lite .isweep{box-shadow:none}
       store.get('recent', []).forEach(function (r) { var a = appById(r.id); if (a && pkgs[a.id]) cards.push({ app: a, title: a.name, sub: 'Zuletzt geöffnet', right: ago(r.ts) }); });
       $('contSub').textContent = 'Zuletzt geöffnet';
     }
+    if (!cards.length) {
+      cards.push({ hint: true, app: { name: 'Tipp', glow: '#8e8e93' }, title: 'Noch leer', sub: 'Öffne eine App, dann erscheint sie hier', right: '' });
+    }
     var h = '';
     cards.forEach(function (c) {
+      if (c.hint) {
+        h += '<div class="card hint" style="--glowA:rgba(255,255,255,.15)"><div class="art"></div><div class="gloss"></div><div class="tag">Tipp</div>' +
+          '<div class="txt"><div class="ct">' + esc(c.title) + '</div><div class="cs"><span>' + esc(c.sub) + '</span></div></div></div>';
+        return;
+      }
       var a = c.app;
       h += '<div class="card" style="--glowA:' + a.glow + '55"><div class="art" style="background:radial-gradient(circle at 78% 22%,' + a.glow + '99 0%,rgba(0,0,0,0) 60%),linear-gradient(155deg,' + a.t1 + ' 0%,' + a.t2 + ' 80%)"></div><div class="gloss"></div>' +
         '<div class="tag">' + esc(a.name) + '</div>' +
@@ -397,7 +410,7 @@ body.lite .isweep{box-shadow:none}
   function each(sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); }
   function render() {
     var z = S.zone, sel = S.sel;
-    var sceneI = z === 'cont' && cards[S.cSel] ? APPS.indexOf(cards[S.cSel].app) : sel;
+    var sceneI = z === 'cont' && cards[S.cSel] && !cards[S.cSel].hint ? APPS.indexOf(cards[S.cSel].app) : sel;
     each('.scene', function (e, i) { e.classList.toggle('on', i === sceneI); });
     each('.hero', function (e, i) { e.classList.toggle('on', i === sel); e.classList.toggle('before', i < sel); });
     each('.slot', function (e, i) {
@@ -455,7 +468,7 @@ body.lite .isweep{box-shadow:none}
       if (k === 'left') S.cSel = Math.max(0, S.cSel - 1);
       else if (k === 'right') S.cSel = Math.min(cards.length - 1, S.cSel + 1);
       else if (k === 'up' || k === 'back') S.zone = 'apps';
-      else if (k === 'ok' && cards[S.cSel]) openCard(cards[S.cSel]);
+      else if (k === 'ok' && cards[S.cSel]) { if (cards[S.cSel].hint) toast('Öffne eine App, dann erscheint sie hier'); else openCard(cards[S.cSel]); }
     } else if (z === 'top') {
       if (k === 'left') S.tSel = 0;
       else if (k === 'right') S.tSel = 1;
