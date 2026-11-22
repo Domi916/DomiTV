@@ -210,8 +210,22 @@ public class HomeWatcherService extends AccessibilityService {
                 overlay.shift(k == android.view.KeyEvent.KEYCODE_DPAD_RIGHT ? -400 : 400);
             return true;
         }
-        // ▲ ▼ in der Anzeige: nichts in YouTube verstellen
-        if (overlayOn && (k == android.view.KeyEvent.KEYCODE_DPAD_UP || k == android.view.KeyEvent.KEYCODE_DPAD_DOWN)) return true;
+        // ▼ Favorit ♥   ▲ Song nie wieder
+        if (overlayOn && k == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
+            if (e.getAction() == android.view.KeyEvent.ACTION_UP) {
+                boolean fav = MediaWatcher.toggleFavorite(this);
+                overlay.badge(fav ? "♥  Zu Favoriten hinzugefügt" : "Aus Favoriten entfernt");
+                overlay.updateFav();
+            }
+            return true;
+        }
+        if (overlayOn && k == android.view.KeyEvent.KEYCODE_DPAD_UP) {
+            if (e.getAction() == android.view.KeyEvent.ACTION_UP) {
+                overlay.badge("Song kommt nicht mehr");
+                MediaWatcher.blockCurrent(this);
+            }
+            return true;
+        }
         // ☰ Menü-Taste: Anzeige wechseln (Songtext → Audio → Video)
         if (MediaWatcher.active && k == android.view.KeyEvent.KEYCODE_MENU) {
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) {

@@ -181,6 +181,7 @@ public class MainActivity extends Activity {
     static class Card {
         AppDef app;
         int rapper = -1;
+        String kind = "app", songId;
         String title, sub, right;
         boolean hint;
         FrameLayout view;
@@ -632,10 +633,10 @@ public class MainActivity extends Activity {
         GradientDrawable stripe = Gfx.grad(GradientDrawable.Orientation.TL_BR, new int[]{0, Gfx.a(r.c1, 0.16f), 0, 0}, rad);
         GradientDrawable gloss = Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.w(0.14f), Gfx.w(0), Gfx.w(0)}, rad);
         f.setBackground(new LayerDrawable(new Drawable[]{base, glow, stripe, gloss}));
-        f.addView(text(r.isMix() ? "MIX" : "RAPPER", 14, "Bold", Gfx.w(0.7f), 0.28f), atD(22, 22, -2, -2));
+        f.addView(text(r.isMix() ? "MIX" : r.isFav() ? "♥ DEINE" : "RAPPER", 14, "Bold", Gfx.w(0.7f), 0.28f), atD(22, 22, -2, -2));
         View dot = new View(this);
         dot.setBackground(Gfx.round(r.c1, px(5)));
-        f.addView(dot, atD(22 + (r.isMix() ? 46 : 92), 26, 10, 10));
+        f.addView(dot, atD(22 + (r.isMix() ? 46 : r.isFav() ? 100 : 92), 26, 10, 10));
         int len = r.name.length();
         TextView nm = text(r.name.toUpperCase(Locale.ROOT), len > 12 ? 28 : len > 10 ? 33 : 40, "Black", Color.WHITE, -0.02f);
         nm.setSingleLine(true);
@@ -644,7 +645,7 @@ public class MainActivity extends Activity {
         nl.leftMargin = px(22);
         nl.bottomMargin = px(48);
         f.addView(nm, nl);
-        TextView sub = text(r.isMix() ? "Alle 5 gemischt" : "Shuffle auf YouTube", 16, "Medium", Gfx.w(0.72f), 0);
+        TextView sub = text(r.isMix() ? "Alle 5 gemischt" : r.isFav() ? "Deine Lieblingssongs" : "Shuffle auf YouTube", 16, "Medium", Gfx.w(0.72f), 0);
         FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2);
         sl.gravity = Gravity.BOTTOM | Gravity.START;
         sl.leftMargin = px(22);
@@ -1364,6 +1365,35 @@ public class MainActivity extends Activity {
             c.right = ago(prefs.getLong("lastRapperTs", System.currentTimeMillis()));
             cards.add(0, c);
         }
+        // "Neu erschienen": neue Songs deiner Rapper (höchstens 3 Karten)
+        if (ytApp != null && ytApp.pkg != null) {
+            int n = 0;
+            for (String[] ns : Library.newSongs(this)) {
+                if (n++ >= 3) break;
+                Card c = new Card();
+                c.app = ytApp;
+                c.kind = "new";
+                c.rapper = Integer.parseInt(ns[0]);
+                c.songId = ns[1];
+                c.title = LyricsOverlay.cleanTitle(ns[2], RAP[c.rapper].name);
+                c.sub = "Neu von " + RAP[c.rapper].name;
+                c.right = ago(Long.parseLong(ns[3]));
+                cards.add(Math.min(cards.size(), lr >= 0 ? 1 : 0), c);
+            }
+            // Wochen-Rückblick
+            String[] wk = Library.weekRecap(this);
+            if (wk != null) {
+                Card c = new Card();
+                c.app = ytApp;
+                c.kind = "week";
+                c.rapper = Library.rapperIndexByName(wk[0]);
+                c.title = "Deine Woche: " + wk[0];
+                String song = wk[2].contains(" – ") ? wk[2].substring(wk[2].indexOf(" – ") + 3) : wk[2];
+                c.sub = wk[1] + " Songs · Top: " + song;
+                c.right = "";
+                cards.add(c);
+            }
+        }
         if (cards.isEmpty()) {
             Card c = new Card();
             c.hint = true;
@@ -1396,7 +1426,9 @@ public class MainActivity extends Activity {
                 new int[]{Gfx.w(0.16f), Gfx.w(0), Gfx.w(0), 0x8c000000}, rad);
         f.setBackground(new LayerDrawable(new Drawable[]{base, glow, gloss}));
 
-        TextView tag = text(c.hint ? "Tipp" : c.rapper >= 0 ? "Weiter hören" : c.app.name, 16, "SemiBold", Gfx.w(0.92f), 0);
+        String tagText = c.hint ? "Tipp" : "new".equals(c.kind) ? "Neu erschienen" : "week".equals(c.kind) ? "Diese Woche"
+                : c.rapper >= 0 ? "Weiter hören" : c.app.name;
+        TextView tag = text(tagText, 16, "SemiBold", Gfx.w(0.92f), 0);
         tag.setGravity(Gravity.CENTER);
         tag.setPadding(px(14), 0, px(14), 0);
         GradientDrawable tb = Gfx.round(0x52000000, px(17));
@@ -1797,7 +1829,7 @@ public class MainActivity extends Activity {
             else if ("ok".equals(k) && cSel < cards.size()) {
                 Card c = cards.get(cSel);
                 if (c.hint) showToast("Öffne eine App, dann erscheint sie hier");
-                else if (c.rapper >= 0) openRapper(RAP[c.rapper], c.view);
+                else if (c.rapper >= 0) openRapper(RAP[c.rapper], c.view, "new".equals(c.kind) ? c.songId : null);
                 else openAppFx(c.app, c.view);
             }
         } else if ("rap".equals(zone)) {
@@ -1956,22 +1988,28 @@ public class MainActivity extends Activity {
         });
     }
 
-    void openRapper(final Rapper r, View src) {
+    void openRapper(final Rapper r, View src) { openRapper(r, src, null); }
+
+    void openRapper(final Rapper r, View src, final String firstId) {
         if (launching) return;
+        if (r.isFav() && Library.favorites(this).isEmpty()) {
+            showToast("Noch keine Favoriten: drück ▼ während ein Song läuft");
+            return;
+        }
         launchFx(src, r.c1, r.c2, r.name, new Callable<Boolean>() {
-            public Boolean call() { return playRapper(r); }
+            public Boolean call() { return playRapper(r, firstId); }
         });
     }
 
     /** Startet auf YouTube die Songs des Rappers: zufälliger Einstieg in seine eigene Playlist. */
-    boolean playRapper(Rapper r) {
+    boolean playRapper(Rapper r, String firstId) {
         JblBox.connect(this);
         AppDef yt = AppDef.byId("youtube");
         if (yt == null || yt.pkg == null) { showToast("YouTube nicht gefunden"); return false; }
         // Nur Songs des Rappers, gemischt. MediaWatcher springt bei fremden Videos sofort zum nächsten.
         int idx = Math.max(0, java.util.Arrays.asList(Rapper.LIST).indexOf(r));
         prefs.edit().putInt("lastRapper", idx).putLong("lastRapperTs", System.currentTimeMillis()).apply();
-        MediaWatcher.start(this, yt.pkg, idx);
+        MediaWatcher.start(this, yt.pkg, idx, firstId);
         overridePendingTransition(0, 0);
         return true;
     }

@@ -44,12 +44,16 @@ public class MediaWatcher extends NotificationListenerService {
     static int rapperIndex = 0;
     static MediaWatcher instance;
 
-    static void start(Context c, String pkg, int index) {
+    static void start(Context c, String pkg, int index) { start(c, pkg, index, null); }
+
+    /** firstId: dieser Song zuerst (z. B. "Neu erschienen"), danach gemischt. */
+    static void start(Context c, String pkg, int index, String firstId) {
         Rapper r = Rapper.LIST[index];
         queue.clear();
         queue.addAll(r.songs(c));
         members = r.members();
         Collections.shuffle(queue);
+        if (firstId != null) { queue.remove(firstId); queue.add(0, firstId); }
         pos = 0;
         ytPkg = pkg;
         rapperName = r.name;
@@ -291,6 +295,7 @@ public class MediaWatcher extends NotificationListenerService {
                 trackStarted(m);
                 foreignInRow = 0;
                 log(this, "unser Song: " + t + " / " + artist + " dur=" + curDur);
+                Library.record(this, whoSings(t, artist), LyricsOverlay.cleanTitle(t, whoSings(t, artist)));
                 unmute();
                 HomeWatcherService.overlayTrack(t, artist, curDur);
             }
@@ -327,6 +332,39 @@ public class MediaWatcher extends NotificationListenerService {
         if (since < 3000) return;
         pos++;
         play(this);
+    }
+
+    /** Welcher Rapper singt? (für Mix/Favoriten und den Wochen-Rückblick) */
+    static String whoSings(String title, String artist) {
+        for (String m : members) {
+            String n = norm(m);
+            if (hasWord(artist, n) || hasWord(title, n)) return m;
+        }
+        return members.length > 0 ? members[0] : rapperName;
+    }
+
+    /** Video-ID des Songs, der gerade läuft. */
+    static String currentId() {
+        return queue.isEmpty() || pos >= queue.size() ? null : queue.get(pos);
+    }
+
+    /** ▼: aktueller Song als Favorit an/aus. */
+    static boolean toggleFavorite(Context c) {
+        String id = currentId();
+        if (id == null) return false;
+        return Library.toggleFavorite(c, id, ourTitle, ourTitle == null ? rapperName : whoSings(ourTitle, null));
+    }
+
+    /** ▲: Song nie wieder spielen und gleich weiter. */
+    static void blockCurrent(Context c) {
+        String id = currentId();
+        if (id == null) return;
+        Library.block(c, id);
+        log(c, "gesperrt: " + id + " " + ourTitle);
+        queue.remove(pos);
+        if (queue.isEmpty()) return;
+        HomeWatcherService.overlaySwitching();
+        play(c);
     }
 
     static String norm(String x) {

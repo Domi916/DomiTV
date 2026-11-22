@@ -244,7 +244,7 @@ final class LyricsOverlay {
         if (root == null) build();
         Rapper r = Rapper.LIST[rapper];
         accent = r.c1;
-        label.setText(r.isMix() ? "DEINE RAPPER  ·  MIX" : r.name.toUpperCase(Locale.ROOT) + "  ·  SHUFFLE");
+        label.setText(r.isMix() ? "DEINE RAPPER  ·  MIX" : r.isFav() ? "DEINE FAVORITEN" : r.name.toUpperCase(Locale.ROOT) + "  ·  SHUFFLE");
         label.setTextColor(accent);
         barFill.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{accent, Color.WHITE}) {{
             setCornerRadius(px(3));
@@ -263,7 +263,7 @@ final class LyricsOverlay {
         title.setText("");
         clearLyrics("");
         status.setText("Lädt …");
-        hint.setText("☰ Anzeige   OK Pause   ⏩ nächster Song   ↩ Ende");
+        hint.setText("☰ Anzeige   OK Pause   ▼ ♥ Favorit   ▲ nie wieder   ⏩ nächster   ↩ Ende");
         if (!added) {
             try {
                 wm.addView(root, params());
@@ -387,10 +387,12 @@ final class LyricsOverlay {
             if (MediaWatcher.hasWord(ytTitle, n) || MediaWatcher.hasWord(ytArtist, n)) { who = m; break; }
         }
         if (r.isMix()) label.setText(who.toUpperCase(Locale.ROOT) + "  ·  MIX");
+        if (r.isFav()) label.setText(who.toUpperCase(Locale.ROOT) + "  ·  FAVORITEN");
         final String artistName = who;
         final String song = cleanTitle(ytTitle, who);
         currentTitle = song;
         title.setText(song);
+        updateFav();
         title.setAlpha(0f);
         title.setTranslationY(px(20));
         title.animate().alpha(1f).translationY(0).setDuration(600).setInterpolator(EASE).start();
@@ -422,6 +424,15 @@ final class LyricsOverlay {
                 });
             }
         }).start();
+    }
+
+    /** ♥ hinter dem Titel, wenn der Song ein Favorit ist. */
+    void updateFav() {
+        if (title == null) return;
+        String id = MediaWatcher.currentId();
+        boolean fav = id != null && Library.isFavorite(c, id);
+        String t = currentTitle;
+        title.setText(fav ? t + "  ♥" : t);
     }
 
     void updateStatus() {
