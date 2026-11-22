@@ -178,6 +178,7 @@ public class HomeWatcherService extends AccessibilityService {
     @Override
     protected boolean onKeyEvent(android.view.KeyEvent e) {
         int k = e.getKeyCode();
+        if (MediaWatcher.active && e.getAction() == android.view.KeyEvent.ACTION_UP) Log.i(TAG, "Taste " + k);
         if (MediaWatcher.active && (k == android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD
                 || k == android.view.KeyEvent.KEYCODE_MEDIA_NEXT)) {
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) MediaWatcher.skip(this);

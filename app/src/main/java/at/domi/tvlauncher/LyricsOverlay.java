@@ -68,6 +68,7 @@ final class LyricsOverlay {
     int shownLine = -2;
     int request = 0;
     String currentTitle = "";
+    boolean approx = false;
 
     LyricsOverlay(Context c) {
         this.c = c;
@@ -297,11 +298,13 @@ final class LyricsOverlay {
                         times.clear();
                         texts.clear();
                         plain = null;
+                        approx = false;
                         if (ly != null) {
                             times.addAll(ly.times);
                             texts.addAll(ly.texts);
                             plain = ly.plain;
                             offset = ly.offset;
+                            approx = ly.approx;
                         }
                         shownLine = -2;
                         updateStatus();
@@ -314,7 +317,7 @@ final class LyricsOverlay {
 
     void updateStatus() {
         if (status == null) return;
-        if (!times.isEmpty()) status.setText(MediaWatcher.positionKnown() ? "Songtext synchron" : "Songtext");
+        if (!times.isEmpty()) status.setText(approx ? "Songtext (ungefähr)" : "Songtext");
         else if (plain != null) status.setText("Songtext (nicht synchron)");
         else if (request > 0 && !currentTitle.isEmpty()) status.setText(mode == LYRICS ? "Kein Songtext gefunden" : "");
     }
@@ -363,6 +366,7 @@ final class LyricsOverlay {
         final List<String> texts = new ArrayList<>();
         String plain;
         long offset;
+        boolean approx;
     }
 
     static String cleanTitle(String t, String artist) {
@@ -429,7 +433,16 @@ final class LyricsOverlay {
                     ly.texts.add(tx.isEmpty() ? "♪" : tx);
                 }
             } else if (!best.isNull("plainLyrics")) {
-                ly.plain = best.optString("plainLyrics");
+                // nur Text ohne Zeiten: gleichmäßig über den Song verteilen (ungefähr mitlaufend)
+                List<String> pl = new ArrayList<>();
+                for (String l : best.optString("plainLyrics").split("\n")) if (!l.trim().isEmpty()) pl.add(l.trim());
+                long dur = videoDur > 0 ? videoDur : (long) (best.optDouble("duration", 150) * 1000);
+                long startAt = 6000, span = Math.max(30000, dur - startAt - 8000);
+                for (int i = 0; i < pl.size(); i++) {
+                    ly.times.add(startAt + span * i / Math.max(1, pl.size()));
+                    ly.texts.add(pl.get(i));
+                }
+                ly.approx = true;
             }
             // Musikvideos haben oft ein längeres Intro als der Song: Unterschied am Anfang ausgleichen
             long trackDur = (long) (best.optDouble("duration", 0) * 1000);
