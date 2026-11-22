@@ -203,6 +203,9 @@ public class MainActivity extends Activity {
         fixTimeZone();
         loadSound();
         registerReceiver(screenOn, new IntentFilter(Intent.ACTION_SCREEN_ON));
+        IntentFilter tf = new IntentFilter(Intent.ACTION_TIME_CHANGED);
+        tf.addAction(Intent.ACTION_TIMEZONE_CHANGED);
+        registerReceiver(timeSet, tf);
         prefs = getSharedPreferences("domitv", MODE_PRIVATE);
         sel = Math.max(0, Math.min(APPS.length - 1, prefs.getInt("sel", 0)));
 
@@ -1407,7 +1410,33 @@ public class MainActivity extends Activity {
 
     final Runnable clockRun = new Runnable() { public void run() { clockTick(); } };
 
+    /** Nach dem Einschalten stimmt die Uhr des Sticks erst, wenn er sie aus dem Internet geholt hat. */
+    static volatile boolean timeSynced = false;
+    final BroadcastReceiver timeSet = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context c, Intent i) { timeSynced = true; clockTick(); }
+    };
+
+    boolean timeOk() {
+        if (timeSynced) return true;
+        // Länger als 2 Minuten an: dann hat der Stick die Zeit sicher schon geholt
+        if (android.os.SystemClock.elapsedRealtime() > 120000) { timeSynced = true; return true; }
+        return false;
+    }
+
     void clockTick() {
+        if (!timeOk()) {
+            String gr = "Hallo, " + AppDef.NAME;
+            greet.setText(gr);
+            date.setText("");
+            time.setText("");
+            if (svTime != null) { svTime.setText(""); svDate.setText(""); }
+            setWords(gr);
+            iSub.setText("");
+            ui.removeCallbacks(clockRun);
+            ui.postDelayed(clockRun, 1000);
+            return;
+        }
         Calendar c = Calendar.getInstance();
         int h = c.get(Calendar.HOUR_OF_DAY);
         String g = h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : h < 22 ? "Guten Abend" : "Gute Nacht";
@@ -2144,6 +2173,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         try { unregisterReceiver(screenOn); } catch (Exception ignored) { }
+        try { unregisterReceiver(timeSet); } catch (Exception ignored) { }
         if (player != null) player.release();
         super.onDestroy();
     }
