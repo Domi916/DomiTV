@@ -64,7 +64,7 @@ final class LyricsOverlay {
     View barBg, barFill;
     LinearLayout lyricBox;      // alle Zeilen untereinander, gleitet nach oben
     FrameLayout lyricClip;      // Bereich, in dem der Songtext läuft
-    static final float ANCHOR = 470; // Höhe der aktuellen Zeile (Design-Pixel)
+    static final float ANCHOR = 300; // Höhe der aktuellen Zeile im Songtext-Bereich (Design-Pixel)
     static final PathInterpolator SMOOTH = new PathInterpolator(0.42f, 0f, 0.18f, 1f);
     boolean added = false;
     int mode;
@@ -101,6 +101,7 @@ final class LyricsOverlay {
         photo.animate().alpha(on ? 0.35f : 1f).setDuration(d).start();
         lyricClip.setPivotX(px(140));
         lyricClip.setPivotY(px(ANCHOR));
+        lyricClip.setClipChildren(!on);
         float sc = on ? 1.22f : 1f;
         lyricClip.animate().scaleX(sc).scaleY(sc).setDuration(d).setInterpolator(EASE).start();
     }
@@ -181,7 +182,8 @@ final class LyricsOverlay {
         // Songtext: alle Zeilen in einer Liste, die weich nach oben gleitet (wie Apple Music)
         lyricClip = new FrameLayout(c);
         lyricClip.setClipChildren(true);
-        root.addView(lyricClip, new FrameLayout.LayoutParams(-1, -1));
+        // nur zwischen Kopfzeile und Titel sichtbar
+        root.addView(lyricClip, at(0, 160, 1560, 660));
         lyricBox = new LinearLayout(c);
         lyricBox.setOrientation(LinearLayout.VERTICAL);
         lyricClip.addView(lyricBox, at(140, 0, 1300, -2));
