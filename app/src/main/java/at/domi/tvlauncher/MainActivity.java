@@ -132,7 +132,7 @@ public class MainActivity extends Activity {
     boolean wokeUp = false;
 
     // ---------- Ansichten ----------
-    FrameLayout root, bgWrap, kbWrap, ringWrap, lift, heroWrap, dock, cont, cardsRow, intro, header, rapStage, rapRow;
+    FrameLayout root, bgWrap, kbWrap, ringWrap, lift, heroWrap, dock, cont, cardsRow, intro, header, rapStage, rapRow, rapRow2;
     final FrameLayout[] fxw = new FrameLayout[AppDef.APPS.length];
     final List<List<Animator>> fxAnims = new ArrayList<>();
     final List<List<View>> heroLetters = new ArrayList<>();
@@ -441,7 +441,7 @@ public class MainActivity extends Activity {
         cont.setAlpha(0f);
         cont.setTranslationY(px(260));
         cont.setVisibility(View.INVISIBLE);
-        root.addView(cont, atD(96, 650, 1728, 760));
+        root.addView(cont, atD(96, 650, 1728, 1100));
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setBaselineAligned(true);
@@ -458,7 +458,7 @@ public class MainActivity extends Activity {
         head2.setOrientation(LinearLayout.HORIZONTAL);
         head2.setBaselineAligned(true);
         head2.addView(text("Deine Rapper", 34, "Bold", TXT, -0.025f));
-        TextView sub2 = text("Direkt in YT Music", 22, "Medium", Gfx.a(TXT, 0.55f), 0);
+        TextView sub2 = text("Shuffle auf YouTube", 22, "Medium", Gfx.a(TXT, 0.55f), 0);
         LinearLayout.LayoutParams cl2 = new LinearLayout.LayoutParams(-2, -2);
         cl2.leftMargin = px(18);
         head2.addView(sub2, cl2);
@@ -466,9 +466,25 @@ public class MainActivity extends Activity {
         rapRow = new FrameLayout(this);
         rapRow.setClipChildren(false);
         cont.addView(rapRow, atD(0, 420, 2000, 260));
-        for (int r = 0; r < RAP.length; r++) {
+        for (int r = 0; r < Rapper.OWN; r++) {
             rapCards[r] = buildRapCard(RAP[r]);
             rapRow.addView(rapCards[r].view, atD(r * 348, 0, 320, 190));
+        }
+        LinearLayout head3 = new LinearLayout(this);
+        head3.setOrientation(LinearLayout.HORIZONTAL);
+        head3.setBaselineAligned(true);
+        head3.addView(text("Rapper, die dir gefallen könnten", 34, "Bold", TXT, -0.025f));
+        TextView sub3 = text("Gleicher Shuffle", 22, "Medium", Gfx.a(TXT, 0.55f), 0);
+        LinearLayout.LayoutParams cl3 = new LinearLayout.LayoutParams(-2, -2);
+        cl3.leftMargin = px(18);
+        head3.addView(sub3, cl3);
+        cont.addView(head3, atD(0, 650, -2, -2));
+        rapRow2 = new FrameLayout(this);
+        rapRow2.setClipChildren(false);
+        cont.addView(rapRow2, atD(0, 720, 2000, 260));
+        for (int r = Rapper.OWN; r < RAP.length; r++) {
+            rapCards[r] = buildRapCard(RAP[r]);
+            rapRow2.addView(rapCards[r].view, atD((r - Rapper.OWN) * 348, 0, 320, 190));
         }
 
         // --- Pfeil unten ---
@@ -804,7 +820,7 @@ public class MainActivity extends Activity {
         for (Animator a : ambient) { if (!a.isStarted()) a.start(); else a.resume(); }
         if (shownBg >= 0 && shownBg < fxAnims.size())
             for (Animator a : fxAnims.get(shownBg)) { if (!a.isStarted()) a.start(); else a.resume(); }
-        if ("rap".equals(shownMode)) { rapPulse.resume(); rapDrift.resume(); }
+        if (isRapZone(shownMode)) { rapPulse.resume(); rapDrift.resume(); }
     }
 
     View buildHero(AppDef a, int i) {
@@ -937,9 +953,9 @@ public class MainActivity extends Activity {
         showHero(sel, anim);
         for (int i = 0; i < slots.length; i++) focusSlot(i, "apps".equals(zone) && i == sel, anim);
         for (int i = 0; i < cards.size(); i++) focusCard(cards.get(i), "cont".equals(zone) && i == cSel, anim);
-        for (int i = 0; i < rapCards.length; i++) focusRap(rapCards[i], "rap".equals(zone) && i == rSel, anim);
-        if ("rap".equals(zone)) setRapper(rSel, anim);
-        float par = "rap".equals(zone) ? -2 * 30 : -(sel - (APPS.length - 1) / 2f) * 30;
+        for (int i = 0; i < rapCards.length; i++) focusRap(rapCards[i], isRapZone(zone) && i == rSel, anim);
+        if (isRapZone(zone)) setRapper(rSel, anim);
+        float par = isRapZone(zone) ? -2 * 30 : -(sel - (APPS.length - 1) / 2f) * 30;
         mv(bgWrap, anim, 1200).translationX(px(par));
         if (!anim) bgWrap.setTranslationX(px(par));
         focusBtn(btnHome, icHome, "top".equals(zone) && tSel == 0, anim);
@@ -948,7 +964,7 @@ public class MainActivity extends Activity {
         float bx;
         if ("apps".equals(zone)) bx = 96 + 28 + sel * 312 + 140 - 360;
         else bx = 96 + Math.min(cSel, 3) * 436 + 200 - 360;
-        float ba = "top".equals(zone) || "rap".equals(zone) ? 0f : 1f;
+        float ba = "top".equals(zone) || isRapZone(zone) ? 0f : 1f;
         mv(beam, anim, 550).translationX(px(bx)).alpha(ba);
         if (!anim) { beam.setTranslationX(px(bx)); beam.setAlpha(ba); }
 
@@ -1117,19 +1133,27 @@ public class MainActivity extends Activity {
 
     String shownMode = "";
 
+    static boolean isRapZone(String z) { return "rap".equals(z) || "rap2".equals(z); }
+
     void setMode(String z, boolean anim) {
         if (z.equals(shownMode) && anim) return;
-        final boolean fromRap = "rap".equals(shownMode);
+        if (isRapZone(z) && isRapZone(shownMode)) {
+            shownMode = z;
+            cont.animate().translationY("rap2".equals(z) ? -px(630) : -px(330)).setDuration(anim ? 600 : 0)
+                    .setStartDelay(0).setInterpolator(EASE).withEndAction(null).start();
+            return;
+        }
+        final boolean fromRap = isRapZone(shownMode);
         shownMode = z;
-        boolean isCont = "cont".equals(z), isRap = "rap".equals(z), low = isCont || isRap;
+        boolean isCont = "cont".equals(z), isRap = isRapZone(z), low = isCont || isRap;
         long d = anim ? 700 : 0;
         lift.animate().translationY(low ? -px(400) : 0).alpha(isRap ? 0f : 1f).setDuration(d).setStartDelay(0).setInterpolator(EASE).start();
         heroWrap.animate().alpha(low ? 0f : 1f).setDuration(anim ? 450 : 0).setStartDelay(0).start();
         cont.setVisibility(View.VISIBLE);
-        cont.animate().alpha(low ? 1f : 0f).translationY(isRap ? -px(330) : (isCont ? 0 : px(260))).setDuration(d)
+        cont.animate().alpha(low ? 1f : 0f).translationY("rap2".equals(z) ? -px(630) : isRap ? -px(330) : (isCont ? 0 : px(260))).setDuration(d)
                 .setStartDelay(isCont && anim && !fromRap ? 120 : 0).setInterpolator(EASE)
                 .withEndAction(low ? null : new Runnable() {
-                    public void run() { if (!"cont".equals(shownMode) && !"rap".equals(shownMode)) cont.setVisibility(View.INVISIBLE); }
+                    public void run() { if (!"cont".equals(shownMode) && !isRapZone(shownMode)) cont.setVisibility(View.INVISIBLE); }
                 }).start();
         if (isRap) {
             ui.removeCallbacks(rapCycle);
@@ -1141,7 +1165,7 @@ public class MainActivity extends Activity {
         } else {
             rapStage.animate().alpha(0f).setDuration(anim ? 450 : 0).setStartDelay(0).withEndAction(new Runnable() {
                 public void run() {
-                    if ("rap".equals(shownMode)) return;
+                    if (isRapZone(shownMode)) return;
                     rapStage.setVisibility(View.INVISIBLE);
                     rapPulse.pause();
                     rapDrift.pause();
@@ -1197,7 +1221,7 @@ public class MainActivity extends Activity {
 
     final Runnable rapCycle = new Runnable() {
         public void run() {
-            if (!"rap".equals(shownMode) || shownRapper < 0) return;
+            if (!isRapZone(shownMode) || shownRapper < 0) return;
             int n = rapPicCount(shownRapper);
             if (n > 1) {
                 rapPicIdx = (rapPicIdx + 1) % n;
@@ -1724,9 +1748,18 @@ public class MainActivity extends Activity {
                 else openAppFx(c.app, c.view);
             }
         } else if ("rap".equals(zone)) {
+            if (rSel >= Rapper.OWN) rSel = Rapper.OWN - 1;
             if ("left".equals(k)) rSel = Math.max(0, rSel - 1);
-            else if ("right".equals(k)) rSel = Math.min(RAP.length - 1, rSel + 1);
+            else if ("right".equals(k)) rSel = Math.min(Rapper.OWN - 1, rSel + 1);
             else if ("up".equals(k)) zone = "cont";
+            else if ("down".equals(k)) { zone = "rap2"; rSel = Math.min(RAP.length - 1, rSel + Rapper.OWN); }
+            else if ("back".equals(k)) zone = "apps";
+            else if ("ok".equals(k)) openRapper(RAP[rSel], rapCards[rSel].view);
+        } else if ("rap2".equals(zone)) {
+            if (rSel < Rapper.OWN) rSel = Rapper.OWN;
+            if ("left".equals(k)) rSel = Math.max(Rapper.OWN, rSel - 1);
+            else if ("right".equals(k)) rSel = Math.min(RAP.length - 1, rSel + 1);
+            else if ("up".equals(k)) { zone = "rap"; rSel = Math.max(0, rSel - Rapper.OWN); }
             else if ("back".equals(k)) zone = "apps";
             else if ("ok".equals(k)) openRapper(RAP[rSel], rapCards[rSel].view);
         } else if ("top".equals(zone)) {

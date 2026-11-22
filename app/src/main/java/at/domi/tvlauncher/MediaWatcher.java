@@ -270,8 +270,7 @@ public class MediaWatcher extends NotificationListenerService {
         // Songtext-/Audio-Modus von YouTube meldet die Song-Version mit anderem Titel: gleicher Song
         String author = m.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
         String r = norm(rapperName);
-        if (norm(t).contains(r) || (artist != null && norm(artist).contains(r))
-                || (author != null && norm(author).contains(r)) || sameSong(t, ourTitle)) {
+        if (hasWord(t, r) || hasWord(artist, r) || hasWord(author, r) || sameSong(t, ourTitle)) {
             log(this, "bleibt: " + t + " / " + artist);
             if (!sameSong(t, ourTitle)) {
                 trackStarted(m);
@@ -293,6 +292,12 @@ public class MediaWatcher extends NotificationListenerService {
         return x.toLowerCase()
                 .replaceAll("[\\(\\[][^\\)\\]]*[\\)\\]]", " ")
                 .replaceAll("[^a-z0-9]+", " ").trim();
+    }
+
+    /** Ganzes Wort: "che" passt zu "che - Bae", aber nicht zu "Cherry". */
+    static boolean hasWord(String text, String normName) {
+        if (text == null || normName.isEmpty()) return false;
+        return (" " + norm(text) + " ").contains(" " + normName + " ");
     }
 
     /** "Ken Carson - margiela (Official Music Video)" und "margiela" sind derselbe Song. */

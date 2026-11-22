@@ -203,7 +203,11 @@ final class LyricsOverlay {
             Bitmap b = BitmapFactory.decodeStream(in);
             in.close();
             photo.setImageBitmap(b);
-        } catch (Exception ignored) { }
+        } catch (Exception e) {
+            // kein Foto: Farbverlauf in der Farbe des Rappers
+            photo.setImageDrawable(new GradientDrawable(GradientDrawable.Orientation.TR_BL,
+                    new int[]{(r.c1 & 0x00FFFFFF) | 0x99000000, r.c2, 0xFF000000}));
+        }
         title.setText("");
         clearLyrics("");
         status.setText("Lädt …");
