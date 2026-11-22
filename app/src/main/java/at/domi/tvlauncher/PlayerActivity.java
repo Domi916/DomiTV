@@ -47,6 +47,8 @@ public class PlayerActivity extends Activity {
     Rapper rapper;
     int rIndex;
     boolean audioMode = false;
+    static final String PAGE = "https://domi916.github.io/domitv/player.html";
+    String pageHtml;
     final Handler ui = new Handler(Looper.getMainLooper());
     final Runnable hideInfo = new Runnable() {
         @Override
@@ -100,7 +102,19 @@ public class PlayerActivity extends Activity {
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         web.setWebChromeClient(new WebChromeClient());
-        web.setWebViewClient(new WebViewClient());
+        web.setWebViewClient(new WebViewClient() {
+            // Die Seite bekommt eine echte https-Adresse, damit YouTube eine gültige Herkunft (Referer) sieht
+            @Override
+            public android.webkit.WebResourceResponse shouldInterceptRequest(WebView v, android.webkit.WebResourceRequest req) {
+                if (PAGE.equals(req.getUrl().toString()) && pageHtml != null) {
+                    try {
+                        return new android.webkit.WebResourceResponse("text/html", "utf-8",
+                                new java.io.ByteArrayInputStream(pageHtml.getBytes("UTF-8")));
+                    } catch (Exception ignored) { }
+                }
+                return null;
+            }
+        });
         web.addJavascriptInterface(new Bridge(), "Domi");
         web.setFocusable(false);
         root.addView(web, new FrameLayout.LayoutParams(-1, -1));
@@ -133,7 +147,8 @@ public class PlayerActivity extends Activity {
         setContentView(root);
         hideSystemUi();
 
-        List<String> ids = new ArrayList<>(Arrays.asList(rapper.videos));
+        String[] test = getIntent().getStringArrayExtra("test_ids");
+        List<String> ids = new ArrayList<>(Arrays.asList(test != null ? test : rapper.videos));
         Collections.shuffle(ids);
         StringBuilder arr = new StringBuilder();
         for (String id : ids) { if (arr.length() > 0) arr.append(','); arr.append('"').append(id).append('"'); }
@@ -143,7 +158,7 @@ public class PlayerActivity extends Activity {
                 + "var ids=[" + arr + "],p,fails=0;"
                 + "function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}"
                 + "function onYouTubeIframeAPIReady(){p=new YT.Player('p',{width:'100%',height:'100%',videoId:ids[0],"
-                + "playerVars:{autoplay:1,controls:0,rel:0,modestbranding:1,playsinline:1,iv_load_policy:3,fs:0,disablekb:1,playlist:ids.join(',')},"
+                + "playerVars:{origin:'https://domi916.github.io',autoplay:1,controls:0,rel:0,modestbranding:1,playsinline:1,iv_load_policy:3,fs:0,disablekb:1,playlist:ids.join(',')},"
                 + "events:{onReady:function(e){e.target.setVolume(100);e.target.playVideo();},"
                 + "onStateChange:function(e){if(e.data==1){fails=0;var d=p.getVideoData();Domi.title(d&&d.title?d.title:'');}"
                 + "if(e.data==0){var i=p.getPlaylistIndex();if(i>=ids.length-1){shuffle(ids);p.loadPlaylist(ids,0);}}},"
@@ -153,7 +168,8 @@ public class PlayerActivity extends Activity {
                 + "function toggle(){if(!p)return;if(p.getPlayerState()==1)p.pauseVideo();else p.playVideo();}"
                 + "var t=document.createElement('script');t.src='https://www.youtube.com/iframe_api';document.head.appendChild(t);"
                 + "</script></body></html>";
-        web.loadDataWithBaseURL("https://domi916.github.io/", html, "text/html", "utf-8", null);
+        pageHtml = html;
+        web.loadUrl(PAGE);
         showInfo();
     }
 
