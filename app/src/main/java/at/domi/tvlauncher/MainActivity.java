@@ -80,6 +80,7 @@ public class MainActivity extends Activity {
     float S = 1f;
     /** Starkes Gerät (z. B. Fire TV Stick 4K): schärfere Bilder, mehr Effekte. */
     boolean HIGH = false;
+    static final boolean PHOTO_BG = true;
     final List<Animator> ambient = new ArrayList<>();
     final Map<String, Typeface> fonts = new HashMap<>();
     SharedPreferences prefs;
@@ -122,6 +123,8 @@ public class MainActivity extends Activity {
 
     // ---------- Zustand ----------
     final AppDef[] APPS = AppDef.APPS;
+    /** Hintergrundfoto je App: Netflix, YouTube, Prime = Ken Carson; Disney+, YT Music = Bleood. */
+    static final String[] APP_PHOTO = {"0_0", "0_1", "0_2", "1_0", "1_1"};
     int sel = 0, cSel = 0, tSel = 0;
     String zone = "apps";
     final List<Card> cards = new ArrayList<>();
@@ -137,7 +140,12 @@ public class MainActivity extends Activity {
     final RapCard[] rapCards = new RapCard[Rapper.LIST.length];
     final Bitmap[] rapGlows = new Bitmap[Rapper.LIST.length];
     int rSel = 0;
-    ImageView rapGlow, rapPicA, rapPicB;
+    ImageView rapGlow, rapPicA, rapPicB, svA, svB;
+    FrameLayout saver;
+    TextView svTime, svDate;
+    boolean saverOn = false, svUseA = true;
+    int svPos = -1;
+    static final long SAVER_AFTER_MS = 3 * 60 * 1000;
     boolean rapUseA = true;
     TextView rapName;
     ValueAnimator rapPulse;
@@ -476,6 +484,29 @@ public class MainActivity extends Activity {
         tol.topMargin = px(170);
         root.addView(toast, tol);
 
+        // --- Bildschirmschoner (Rapper-Fotos) ---
+        saver = new FrameLayout(this);
+        saver.setBackgroundColor(Color.BLACK);
+        saver.setVisibility(View.GONE);
+        root.addView(saver, new FrameLayout.LayoutParams(-1, -1));
+        svA = new ImageView(this);
+        svB = new ImageView(this);
+        for (ImageView v : new ImageView[]{svA, svB}) {
+            v.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            v.setAlpha(0f);
+            v.setPivotX(px(1400));
+            v.setPivotY(px(400));
+            saver.addView(v, new FrameLayout.LayoutParams(-1, -1));
+        }
+        View svShade = new View(this);
+        svShade.setBackground(Gfx.grad(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{0xcc000000, 0x40000000, 0}, 0));
+        saver.addView(svShade, new FrameLayout.LayoutParams(-1, -1));
+        svTime = text("", 150, "Bold", Color.WHITE, -0.03f);
+        svTime.setFontFeatureSettings("tnum");
+        saver.addView(svTime, atD(96, 800, -2, -2));
+        svDate = text("", 32, "Medium", Gfx.w(0.75f), 0);
+        saver.addView(svDate, atD(102, 980, -2, -2));
+
         // --- Startanimation ---
         intro = new FrameLayout(this);
         intro.setVisibility(View.GONE);
@@ -614,7 +645,7 @@ public class MainActivity extends Activity {
         AppDef a = APPS[i];
         List<Animator> an = new ArrayList<>();
         fxAnims.add(an);
-        if ("ytmusic".equals(a.id)) {
+        if ("ytmusic".equals(a.id) && !PHOTO_BG) {
             fxw[i] = ringWrap;
             an.addAll(ringAnims);
             return;
@@ -625,6 +656,17 @@ public class MainActivity extends Activity {
         kbWrap.addView(w, new FrameLayout.LayoutParams(-1, -1));
         fxw[i] = w;
         Random rnd = new Random(11 + i * 7);
+        if (PHOTO_BG) {
+            ImageView tint = new ImageView(this);
+            tint.setImageBitmap(Gfx.glow(a.glow, 0.55f));
+            tint.setScaleType(ImageView.ScaleType.FIT_XY);
+            w.addView(tint, atD(700, -420, 1700, 1100));
+            an.add(loop(tint, 6000, rnd,
+                    PropertyValuesHolder.ofFloat(View.ALPHA, 0.35f, 0.7f),
+                    PropertyValuesHolder.ofFloat(View.SCALE_X, 0.95f, 1.08f),
+                    PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.95f, 1.08f)));
+            return;
+        }
         if ("netflix".equals(a.id)) {
             Bitmap st = Gfx.streak(0xffff3040);
             for (int k = 0; k < (HIGH ? 7 : 5); k++) {
@@ -1351,6 +1393,7 @@ public class MainActivity extends Activity {
         greet.setText(gr);
         date.setText(d);
         time.setText(t);
+        if (svTime != null) { svTime.setText(t); svDate.setText(d); }
         setWords(gr);
         iSub.setText(t + " · " + d);
         ui.removeCallbacks(clockRun);
@@ -1598,6 +1641,8 @@ public class MainActivity extends Activity {
     }
 
     void key(String k) {
+        resetIdle();
+        if (saverOn) { hideSaver(true); return; }
         if (launching) return;
         if (introRunning() && !"menu".equals(k)) { skipIntro(); return; }
         int n = APPS.length;
@@ -1635,6 +1680,74 @@ public class MainActivity extends Activity {
         }
         if ("menu".equals(k)) openSettings();
         applyAll(true);
+    }
+
+    // ---------- Bildschirmschoner ----------
+    final Runnable idleRun = new Runnable() {
+        public void run() {
+            if (introRunning() || launching || saverOn) return;
+            showSaver();
+        }
+    };
+    final Runnable saverCycle = new Runnable() {
+        public void run() {
+            if (!saverOn) return;
+            nextSaverPic();
+            ui.postDelayed(this, 8000);
+        }
+    };
+
+    void resetIdle() {
+        ui.removeCallbacks(idleRun);
+        ui.postDelayed(idleRun, SAVER_AFTER_MS);
+    }
+
+    void showSaver() {
+        saverOn = true;
+        clockTick();
+        saver.setVisibility(View.VISIBLE);
+        saver.setAlpha(0f);
+        saver.animate().alpha(1f).setDuration(1200).setStartDelay(0).withEndAction(new Runnable() {
+            public void run() { if (saverOn) { kenBurns.pause(); pauseFx(); } }
+        }).start();
+        svPos = -1;
+        nextSaverPic();
+        ui.removeCallbacks(saverCycle);
+        ui.postDelayed(saverCycle, 8000);
+    }
+
+    void nextSaverPic() {
+        List<int[]> pl = playlist();
+        if (pl.isEmpty()) return;
+        svPos = (svPos + 1) % pl.size();
+        int[] e = pl.get(svPos);
+        final ImageView next = svUseA ? svB : svA, old = svUseA ? svA : svB;
+        svUseA = !svUseA;
+        next.setImageBitmap(loadRapPic(e[0], e[1]));
+        next.animate().cancel();
+        old.animate().cancel();
+        next.setAlpha(0f);
+        next.animate().alpha(1f).setDuration(1400).setStartDelay(0).withEndAction(null).start();
+        ObjectAnimator z = ObjectAnimator.ofPropertyValuesHolder(next,
+                PropertyValuesHolder.ofFloat(View.SCALE_X, 1.14f, 1f),
+                PropertyValuesHolder.ofFloat(View.SCALE_Y, 1.14f, 1f));
+        z.setDuration(9000);
+        z.setInterpolator(EASE);
+        z.start();
+        old.animate().alpha(0f).setDuration(1400).setStartDelay(200).start();
+    }
+
+    void hideSaver(boolean anim) {
+        if (!saverOn) return;
+        saverOn = false;
+        ui.removeCallbacks(saverCycle);
+        kenBurns.resume();
+        resumeFx();
+        if (anim) {
+            saver.animate().alpha(0f).setDuration(450).setStartDelay(0).withEndAction(new Runnable() {
+                public void run() { if (!saverOn) saver.setVisibility(View.GONE); }
+            }).start();
+        } else saver.setVisibility(View.GONE);
     }
 
     final Runnable hideToast = new Runnable() { public void run() { toast.animate().alpha(0f).translationY(-px(20)).setDuration(300).start(); } };
@@ -1864,10 +1977,9 @@ public class MainActivity extends Activity {
     // =====================================================================
     Bitmap loadBg(int i) {
         try {
-            InputStream in = getAssets().open("bg/bg_" + APPS[i].id + ".jpg");
+            InputStream in = getAssets().open("rap/" + APP_PHOTO[i] + ".jpg");
             BitmapFactory.Options o = new BitmapFactory.Options();
             o.inPreferredConfig = Bitmap.Config.ARGB_8888;
-            if (!HIGH) { o.inScaled = true; o.inDensity = 3; o.inTargetDensity = 2; }
             Bitmap b = BitmapFactory.decodeStream(in, null, o);
             in.close();
             return b;
@@ -1941,6 +2053,7 @@ public class MainActivity extends Activity {
         super.onResume();
         hideSystemUi();
         HomeWatcherService.allowAmazonHome = false;
+        resetIdle();
         if (first) { first = false; return; }
         long away = pausedAt == 0 ? 0 : SystemClock.elapsedRealtime() - pausedAt;
         boolean woke = wokeUp;
@@ -1960,6 +2073,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
+        ui.removeCallbacks(idleRun);
+        hideSaver(false);
         pausedAt = SystemClock.elapsedRealtime();
         kenBurns.pause();
         pauseFx();

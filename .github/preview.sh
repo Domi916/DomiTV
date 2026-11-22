@@ -29,6 +29,7 @@ adb shell input keyevent 21; adb shell input keyevent 21; adb shell input keyeve
 (adb shell screenrecord --time-limit 5 --size 960x540 /sdcard/launch.mp4 &) ; sleep 0.6
 adb shell input keyevent 23
 sleep 5.5; adb pull /sdcard/launch.mp4 shots/launch.mp4
+adb shell am start -n at.domi.tvlauncher/.MainActivity >/dev/null; sleep 2
 adb shell dumpsys gfxinfo at.domi.tvlauncher > shots/gfxinfo.txt
 adb logcat -d -s AndroidRuntime:E DomiTV:* > shots/logcat.txt
 adb logcat -d | grep -iE "FATAL|Exception|DomiTV" | head -100 > shots/errors.txt
