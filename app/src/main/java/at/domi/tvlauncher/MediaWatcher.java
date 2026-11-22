@@ -142,8 +142,33 @@ public class MediaWatcher extends NotificationListenerService {
             return;
         }
         if (t.equals(ourTitle)) return;
-        Log.i(TAG, "Shuffle: fremder Song erkannt (" + t + "), nächster Song von " + rapperName);
+        // Songtext-/Audio-Modus: YouTube wechselt dann auf die Song-Version mit anderem Titel.
+        // Alles, was vom Rapper ist oder zum aktuellen Song passt, bleibt.
+        String artist = m.getString(MediaMetadata.METADATA_KEY_ARTIST);
+        String author = m.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
+        String r = norm(rapperName);
+        if (norm(t).contains(r) || (artist != null && norm(artist).contains(r))
+                || (author != null && norm(author).contains(r)) || sameSong(t, ourTitle)) {
+            Log.i(TAG, "Shuffle: gleicher Rapper/Song (" + t + "), bleibt");
+            ourTitle = t;
+            return;
+        }
+        Log.i(TAG, "Shuffle: fremder Song erkannt (" + t + " / " + artist + "), nächster Song von " + rapperName);
         next();
+    }
+
+    static String norm(String x) {
+        if (x == null) return "";
+        return x.toLowerCase()
+                .replaceAll("[\\(\\[][^\\)\\]]*[\\)\\]]", " ")
+                .replaceAll("[^a-z0-9]+", " ").trim();
+    }
+
+    /** "Ken Carson - margiela (Official Music Video)" und "margiela" sind derselbe Song. */
+    static boolean sameSong(String a, String b) {
+        String x = norm(a), y = norm(b);
+        if (x.isEmpty() || y.isEmpty()) return false;
+        return x.contains(y) || y.contains(x);
     }
 
     void next() {
