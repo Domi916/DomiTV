@@ -30,6 +30,22 @@ adb shell input keyevent 21; adb shell input keyevent 21; adb shell input keyeve
 adb shell input keyevent 23
 sleep 5.5; adb pull /sdcard/launch.mp4 shots/launch.mp4
 adb shell am start -n at.domi.tvlauncher/.MainActivity >/dev/null; sleep 2
+# Songtext-Anzeige testen (Dienst einschalten, Test-Song zeigen)
+adb shell settings put secure enabled_accessibility_services at.domi.tvlauncher/at.domi.tvlauncher.HomeWatcherService
+adb shell settings put secure accessibility_enabled 1
+sleep 4
+adb shell am broadcast -a at.domi.tvlauncher.TEST_OVERLAY --ei rapper 0 --es title "'Ken Carson - overseas (Official Music Video)'" --ei at 35000
+sleep 8; shot 20_lyrics_a
+sleep 6; shot 20_lyrics_b
+adb shell am broadcast -a at.domi.tvlauncher.TEST_OVERLAY --ei rapper 1 --es title "'bleood - friend or foe [music video]'" --ei at 50000
+sleep 8; shot 21_lyrics_bleood
+adb shell am broadcast -a at.domi.tvlauncher.TEST_OVERLAY --ei rapper 4 --es title "'Nettspend - stressed [Official Video]'" --ei at 20000
+sleep 8; shot 22_lyrics_plain
+adb shell input keyevent 82; sleep 1; shot 23_mode_audio
+adb shell input keyevent 82; sleep 1.5; shot 24_mode_video
+adb shell input keyevent 82; sleep 1
+adb shell am broadcast -a at.domi.tvlauncher.TEST_OVERLAY --es title hide
+sleep 1
 adb shell dumpsys gfxinfo at.domi.tvlauncher > shots/gfxinfo.txt
 adb logcat -d -s AndroidRuntime:E DomiTV:* > shots/logcat.txt
 adb logcat -d | grep -iE "FATAL|Exception|DomiTV" | head -100 > shots/errors.txt

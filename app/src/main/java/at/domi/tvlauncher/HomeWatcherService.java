@@ -26,6 +26,37 @@ public class HomeWatcherService extends AccessibilityService {
     static volatile boolean allowAmazonHome = false;
 
     private long lastLaunch = 0;
+
+    // ---------- Songtext-/Audio-Anzeige über YouTube ----------
+    static HomeWatcherService instance;
+    LyricsOverlay overlay;
+
+    static void overlayShow(final int rapper) {
+        final HomeWatcherService s = instance;
+        if (s == null) return;
+        s.h.post(new Runnable() { public void run() {
+            if (s.overlay == null) s.overlay = new LyricsOverlay(s);
+            s.overlay.show(rapper);
+        } });
+    }
+
+    static void overlayHide() {
+        final HomeWatcherService s = instance;
+        if (s == null) return;
+        s.h.post(new Runnable() { public void run() { if (s.overlay != null) s.overlay.hide(); } });
+    }
+
+    static void overlayTrack(final String title, final long dur) {
+        final HomeWatcherService s = instance;
+        if (s == null) return;
+        s.h.post(new Runnable() { public void run() { if (s.overlay != null) s.overlay.track(title, dur); } });
+    }
+
+    static void overlaySwitching() {
+        final HomeWatcherService s = instance;
+        if (s == null) return;
+        s.h.post(new Runnable() { public void run() { if (s.overlay != null) s.overlay.switching(); } });
+    }
     /** Zeitpunkt, an dem der Bildschirm ausging: kurz danach nie umleiten, sonst weckt das den Fernseher wieder auf. */
     private long screenOffAt = -100000;
     private final Handler h = new Handler(Looper.getMainLooper());
@@ -53,9 +84,29 @@ public class HomeWatcherService extends AccessibilityService {
         }
     };
 
+    /** Nur zum Testen im Emulator: Anzeige mit einem Song zeigen. */
+    private final BroadcastReceiver test = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context c, Intent i) {
+            int r = i.getIntExtra("rapper", 0);
+            String t = i.getStringExtra("title");
+            if (overlay == null) overlay = new LyricsOverlay(HomeWatcherService.this);
+            if ("hide".equals(t)) { overlay.hide(); return; }
+            MediaWatcher.appCtx = getApplicationContext();
+            MediaWatcher.active = true;
+            MediaWatcher.rapperIndex = r;
+            MediaWatcher.trackAt = SystemClock.elapsedRealtime() - i.getIntExtra("at", 0);
+            MediaWatcher.lastPos = -1;
+            overlay.show(r);
+            overlay.track(t, i.getLongExtra("dur", 0));
+        }
+    };
+
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
+        instance = this;
+        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) registerReceiver(test, new IntentFilter("at.domi.tvlauncher.TEST_OVERLAY"));
         IntentFilter f = new IntentFilter(Intent.ACTION_SCREEN_OFF);
         f.addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED");
         registerReceiver(power, f);
@@ -64,6 +115,9 @@ public class HomeWatcherService extends AccessibilityService {
     @Override
     public void onDestroy() {
         try { unregisterReceiver(power); } catch (Exception ignored) { }
+        try { unregisterReceiver(test); } catch (Exception ignored) { }
+        if (overlay != null) overlay.hide();
+        if (instance == this) instance = null;
         super.onDestroy();
     }
 
@@ -129,12 +183,31 @@ public class HomeWatcherService extends AccessibilityService {
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) MediaWatcher.skip(this);
             return true;
         }
+        // ☰ Menü-Taste: Anzeige wechseln (Songtext → Audio → Video)
+        if (MediaWatcher.active && k == android.view.KeyEvent.KEYCODE_MENU) {
+            if (e.getAction() == android.view.KeyEvent.ACTION_UP) {
+                if (overlay == null) overlay = new LyricsOverlay(this);
+                overlay.cycleMode();
+            }
+            return true;
+        }
+        // Zurück während des Shuffles: Musik aus, zurück zu Domi TV
+        if (MediaWatcher.active && k == android.view.KeyEvent.KEYCODE_BACK) {
+            if (e.getAction() == android.view.KeyEvent.ACTION_UP) {
+                MediaWatcher.pauseYouTube();
+                MediaWatcher.stop();
+                Intent i = new Intent(this, MainActivity.class);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                try { startActivity(i); } catch (Exception ignored) { }
+            }
+            return true;
+        }
         // ⏪ (Zurückspulen) während des Shuffles: Shuffle aus, du kannst in YouTube frei wählen
         if (MediaWatcher.active && (k == android.view.KeyEvent.KEYCODE_MEDIA_REWIND
                 || k == android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS)) {
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) {
                 MediaWatcher.log(this, "Shuffle aus per ⏪");
-                MediaWatcher.active = false;
+                MediaWatcher.stop();
                 android.widget.Toast.makeText(this, "Shuffle aus – du kannst jetzt frei wählen", android.widget.Toast.LENGTH_SHORT).show();
             }
             return true;

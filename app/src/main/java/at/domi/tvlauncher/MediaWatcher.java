@@ -3,6 +3,7 @@ package at.domi.tvlauncher;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioManager;
 import android.media.MediaMetadata;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
@@ -21,15 +22,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Rapper-Shuffle: YouTube auf dem Fire TV ignoriert Playlists aus Links und spielt danach
- * "ähnliche" Videos (andere Rapper). Dieser Dienst sieht über die Mediensteuerung, wann in
- * YouTube ein neuer Song beginnt, den nicht wir gestartet haben (Autoplay oder Skip),
- * und startet stattdessen sofort den nächsten Song des Rappers aus der gemischten Liste.
+ * Rapper-Shuffle über YouTube.
+ * YouTube auf dem Fire TV nimmt nur einzelne Videos an und spielt danach "ähnliche" Videos.
+ * Dieser Dienst beobachtet über die Mediensteuerung, was in YouTube läuft:
+ *  - kurz vor Songende startet er selbst den nächsten Song des Rappers (YouTube kommt gar nicht zum Autoplay)
+ *  - startet trotzdem ein fremder Song, wird er stumm geschaltet und sofort ersetzt
+ *  - Songtext-/Audio-Anzeige von Domi TV liegt als Overlay darüber (siehe LyricsOverlay)
  */
 public class MediaWatcher extends NotificationListenerService {
     static final String TAG = "DomiTV";
 
-    // ---------- Warteschlange (wird von MainActivity gesetzt) ----------
+    // ---------- Warteschlange ----------
     static final List<String> queue = new ArrayList<>();
     static int pos = 0;
     static volatile boolean active = false;
@@ -37,22 +40,35 @@ public class MediaWatcher extends NotificationListenerService {
     static long launchedAt = 0;
     static String ourTitle = null;
     static String rapperName = "";
+    static int rapperIndex = 0;
+    static MediaWatcher instance;
 
-    static void start(Context c, String pkg, String name, String[] ids) {
+    static void start(Context c, String pkg, int index) {
+        Rapper r = Rapper.LIST[index];
         queue.clear();
-        Collections.addAll(queue, ids);
+        Collections.addAll(queue, r.videos);
         Collections.shuffle(queue);
         pos = 0;
         ytPkg = pkg;
-        rapperName = name;
+        rapperName = r.name;
+        rapperIndex = index;
         active = true;
+        appCtx = c.getApplicationContext();
+        log(c, "Shuffle gestartet: " + r.name + " (" + queue.size() + " Songs)");
+        HomeWatcherService.overlayShow(index);
         play(c);
     }
 
-    static void stop() { if (active) log(null, "Shuffle beendet (zurück in Domi TV)"); active = false; }
+    static void stop() {
+        if (active) log(null, "Shuffle beendet");
+        active = false;
+        unmute();
+        HomeWatcherService.overlayHide();
+    }
 
     static Context appCtx;
-    /** Eigenes Protokoll in einer Datei, damit nichts verloren geht: adb shell run-as at.domi.tvlauncher cat files/shuffle.log */
+
+    /** Eigenes Protokoll: adb shell run-as at.domi.tvlauncher cat files/shuffle.log */
     static synchronized void log(Context c, String msg) {
         Log.i(TAG, "Shuffle: " + msg);
         if (c != null) appCtx = c.getApplicationContext();
@@ -66,10 +82,11 @@ public class MediaWatcher extends NotificationListenerService {
         } catch (Exception ignored) { }
     }
 
-    /** ⏩-Taste während des Shuffles: nächster Song des Rappers. */
+    /** ⏩ während des Shuffles: nächster Song des Rappers. */
     static void skip(Context c) {
         if (!active) return;
         pos++;
+        HomeWatcherService.overlaySwitching();
         play(c);
     }
 
@@ -79,6 +96,8 @@ public class MediaWatcher extends NotificationListenerService {
         String id = queue.get(pos);
         launchedAt = SystemClock.elapsedRealtime();
         ourTitle = null;
+        curDur = 0;
+        lastPos = -1;
         Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=" + id));
         v.setPackage(ytPkg);
         v.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -92,7 +111,59 @@ public class MediaWatcher extends NotificationListenerService {
         }
     }
 
-    // ---------- Mediensitzungen von YouTube beobachten ----------
+    // ---------- Ton kurz stumm, solange ein fremder Song ersetzt wird ----------
+    static boolean muted = false;
+    static final Handler mh = new Handler(Looper.getMainLooper());
+    static final Runnable unmuteLater = new Runnable() { public void run() { unmute(); } };
+
+    static void mute() {
+        if (appCtx == null || muted) return;
+        try {
+            AudioManager am = (AudioManager) appCtx.getSystemService(AUDIO_SERVICE);
+            am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, 0);
+            muted = true;
+            mh.removeCallbacks(unmuteLater);
+            mh.postDelayed(unmuteLater, 9000); // Sicherheit: nie stumm hängen bleiben
+        } catch (Exception ignored) { }
+    }
+
+    static void unmute() {
+        mh.removeCallbacks(unmuteLater);
+        if (appCtx == null || !muted) return;
+        try {
+            AudioManager am = (AudioManager) appCtx.getSystemService(AUDIO_SERVICE);
+            am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, 0);
+        } catch (Exception ignored) { }
+        muted = false;
+    }
+
+    // ---------- Position im aktuellen Song ----------
+    static long curDur = 0, lastPos = -1, lastPosAt = 0, trackAt = 0;
+    static boolean playing = true;
+    static float speed = 1f;
+    static MediaController current;
+
+    static void trackStarted(MediaMetadata m) {
+        curDur = m == null ? 0 : m.getLong(MediaMetadata.METADATA_KEY_DURATION);
+        lastPos = -1;
+        trackAt = SystemClock.elapsedRealtime();
+    }
+
+    /** Aktuelle Position im Song in ms (aus YouTube, sonst geschätzt). */
+    static long position() {
+        long now = SystemClock.elapsedRealtime();
+        if (lastPos >= 0) return lastPos + (playing ? (long) ((now - lastPosAt) * speed) : 0);
+        return trackAt > 0 ? now - trackAt : 0;
+    }
+
+    static boolean positionKnown() { return lastPos >= 0; }
+
+    /** Zurück-Taste: YouTube pausieren. */
+    static void pauseYouTube() {
+        try { if (current != null) current.getTransportControls().pause(); } catch (Exception ignored) { }
+    }
+
+    // ---------- Mediensitzungen beobachten ----------
     final Handler h = new Handler(Looper.getMainLooper());
     final Map<MediaController, MediaController.Callback> watched = new HashMap<>();
     MediaSessionManager msm;
@@ -102,9 +173,27 @@ public class MediaWatcher extends NotificationListenerService {
         public void onActiveSessionsChanged(List<MediaController> list) { attach(list); }
     };
 
+    /** Kurz vor Songende selbst weiterschalten, damit YouTube kein fremdes Video startet. */
+    final Runnable endCheck = new Runnable() {
+        @Override
+        public void run() {
+            h.postDelayed(this, 400);
+            if (!active || curDur <= 0 || !positionKnown() || !playing) return;
+            if (SystemClock.elapsedRealtime() - launchedAt < 8000) return;
+            if (position() >= curDur - 1500) {
+                log(MediaWatcher.this, "Songende erreicht, nächster Song (pos=" + position() + " dur=" + curDur + ")");
+                pos++;
+                HomeWatcherService.overlaySwitching();
+                play(MediaWatcher.this);
+            }
+        }
+    };
+
     @Override
     public void onListenerConnected() {
         super.onListenerConnected();
+        instance = this;
+        appCtx = getApplicationContext();
         try {
             msm = (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
             ComponentName me = new ComponentName(this, MediaWatcher.class);
@@ -114,11 +203,14 @@ public class MediaWatcher extends NotificationListenerService {
         } catch (Exception e) {
             log(this, "MediaWatcher: keine Berechtigung " + e);
         }
+        h.removeCallbacks(endCheck);
+        h.post(endCheck);
     }
 
     @Override
     public void onListenerDisconnected() {
         try { if (msm != null) msm.removeOnActiveSessionsChangedListener(sessions); } catch (Exception ignored) { }
+        h.removeCallbacks(endCheck);
         super.onListenerDisconnected();
     }
 
@@ -132,15 +224,16 @@ public class MediaWatcher extends NotificationListenerService {
             if (p == null || !p.contains("youtube")) continue;
             MediaController.Callback cb = new MediaController.Callback() {
                 @Override
-                public void onMetadataChanged(MediaMetadata m) { onTrack(mc, m); }
+                public void onMetadataChanged(MediaMetadata m) { current = mc; onTrack(m); }
 
                 @Override
                 public void onPlaybackStateChanged(PlaybackState s) {
                     if (s == null) return;
-                    if (s.getPosition() >= 0) {
+                    current = mc;
+                    playing = s.getState() == PlaybackState.STATE_PLAYING || s.getState() == PlaybackState.STATE_BUFFERING;
+                    if (s.getPosition() > 0) {
                         lastPos = s.getPosition();
                         lastPosAt = s.getLastPositionUpdateTime() > 0 ? s.getLastPositionUpdateTime() : SystemClock.elapsedRealtime();
-                        playing = s.getState() == PlaybackState.STATE_PLAYING;
                         speed = s.getPlaybackSpeed() > 0 ? s.getPlaybackSpeed() : 1f;
                     }
                 }
@@ -150,54 +243,49 @@ public class MediaWatcher extends NotificationListenerService {
             };
             mc.registerCallback(cb, h);
             watched.put(mc, cb);
+            current = mc;
             log(this, "beobachte " + p);
-            onTrack(mc, mc.getMetadata());
+            onTrack(mc.getMetadata());
         }
     }
 
-    // Wo steht der aktuelle Song? Damit unterscheiden wir "Song zu Ende" (Autoplay) von "du hast selbst etwas gewählt".
-    static long curDur = 0, lastPos = -1, lastPosAt = 0;
-    static boolean playing = false;
-    static float speed = 1f;
-
-    static void trackStarted(MediaMetadata m) {
-        curDur = m == null ? 0 : m.getLong(MediaMetadata.METADATA_KEY_DURATION);
-        lastPos = -1;
-    }
-
-    /** true = der vorige Song war (fast) zu Ende, also hat YouTube von selbst weitergemacht. */
-    static boolean endedNaturally() {
-        if (curDur <= 0 || lastPos < 0) return true; // unbekannt: wie bisher behandeln
-        long pos = lastPos + (playing ? (long) ((SystemClock.elapsedRealtime() - lastPosAt) * speed) : 0);
-        return pos >= curDur - 12000;
-    }
-
-    void onTrack(MediaController mc, MediaMetadata m) {
+    void onTrack(MediaMetadata m) {
         if (!active || m == null) return;
         String t = m.getString(MediaMetadata.METADATA_KEY_TITLE);
         if (t == null || t.isEmpty()) return;
+        String artist = m.getString(MediaMetadata.METADATA_KEY_ARTIST);
         long since = SystemClock.elapsedRealtime() - launchedAt;
         if (since < 7000) {
-            // Das ist der Song, den wir gerade gestartet haben
-            if (!t.equals(ourTitle)) { trackStarted(m); log(this, "unser Song: " + t + " / " + m.getString(MediaMetadata.METADATA_KEY_ARTIST) + " dur=" + curDur); }
+            // der Song, den wir gerade gestartet haben
+            if (!t.equals(ourTitle)) {
+                trackStarted(m);
+                log(this, "unser Song: " + t + " / " + artist + " dur=" + curDur);
+                unmute();
+                HomeWatcherService.overlayTrack(t, curDur);
+            }
             ourTitle = t;
             return;
         }
         if (t.equals(ourTitle)) return;
-        // Songtext-/Audio-Modus: YouTube wechselt dann auf die Song-Version mit anderem Titel.
-        // Alles, was vom Rapper ist oder zum aktuellen Song passt, bleibt.
-        String artist = m.getString(MediaMetadata.METADATA_KEY_ARTIST);
+        // Songtext-/Audio-Modus von YouTube meldet die Song-Version mit anderem Titel: gleicher Song
         String author = m.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
         String r = norm(rapperName);
         if (norm(t).contains(r) || (artist != null && norm(artist).contains(r))
                 || (author != null && norm(author).contains(r)) || sameSong(t, ourTitle)) {
-            log(this, "bleibt: " + t + " / " + artist + " / " + author);
-            if (!sameSong(t, ourTitle)) trackStarted(m);
+            log(this, "bleibt: " + t + " / " + artist);
+            if (!sameSong(t, ourTitle)) {
+                trackStarted(m);
+                HomeWatcherService.overlayTrack(t, curDur);
+            }
             ourTitle = t;
             return;
         }
-        log(this, "fremd: " + t + " / " + artist + " pos=" + lastPos + " dur=" + curDur + " -> nächster Song");
-        next();
+        log(this, "fremd: " + t + " / " + artist + " -> stumm + nächster Song");
+        mute();
+        HomeWatcherService.overlaySwitching();
+        if (since < 3000) return;
+        pos++;
+        play(this);
     }
 
     static String norm(String x) {
@@ -212,15 +300,6 @@ public class MediaWatcher extends NotificationListenerService {
         String x = norm(a), y = norm(b);
         if (x.isEmpty() || y.isEmpty()) return false;
         if (x.equals(y)) return true;
-        // kurze Titel wie "pain" nicht in fremden Titeln wiederfinden
         return (y.length() >= 6 && x.contains(y)) || (x.length() >= 6 && y.contains(x));
-    }
-
-    void next() {
-        if (!active) return;
-        long since = SystemClock.elapsedRealtime() - launchedAt;
-        if (since < 3000) return;
-        pos++;
-        play(this);
     }
 }

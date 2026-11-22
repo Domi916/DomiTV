@@ -236,7 +236,9 @@ public class MainActivity extends Activity {
         buildCards();
         applyAll(false);
         loadOtherBackgrounds();
-        root.post(new Runnable() { public void run() { playIntro(true); } });
+        long up = SystemClock.elapsedRealtime();
+        if (up < 90000) intro.setAlpha(0f);
+        root.postDelayed(new Runnable() { public void run() { playIntro(true); } }, up < 90000 ? 2500 : 0);
     }
 
     // =====================================================================
@@ -1431,7 +1433,8 @@ public class MainActivity extends Activity {
             date.setText("");
             time.setText("");
             if (svTime != null) { svTime.setText(""); svDate.setText(""); }
-            setWords(gr);
+            pendingWords = gr;
+            if (!introRunning()) setWords(gr);
             iSub.setText("");
             ui.removeCallbacks(clockRun);
             ui.postDelayed(clockRun, 1000);
@@ -1447,7 +1450,8 @@ public class MainActivity extends Activity {
         date.setText(d);
         time.setText(t);
         if (svTime != null) { svTime.setText(t); svDate.setText(d); }
-        setWords(gr);
+        pendingWords = gr;
+        if (!introRunning()) setWords(gr);
         iSub.setText(t + " · " + d);
         ui.removeCallbacks(clockRun);
         ui.postDelayed(clockRun, 10000);
@@ -1462,9 +1466,12 @@ public class MainActivity extends Activity {
     float flyX, flyY, flyK;
     boolean flyReady = false, greetShown = false;
 
+    String pendingWords = null;
+
     void playIntro(boolean withSound) {
         if (introAnim != null) introAnim.cancel();
         clockTick();
+        if (pendingWords != null) setWords(pendingWords);
         if (withSound) playSound();
         intro.animate().cancel();
         intro.setVisibility(View.VISIBLE);
@@ -1875,7 +1882,7 @@ public class MainActivity extends Activity {
         AppDef yt = AppDef.byId("youtube");
         if (yt == null || yt.pkg == null) { showToast("YouTube nicht gefunden"); return false; }
         // Nur Songs des Rappers, gemischt. MediaWatcher springt bei fremden Videos sofort zum nächsten.
-        MediaWatcher.start(this, yt.pkg, r.name, r.videos);
+        MediaWatcher.start(this, yt.pkg, Math.max(0, java.util.Arrays.asList(Rapper.LIST).indexOf(r)));
         overridePendingTransition(0, 0);
         return true;
     }
