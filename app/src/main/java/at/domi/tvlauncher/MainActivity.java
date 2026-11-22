@@ -606,7 +606,7 @@ public class MainActivity extends Activity {
         words.clear();
         String[] parts = t.split(" ");
         for (int i = 0; i < parts.length; i++) {
-            TextView w = text(parts[i], 96, "ExtraBold", Color.WHITE, -0.03f);
+            TextView w = text(parts[i], 118, "Black", Color.WHITE, -0.035f);
             LinearLayout.LayoutParams l = new LinearLayout.LayoutParams(-2, -2);
             if (i > 0) l.leftMargin = px(24);
             iWords.addView(w, l);
@@ -1630,7 +1630,7 @@ public class MainActivity extends Activity {
         // Schatten links, damit der Gruß gut lesbar ist; beim Reinzoomen geht er weg
         iShade.setAlpha(kf(s, new float[]{0f, 2.3f, 3.0f}, new float[]{1f, 1f, 0f}));
         // 2) roter Schein in der Farbe des Bildes, pulsiert mit dem Sound
-        iGlow.setAlpha(kf(s, new float[]{0.6f, 1.3f, 2.4f, 3.0f}, new float[]{0, 0.45f, 0.5f, 0}) + 0.25f * pulse(s, 1.1f, 0.5f));
+        iGlow.setAlpha(0f); // bunter Schein passt nicht zum Foto
         float gs = kf(s, new float[]{0.6f, 2.4f, 3.0f}, new float[]{0.7f, 1.05f, 2.2f});
         iGlow.setScaleX(gs); iGlow.setScaleY(gs);
         iGlow.setRotation(kf(s, new float[]{0.6f, 3.0f}, new float[]{-30, 40}));
