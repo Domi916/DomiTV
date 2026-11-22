@@ -406,7 +406,12 @@ public class MainActivity extends Activity {
         iSub.setGravity(Gravity.CENTER);
         intro.addView(iSub, atD(0, 598, 1920, 40));
         iFlash = new View(this);
-        iFlash.setBackgroundColor(Color.WHITE);
+        GradientDrawable fl = new GradientDrawable();
+        fl.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+        fl.setColors(new int[]{Gfx.w(0.9f), Gfx.w(0.35f), Gfx.w(0)});
+        fl.setGradientCenter(0.5f, 0.5f);
+        fl.setGradientRadius(px(820));
+        iFlash.setBackground(fl);
         iFlash.setAlpha(0f);
         intro.addView(iFlash, new FrameLayout.LayoutParams(-1, -1));
     }
@@ -913,7 +918,7 @@ public class MainActivity extends Activity {
         iGlow.setRotation(kf(s, new float[]{1.0f, 4.1f}, new float[]{-40, 70}));
         // 4) Lichtlinie
         iSweep.setAlpha(kf(s, new float[]{1.35f, 1.5f, 1.95f, 2.6f}, new float[]{0, 1, 1, 0}));
-        iFlash.setAlpha(0.16f * pulse(s, 1.45f, 0.22f) + 0.06f * pulse(s, 4.25f, 0.3f));
+        iFlash.setAlpha(0.42f * pulse(s, 1.45f, 0.28f) + 0.12f * pulse(s, 4.25f, 0.35f));
         iSweep.setScaleX(kf(s, new float[]{1.35f, 2.0f}, new float[]{0, 1}));
         // 5) Gruß: Wort für Wort
         for (int i = 0; i < words.size(); i++) {
