@@ -1834,15 +1834,20 @@ public class MainActivity extends Activity {
         AppDef yt = AppDef.byId("youtube"), ym = AppDef.byId("ytmusic");
         JblBox.connect(this);
         if (yt != null && yt.pkg != null && r.videos.length > 0) {
-            String id = r.videos[new Random().nextInt(r.videos.length)];
-            // Nur Songs des Künstlers: seine Uploads-Playlist, Start bei einem zufälligen Song
+            // Alle Songs des Rappers zufällig mischen und daraus eine YouTube-Playlist machen
+            List<String> ids = new ArrayList<>(java.util.Arrays.asList(r.videos));
+            java.util.Collections.shuffle(ids);
+            String id = ids.get(0);
+            String shuffled = ShufflePlaylist.create(ids);
             String uploads = "UU" + r.channel.substring(2);
             String[] urls = {
+                    shuffled != null ? "https://www.youtube.com/watch?v=" + id + "&list=" + shuffled : null,
                     "https://www.youtube.com/watch?v=" + id + "&list=" + uploads,
                     "https://www.youtube.com/playlist?list=" + uploads,
                     "https://www.youtube.com/watch?v=" + id,
             };
             for (String u : urls) {
+                if (u == null) continue;
                 Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse(u));
                 v.setPackage(yt.pkg);
                 v.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -1852,7 +1857,7 @@ public class MainActivity extends Activity {
                 }
             }
             // Manche YouTube-Versionen melden ihre Links nicht an: trotzdem versuchen
-            Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse(urls[0]));
+            Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse(urls[0] != null ? urls[0] : urls[1]));
             v.setPackage(yt.pkg);
             v.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             if (start(v)) { overridePendingTransition(0, 0); return true; }
