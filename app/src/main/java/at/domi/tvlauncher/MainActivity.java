@@ -134,7 +134,8 @@ public class MainActivity extends Activity {
     final RapCard[] rapCards = new RapCard[Rapper.LIST.length];
     final Bitmap[] rapGlows = new Bitmap[Rapper.LIST.length];
     int rSel = 0;
-    ImageView rapGlow;
+    ImageView rapGlow, rapPicA, rapPicB;
+    boolean rapUseA = true;
     TextView rapName;
     ValueAnimator rapPulse;
     ObjectAnimator rapDrift;
@@ -292,6 +293,15 @@ public class MainActivity extends Activity {
         View rapDark = new View(this);
         rapDark.setBackgroundColor(0xdc050507);
         rapStage.addView(rapDark, new FrameLayout.LayoutParams(-1, -1));
+        rapPicA = new ImageView(this);
+        rapPicB = new ImageView(this);
+        for (ImageView pv : new ImageView[]{rapPicA, rapPicB}) {
+            pv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            pv.setAlpha(0f);
+            pv.setPivotX(px(1350));
+            pv.setPivotY(px(380));
+            rapStage.addView(pv, new FrameLayout.LayoutParams(-1, -1));
+        }
         rapGlow = new ImageView(this);
         rapGlow.setScaleType(ImageView.ScaleType.FIT_XY);
         rapStage.addView(rapGlow, atD(420, -300, 1900, 1150));
@@ -303,6 +313,7 @@ public class MainActivity extends Activity {
         rapName.setIncludeFontPadding(false);
         rapName.setSingleLine(true);
         rapName.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        rapName.setVisibility(View.GONE);
         rapStage.addView(rapName, atD(60, 120, 4200, 420));
         rapPulse = ValueAnimator.ofFloat(0f, 1f);
         rapPulse.setDuration(400);            // 150 BPM, wie ein Rage-Beat
@@ -312,9 +323,14 @@ public class MainActivity extends Activity {
             @Override
             public void onAnimationUpdate(ValueAnimator va) {
                 float e = (float) Math.exp(-3.2f * (Float) va.getAnimatedValue());
-                rapGlow.setAlpha(0.42f + 0.55f * e);
+                rapGlow.setAlpha(0.12f + 0.28f * e);
                 float sc = 1f + 0.06f * e;
                 rapGlow.setScaleX(sc); rapGlow.setScaleY(sc);
+                ImageView cur = rapUseA ? rapPicA : rapPicB;
+                if (cur.getAnimation() == null) {
+                    float ps = rapBase + 0.012f * e;
+                    cur.setScaleX(ps); cur.setScaleY(ps);
+                }
             }
         });
         rapDrift = ObjectAnimator.ofFloat(rapName, View.TRANSLATION_X, 0f, -px(900));
@@ -1005,24 +1021,47 @@ public class MainActivity extends Activity {
     }
 
     int shownRapper = -1;
+    float rapBase = 1f;
+    ValueAnimator rapZoom;
+
+    Bitmap loadRapPic(int r) {
+        try {
+            InputStream in = getAssets().open("rap/" + r + ".jpg");
+            Bitmap b = BitmapFactory.decodeStream(in);
+            in.close();
+            return b;
+        } catch (Exception e) { return null; }
+    }
 
     void setRapper(final int r, boolean anim) {
         if (r == shownRapper) return;
         shownRapper = r;
         rapGlow.setImageBitmap(rapGlows[r]);
+        final ImageView next = rapUseA ? rapPicB : rapPicA;
+        final ImageView old = rapUseA ? rapPicA : rapPicB;
+        rapUseA = !rapUseA;
+        next.setImageBitmap(loadRapPic(r));
+        next.bringToFront();
+        rapGlow.bringToFront();
+        next.animate().cancel();
+        old.animate().cancel();
+        // langsamer Zoom auf das Bild (Rapper kommt näher)
+        if (rapZoom != null) rapZoom.cancel();
+        rapZoom = ValueAnimator.ofFloat(1.1f, 1f);
+        rapZoom.setDuration(anim ? 6000 : 0);
+        rapZoom.setInterpolator(EASE);
+        rapZoom.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator va) { rapBase = (Float) va.getAnimatedValue(); }
+        });
+        rapZoom.start();
         if (anim) {
-            rapName.animate().alpha(0f).setDuration(140).setStartDelay(0).withEndAction(new Runnable() {
-                public void run() {
-                    rapName.setText(RAP[r].name.toUpperCase(Locale.ROOT));
-                    rapName.setTextColor(Gfx.a(RAP[r].c1, 0.16f));
-                    rapName.setTranslationY(px(30));
-                    rapName.animate().alpha(1f).translationY(0).setDuration(500).setInterpolator(EASE).withEndAction(null).start();
-                }
-            }).start();
+            next.setAlpha(0f);
+            next.animate().alpha(1f).setDuration(550).setStartDelay(0).setInterpolator(SOFT).withEndAction(null).start();
+            old.animate().alpha(0f).setDuration(450).setStartDelay(150).withEndAction(null).start();
         } else {
-            rapName.setText(RAP[r].name.toUpperCase(Locale.ROOT));
-            rapName.setTextColor(Gfx.a(RAP[r].c1, 0.16f));
-            rapName.setAlpha(1f);
+            next.setAlpha(1f);
+            old.setAlpha(0f);
         }
     }
 
