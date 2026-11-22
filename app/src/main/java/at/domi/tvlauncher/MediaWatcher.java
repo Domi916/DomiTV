@@ -39,6 +39,9 @@ public class MediaWatcher extends NotificationListenerService {
     static String ytPkg;
     static long launchedAt = 0;
     static String ourTitle = null;
+    /** Nach dem Starten eines Songs: der erste neue Titel, den YouTube meldet, ist unserer (egal wie lange das Laden dauert). */
+    static boolean awaitingOurs = false;
+    static String prevTitle = null;
     static String rapperName = "";
     static String[] members = new String[0];
     static int rapperIndex = 0;
@@ -61,6 +64,7 @@ public class MediaWatcher extends NotificationListenerService {
         active = true;
         foreignInRow = 0;
         appCtx = c.getApplicationContext();
+        unmuteHard(c);
         log(c, "Shuffle gestartet: " + r.name + " (" + queue.size() + " Songs)");
         HomeWatcherService.overlayShow(index);
         play(c);
@@ -102,7 +106,9 @@ public class MediaWatcher extends NotificationListenerService {
         if (pos >= queue.size()) { Collections.shuffle(queue); pos = 0; }
         String id = queue.get(pos);
         launchedAt = SystemClock.elapsedRealtime();
+        prevTitle = ourTitle;
         ourTitle = null;
+        awaitingOurs = true;
         curDur = 0;
         lastPos = -1;
         Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=" + id));
@@ -132,6 +138,15 @@ public class MediaWatcher extends NotificationListenerService {
             mh.removeCallbacks(unmuteLater);
             mh.postDelayed(unmuteLater, 9000); // Sicherheit: nie stumm hängen bleiben
         } catch (Exception ignored) { }
+    }
+
+    /** Falls ein früherer Lauf stumm hängen geblieben ist: Ton sicher wieder an. */
+    static void unmuteHard(Context c) {
+        try {
+            AudioManager am = (AudioManager) c.getSystemService(AUDIO_SERVICE);
+            if (am.isStreamMute(AudioManager.STREAM_MUSIC)) am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, 0);
+        } catch (Exception ignored) { }
+        muted = false;
     }
 
     static void unmute() {
@@ -289,7 +304,9 @@ public class MediaWatcher extends NotificationListenerService {
         if (t == null || t.isEmpty()) return;
         String artist = m.getString(MediaMetadata.METADATA_KEY_ARTIST);
         long since = SystemClock.elapsedRealtime() - launchedAt;
-        if (since < 7000) {
+        boolean stale = prevTitle != null && t.equals(prevTitle) && since < 15000;
+        if (!stale && ((awaitingOurs && since < 60000) || since < 7000)) {
+            awaitingOurs = false;
             // der Song, den wir gerade gestartet haben
             if (!t.equals(ourTitle)) {
                 trackStarted(m);
