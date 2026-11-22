@@ -55,6 +55,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Eigener Player für die Rapper-Songs -->
+        <activity
+            android:name=".PlayerActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
         <!-- Erkennt, wenn die Amazon-Startseite erscheint, und öffnet stattdessen Domi TV -->
         <service
             android:name=".HomeWatcherService"

@@ -614,7 +614,7 @@ public class MainActivity extends Activity {
         nl.leftMargin = px(22);
         nl.bottomMargin = px(48);
         f.addView(nm, nl);
-        TextView sub = text("Shuffle auf YouTube", 16, "Medium", Gfx.w(0.72f), 0);
+        TextView sub = text("Shuffle · nur seine Songs", 16, "Medium", Gfx.w(0.72f), 0);
         FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2);
         sl.gravity = Gravity.BOTTOM | Gravity.START;
         sl.leftMargin = px(22);
@@ -1871,44 +1871,19 @@ public class MainActivity extends Activity {
 
     /** Startet auf YouTube die Songs des Rappers: zufälliger Einstieg in seine eigene Playlist. */
     boolean playRapper(Rapper r) {
-        AppDef yt = AppDef.byId("youtube"), ym = AppDef.byId("ytmusic");
         JblBox.connect(this);
-        if (yt != null && yt.pkg != null && r.videos.length > 0) {
-            // Alle Songs des Rappers zufällig mischen und daraus eine YouTube-Playlist machen
-            List<String> ids = new ArrayList<>(java.util.Arrays.asList(r.videos));
-            java.util.Collections.shuffle(ids);
-            String id = ids.get(0);
-            String shuffled = ShufflePlaylist.create(ids);
-            String uploads = "UU" + r.channel.substring(2);
-            String[] urls = {
-                    shuffled != null ? "https://www.youtube.com/watch?v=" + id + "&list=" + shuffled : null,
-                    "https://www.youtube.com/watch?v=" + id + "&list=" + uploads,
-                    "https://www.youtube.com/playlist?list=" + uploads,
-                    "https://www.youtube.com/watch?v=" + id,
-            };
-            for (String u : urls) {
-                if (u == null) continue;
-                Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse(u));
-                v.setPackage(yt.pkg);
-                v.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                if (!getPackageManager().queryIntentActivities(v, 0).isEmpty() && start(v)) {
-                    overridePendingTransition(0, 0);
-                    return true;
-                }
-            }
-            // Manche YouTube-Versionen melden ihre Links nicht an: trotzdem versuchen
-            Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse(urls[0] != null ? urls[0] : urls[1]));
-            v.setPackage(yt.pkg);
-            v.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            if (start(v)) { overridePendingTransition(0, 0); return true; }
+        int idx = java.util.Arrays.asList(Rapper.LIST).indexOf(r);
+        Intent i = new Intent(this, PlayerActivity.class);
+        i.putExtra("rapper", Math.max(0, idx));
+        try {
+            startActivity(i);
+            overridePendingTransition(0, 0);
+            return true;
+        } catch (Exception e) {
+            Log.e(HomeWatcherService.TAG, "Player", e);
+            showToast("Player konnte nicht starten");
+            return false;
         }
-        if (ym != null && ym.pkg != null) {
-            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=" + Uri.encode(r.name)));
-            i.setPackage(ym.pkg);
-            if (start(i)) { overridePendingTransition(0, 0); return true; }
-        }
-        showToast("YouTube nicht gefunden");
-        return false;
     }
 
     void launchFx(View src, int t1, int t2, String name, final Callable<Boolean> go) {

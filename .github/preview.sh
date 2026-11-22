@@ -30,6 +30,11 @@ adb shell input keyevent 21; adb shell input keyevent 21; adb shell input keyeve
 adb shell input keyevent 23
 sleep 5.5; adb pull /sdcard/launch.mp4 shots/launch.mp4
 adb shell am start -n at.domi.tvlauncher/.MainActivity >/dev/null; sleep 2
+# Eigener Player: Ken Carson
+adb shell am start -n at.domi.tvlauncher/.PlayerActivity --ei rapper 0; sleep 25; shot 10_player
+adb shell input keyevent 22; sleep 15; shot 11_player_next
+adb shell input keyevent 20; sleep 3; shot 12_player_audio
+adb shell input keyevent 4; sleep 2
 adb shell dumpsys gfxinfo at.domi.tvlauncher > shots/gfxinfo.txt
 adb logcat -d -s AndroidRuntime:E DomiTV:* > shots/logcat.txt
 adb logcat -d | grep -iE "FATAL|Exception|DomiTV" | head -100 > shots/errors.txt
