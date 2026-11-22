@@ -323,7 +323,7 @@ public class MainActivity extends Activity {
             @Override
             public void onAnimationUpdate(ValueAnimator va) {
                 float e = (float) Math.exp(-3.2f * (Float) va.getAnimatedValue());
-                boolean hasPic = shownRapper >= 0 && rapPicCount(shownRapper) > 0;
+                boolean hasPic = !playlist().isEmpty();
                 rapGlow.setAlpha(hasPic ? 0.12f + 0.28f * e : 0.42f + 0.55f * e);
                 float sc = 1f + 0.06f * e;
                 rapGlow.setScaleX(sc); rapGlow.setScaleY(sc);
@@ -1004,6 +1004,10 @@ public class MainActivity extends Activity {
                     public void run() { if (!"cont".equals(shownMode) && !"rap".equals(shownMode)) cont.setVisibility(View.INVISIBLE); }
                 }).start();
         if (isRap) {
+            rapPlayPos = -1;
+            nextRapPic(anim, 550);
+            ui.removeCallbacks(rapCycle);
+            ui.postDelayed(rapCycle, 7000);
             rapStage.setVisibility(View.VISIBLE);
             rapStage.animate().alpha(1f).setDuration(anim ? 600 : 0).setStartDelay(0).withEndAction(null).start();
             if (!rapPulse.isStarted()) rapPulse.start(); else rapPulse.resume();
@@ -1046,15 +1050,29 @@ public class MainActivity extends Activity {
         return n;
     }
 
-    /** Wechselt alle 7 Sekunden zum nächsten Bild des Rappers. */
+    /** Bilderreihe: erst alle Ken-Carson-Fotos, dann Bleood – alle 7 Sekunden weiter. */
+    final List<int[]> rapPlaylist = new ArrayList<>();
+    int rapPlayPos = -1;
+
+    List<int[]> playlist() {
+        if (rapPlaylist.isEmpty())
+            for (int r = 0; r < RAP.length; r++)
+                for (int k = 0; k < rapPicCount(r); k++) rapPlaylist.add(new int[]{r, k});
+        return rapPlaylist;
+    }
+
+    void nextRapPic(boolean anim, long fadeMs) {
+        List<int[]> pl = playlist();
+        if (pl.isEmpty()) { showRapPic(null, anim, fadeMs); return; }
+        rapPlayPos = (rapPlayPos + 1) % pl.size();
+        int[] e = pl.get(rapPlayPos);
+        showRapPic(loadRapPic(e[0], e[1]), anim, fadeMs);
+    }
+
     final Runnable rapCycle = new Runnable() {
         public void run() {
-            if (!"rap".equals(shownMode) || shownRapper < 0) return;
-            int n = rapPicCount(shownRapper);
-            if (n > 1) {
-                rapPicIdx = (rapPicIdx + 1) % n;
-                showRapPic(loadRapPic(shownRapper, rapPicIdx), true, 900);
-            }
+            if (!"rap".equals(shownMode)) return;
+            nextRapPic(true, 900);
             ui.postDelayed(this, 7000);
         }
     };
@@ -1072,11 +1090,6 @@ public class MainActivity extends Activity {
         if (r == shownRapper) return;
         shownRapper = r;
         rapGlow.setImageBitmap(rapGlows[r]);
-        rapPicIdx = 0;
-        Bitmap pic = rapPicCount(r) > 0 ? loadRapPic(r, 0) : null;
-        showRapPic(pic, anim, 550);
-        ui.removeCallbacks(rapCycle);
-        ui.postDelayed(rapCycle, 7000);
     }
 
     void showRapPic(Bitmap pic, boolean anim, long fadeMs) {
