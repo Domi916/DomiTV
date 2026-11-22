@@ -200,6 +200,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        fixTimeZone();
         loadSound();
         registerReceiver(screenOn, new IntentFilter(Intent.ACTION_SCREEN_ON));
         prefs = getSharedPreferences("domitv", MODE_PRIVATE);
@@ -610,7 +611,7 @@ public class MainActivity extends Activity {
         nl.leftMargin = px(22);
         nl.bottomMargin = px(48);
         f.addView(nm, nl);
-        TextView sub = text("Mix auf YT Music", 16, "Medium", Gfx.w(0.72f), 0);
+        TextView sub = text("Mix auf YouTube", 16, "Medium", Gfx.w(0.72f), 0);
         FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2);
         sl.gravity = Gravity.BOTTOM | Gravity.START;
         sl.leftMargin = px(22);
@@ -1399,6 +1400,11 @@ public class MainActivity extends Activity {
     // =====================================================================
     static final String[] TAGE = {"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"};
     static final String[] MON = {"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"};
+    /** Fire TV steht oft auf falscher Zeitzone (z. B. UTC): für die Uhr immer Österreich. */
+    static void fixTimeZone() {
+        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Europe/Vienna"));
+    }
+
     final Runnable clockRun = new Runnable() { public void run() { clockTick(); } };
 
     void clockTick() {
@@ -1823,35 +1829,36 @@ public class MainActivity extends Activity {
         });
     }
 
-    /** Öffnet die Musik eines Rappers: zuerst YT Music, sonst YouTube. */
+    /** Startet auf YouTube direkt einen Mix: zufälliger Song des Rappers + seine Mix-Playlist. */
     boolean playRapper(Rapper r) {
-        String q = Uri.encode(r.name);
-        AppDef ym = AppDef.byId("ytmusic"), yt = AppDef.byId("youtube");
-        if (ym != null && ym.pkg != null) {
-            // 1) Wie ein Sprachbefehl "Spiel <Rapper>": YT Music spielt direkt einen Mix des Künstlers
-            Intent play = new Intent("android.media.action.MEDIA_PLAY_FROM_SEARCH");
-            play.setPackage(ym.pkg);
-            play.putExtra(SearchManager.QUERY, r.name);
-            play.putExtra("android.intent.extra.focus", "vnd.android.cursor.item/artist");
-            play.putExtra("android.intent.extra.artist", r.name);
-            if (!getPackageManager().queryIntentActivities(play, 0).isEmpty() && start(play)) {
-                overridePendingTransition(0, 0);
-                return true;
+        AppDef yt = AppDef.byId("youtube"), ym = AppDef.byId("ytmusic");
+        if (yt != null && yt.pkg != null && r.videos.length > 0) {
+            String id = r.videos[new Random().nextInt(r.videos.length)];
+            String[] urls = {
+                    "https://www.youtube.com/watch?v=" + id + "&list=RD" + id + "&start_radio=1",
+                    "https://www.youtube.com/watch?v=" + id,
+            };
+            for (String u : urls) {
+                Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse(u));
+                v.setPackage(yt.pkg);
+                v.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                if (!getPackageManager().queryIntentActivities(v, 0).isEmpty() && start(v)) {
+                    overridePendingTransition(0, 0);
+                    return true;
+                }
             }
-            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=" + q));
+            // Manche YouTube-Versionen melden ihre Links nicht an: trotzdem versuchen
+            Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse(urls[0]));
+            v.setPackage(yt.pkg);
+            v.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (start(v)) { overridePendingTransition(0, 0); return true; }
+        }
+        if (ym != null && ym.pkg != null) {
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=" + Uri.encode(r.name)));
             i.setPackage(ym.pkg);
             if (start(i)) { overridePendingTransition(0, 0); return true; }
         }
-        if (yt != null && yt.pkg != null) {
-            Intent s2 = new Intent(Intent.ACTION_SEARCH);
-            s2.setPackage(yt.pkg);
-            s2.putExtra(SearchManager.QUERY, r.name);
-            if (start(s2)) { overridePendingTransition(0, 0); return true; }
-            Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + q));
-            v.setPackage(yt.pkg);
-            if (start(v)) { overridePendingTransition(0, 0); return true; }
-        }
-        showToast("YT Music oder YouTube nicht gefunden");
+        showToast("YouTube nicht gefunden");
         return false;
     }
 
