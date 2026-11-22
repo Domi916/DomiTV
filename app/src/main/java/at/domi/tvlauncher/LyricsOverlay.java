@@ -81,6 +81,27 @@ final class LyricsOverlay {
     String currentTitle = "";
     boolean approx = false;
     boolean wasPlaying = true;
+    // Songtext-Schoner: nach 20 s ohne Tastendruck wird der Songtext riesig
+    long lastKey = android.os.SystemClock.elapsedRealtime();
+    boolean big = false;
+
+    void poke() {
+        lastKey = android.os.SystemClock.elapsedRealtime();
+        if (big) setBig(false);
+    }
+
+    void setBig(boolean on) {
+        big = on;
+        long d = on ? 1400 : 500;
+        float a = on ? 0f : 1f;
+        for (View v : new View[]{label, title, status, hint, barBg, barFill, timeL, timeR})
+            if (v != null) v.animate().alpha(a).setDuration(d).start();
+        photo.animate().alpha(on ? 0.35f : 1f).setDuration(d).start();
+        lyricBox.setPivotX(0);
+        lyricBox.setPivotY(lyricBox.getHeight() / 2f);
+        float sc = on ? 1.25f : 1f;
+        lyricBox.animate().scaleX(sc).scaleY(sc).setDuration(d).setInterpolator(EASE).start();
+    }
 
     LyricsOverlay(Context c) {
         this.c = c;
@@ -244,7 +265,9 @@ final class LyricsOverlay {
         if (root == null) build();
         Rapper r = Rapper.LIST[rapper];
         accent = r.c1;
-        label.setText(r.isMix() ? "DEINE RAPPER  ·  MIX" : r.isFav() ? "DEINE FAVORITEN" : r.name.toUpperCase(Locale.ROOT) + "  ·  SHUFFLE");
+        label.setText(MediaWatcher.albumTitle != null
+                ? r.name.toUpperCase(Locale.ROOT) + "  ·  " + MediaWatcher.albumTitle.toUpperCase(Locale.ROOT)
+                : r.isMix() ? "DEINE RAPPER  ·  MIX" : r.isFav() ? "DEINE FAVORITEN" : r.name.toUpperCase(Locale.ROOT) + "  ·  SHUFFLE");
         label.setTextColor(accent);
         barFill.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{accent, Color.WHITE}) {{
             setCornerRadius(px(3));
@@ -280,6 +303,7 @@ final class LyricsOverlay {
             }
         }
         startAmbient();
+        lastKey = android.os.SystemClock.elapsedRealtime();
         applyMode(false);
         ui.removeCallbacks(tick);
         ui.post(tick);
@@ -321,6 +345,8 @@ final class LyricsOverlay {
 
     void hide() {
         ui.removeCallbacks(tick);
+        if (big) { big = false; lyricBox.setScaleX(1f); lyricBox.setScaleY(1f); photo.setAlpha(1f);
+            for (View v : new View[]{label, title, status, hint, barBg, barFill, timeL, timeR}) v.setAlpha(1f); }
         request++;
         if (breathe != null) breathe.cancel();
         if (zoom != null) zoom.cancel();
@@ -473,7 +499,8 @@ final class LyricsOverlay {
                 pauseIcon.animate().alpha(pl ? 0f : 0.9f).scaleX(pl ? 1.3f : 1f).scaleY(pl ? 1.3f : 1f).setDuration(300).start();
                 lyricBox.animate().alpha(mode == LYRICS ? (pl ? 1f : 0.35f) : 0f).setDuration(300).start();
             }
-            if (mode != LYRICS || times.isEmpty()) return;
+            if (mode != LYRICS || times.isEmpty()) { if (big) setBig(false); return; }
+            if (!big && pl && android.os.SystemClock.elapsedRealtime() - lastKey > 20000) setBig(true);
             long t = pos - offset - shift;
             int idx = -1;
             for (int i = 0; i < times.size(); i++) { if (times.get(i) <= t) idx = i; else break; }

@@ -217,6 +217,7 @@ public class HomeWatcherService extends AccessibilityService {
             return true;
         }
         boolean overlayOn = MediaWatcher.active && overlay != null && overlay.mode != LyricsOverlay.VIDEO;
+        if (overlayOn && e.getAction() == android.view.KeyEvent.ACTION_DOWN) overlay.poke();
         // OK / ⏯: Pause bzw. weiter (in der Songtext-/Audio-Anzeige)
         if (overlayOn && (k == android.view.KeyEvent.KEYCODE_DPAD_CENTER || k == android.view.KeyEvent.KEYCODE_ENTER
                 || k == android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || k == android.view.KeyEvent.KEYCODE_MEDIA_PLAY

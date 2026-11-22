@@ -132,7 +132,7 @@ public class MainActivity extends Activity {
     boolean wokeUp = false;
 
     // ---------- Ansichten ----------
-    FrameLayout root, bgWrap, kbWrap, ringWrap, lift, heroWrap, dock, cont, cardsRow, intro, header, rapStage, rapRow, rapRow2;
+    FrameLayout root, bgWrap, kbWrap, ringWrap, lift, heroWrap, dock, cont, cardsRow, intro, header, rapStage, rapRow, rapRow2, albumRow;
     View contHead;
     final FrameLayout[] fxw = new FrameLayout[AppDef.APPS.length];
     final List<List<Animator>> fxAnims = new ArrayList<>();
@@ -140,7 +140,10 @@ public class MainActivity extends Activity {
     final Rapper[] RAP = Rapper.LIST;
     final RapCard[] rapCards = new RapCard[Rapper.LIST.length];
     final Bitmap[] rapGlows = new Bitmap[Rapper.LIST.length];
-    int rSel = 0;
+    int rSel = 0, aSel = 0;
+    List<Album> albums = new ArrayList<>();
+    RapCard[] albumCards = new RapCard[0];
+    View head2v, head3v, head4v;
     ImageView rapGlow, rapPicA, rapPicB, svA, svB;
     FrameLayout saver;
     TextView svTime, svDate;
@@ -452,7 +455,7 @@ public class MainActivity extends Activity {
         cont.setAlpha(0f);
         cont.setTranslationY(px(260));
         cont.setVisibility(View.INVISIBLE);
-        root.addView(cont, atD(96, 650, 1728, 1100));
+        root.addView(cont, atD(96, 650, 1728, 1400));
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setBaselineAligned(true);
@@ -475,6 +478,7 @@ public class MainActivity extends Activity {
         cl2.leftMargin = px(18);
         head2.addView(sub2, cl2);
         cont.addView(head2, atD(0, 350, -2, -2));
+        head2v = head2;
         rapRow = new FrameLayout(this);
         rapRow.setClipChildren(false);
         cont.addView(rapRow, atD(0, 420, 2000, 260));
@@ -490,10 +494,31 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams cl3 = new LinearLayout.LayoutParams(-2, -2);
         cl3.leftMargin = px(18);
         head3.addView(sub3, cl3);
-        cont.addView(head3, atD(0, 650, -2, -2));
+        // --- Alben deiner Rapper ---
+        LinearLayout head4 = new LinearLayout(this);
+        head4.setOrientation(LinearLayout.HORIZONTAL);
+        head4.setBaselineAligned(true);
+        head4.addView(text("Alben deiner Rapper", 34, "Bold", TXT, -0.025f));
+        TextView sub4 = text("Ganzes Album in Reihenfolge", 22, "Medium", Gfx.a(TXT, 0.55f), 0);
+        LinearLayout.LayoutParams cl4 = new LinearLayout.LayoutParams(-2, -2);
+        cl4.leftMargin = px(18);
+        head4.addView(sub4, cl4);
+        cont.addView(head4, atD(0, 650, -2, -2));
+        head4v = head4;
+        albumRow = new FrameLayout(this);
+        albumRow.setClipChildren(false);
+        cont.addView(albumRow, atD(0, 720, 4000, 260));
+        albums = Album.load(this);
+        albumCards = new RapCard[albums.size()];
+        for (int i = 0; i < albums.size(); i++) {
+            albumCards[i] = buildAlbumCard(albums.get(i));
+            albumRow.addView(albumCards[i].view, atD(i * 348, 0, 320, 190));
+        }
+        cont.addView(head3, atD(0, 950, -2, -2));
+        head3v = head3;
         rapRow2 = new FrameLayout(this);
         rapRow2.setClipChildren(false);
-        cont.addView(rapRow2, atD(0, 720, 2000, 260));
+        cont.addView(rapRow2, atD(0, 1020, 2000, 260));
         for (int r = Rapper.OWN; r < RAP.length; r++) {
             rapCards[r] = buildRapCard(RAP[r]);
             rapRow2.addView(rapCards[r].view, atD((r - Rapper.OWN) * 348, 0, 320, 190));
@@ -622,6 +647,58 @@ public class MainActivity extends Activity {
         l.gravity = Gravity.CENTER;
         f.addView(ic, l);
         return f;
+    }
+
+    RapCard buildAlbumCard(Album a) {
+        Rapper r = RAP[a.rapper];
+        RapCard rc = new RapCard();
+        FrameLayout f = new FrameLayout(this);
+        final float rad = px(28);
+        f.setOutlineProvider(new ViewOutlineProvider() {
+            @Override
+            public void getOutline(View v, Outline o) { o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), rad); }
+        });
+        f.setClipToOutline(true);
+        GradientDrawable base = Gfx.grad(GradientDrawable.Orientation.BL_TR, new int[]{0xff08080b, r.c2, Gfx.a(r.c1, 0.55f)}, rad);
+        GradientDrawable gloss = Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.w(0.12f), Gfx.w(0), Gfx.w(0)}, rad);
+        f.setBackground(new LayerDrawable(new Drawable[]{base, gloss}));
+        f.addView(text("ALBUM", 14, "Bold", Gfx.w(0.7f), 0.28f), atD(22, 22, -2, -2));
+        TextView nm = text(a.title, a.title.length() > 16 ? 26 : 32, "Black", Color.WHITE, -0.02f);
+        nm.setMaxLines(2);
+        nm.setEllipsize(TextUtils.TruncateAt.END);
+        FrameLayout.LayoutParams nl = new FrameLayout.LayoutParams(px(276), -2);
+        nl.gravity = Gravity.BOTTOM | Gravity.START;
+        nl.leftMargin = px(22);
+        nl.bottomMargin = px(48);
+        f.addView(nm, nl);
+        TextView sub = text(r.name + " · " + a.tracks.size() + " Songs", 16, "Medium", Gfx.w(0.72f), 0);
+        FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2);
+        sl.gravity = Gravity.BOTTOM | Gravity.START;
+        sl.leftMargin = px(22);
+        sl.bottomMargin = px(22);
+        f.addView(sub, sl);
+        FrameLayout play = new FrameLayout(this);
+        play.setBackground(Gfx.round(r.c1, px(25)));
+        Gfx.Icon pi = new Gfx.Icon(this, Gfx.Icon.PLAY);
+        pi.setColor(Color.WHITE);
+        FrameLayout.LayoutParams pl = new FrameLayout.LayoutParams(px(22), px(22));
+        pl.gravity = Gravity.CENTER;
+        pl.leftMargin = px(3);
+        play.addView(pi, pl);
+        play.setAlpha(0f);
+        f.addView(play, atD(320 - 20 - 50, 18, 50, 50));
+        View ring = new View(this);
+        GradientDrawable rg = Gfx.round(Color.TRANSPARENT, rad);
+        rg.setStroke(Math.max(2, px(3)), Gfx.w(0.95f));
+        ring.setBackground(rg);
+        ring.setAlpha(0f);
+        f.addView(ring, new FrameLayout.LayoutParams(-1, -1));
+        f.setAlpha(0.62f);
+        f.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        rc.view = f;
+        rc.ring = ring;
+        rc.play = play;
+        return rc;
     }
 
     RapCard buildRapCard(Rapper r) {
@@ -975,8 +1052,10 @@ public class MainActivity extends Activity {
         showHero(sel, anim);
         for (int i = 0; i < slots.length; i++) focusSlot(i, "apps".equals(zone) && i == sel, anim);
         for (int i = 0; i < cards.size(); i++) focusCard(cards.get(i), "cont".equals(zone) && i == cSel, anim);
-        for (int i = 0; i < rapCards.length; i++) focusRap(rapCards[i], isRapZone(zone) && i == rSel, anim);
-        if (isRapZone(zone)) setRapper(rSel, anim);
+        for (int i = 0; i < rapCards.length; i++) focusRap(rapCards[i], ("rap".equals(zone) || "rap2".equals(zone)) && i == rSel, anim);
+        for (int i = 0; i < albumCards.length; i++) focusRap(albumCards[i], "alb".equals(zone) && i == aSel, anim);
+        if ("alb".equals(zone) && aSel < albums.size()) setRapper(albums.get(aSel).rapper, anim);
+        else if (isRapZone(zone)) setRapper(rSel, anim);
         float par = isRapZone(zone) ? -2 * 30 : -(sel - (APPS.length - 1) / 2f) * 30;
         mv(bgWrap, anim, 1200).translationX(px(par));
         if (!anim) bgWrap.setTranslationX(px(par));
@@ -1000,6 +1079,9 @@ public class MainActivity extends Activity {
         mv(cardsRow, anim, 500).translationX(px(cx));
         if (!anim) cardsRow.setTranslationX(px(cx));
         float rx = "rap".equals(zone) ? -Math.max(0, rSel - 4) * 348 : 0;
+        float ax = "alb".equals(zone) ? -Math.max(0, aSel - 3) * 348 : 0;
+        mv(albumRow, anim, 500).translationX(px(ax));
+        if (!anim) albumRow.setTranslationX(px(ax));
         mv(rapRow, anim, 500).translationX(px(rx));
         if (!anim) rapRow.setTranslationX(px(rx));
         setMode("top".equals(zone) ? "apps" : zone, anim);
@@ -1177,18 +1259,24 @@ public class MainActivity extends Activity {
 
     String shownMode = "";
 
-    static boolean isRapZone(String z) { return "rap".equals(z) || "rap2".equals(z); }
+    static boolean isRapZone(String z) { return "rap".equals(z) || "rap2".equals(z) || "alb".equals(z); }
+
+    float contShift(String z) { return "rap2".equals(z) ? -930 : "alb".equals(z) ? -630 : -330; }
 
     void setMode(String z, boolean anim) {
         if (z.equals(shownMode) && anim) return;
-        float topA = "rap2".equals(z) ? 0f : 1f;
+        // Reihen, die oben aus dem Bild rutschen, ausblenden
+        float topA = "rap2".equals(z) || "alb".equals(z) ? 0f : 1f;
+        float midA = "rap2".equals(z) ? 0f : 1f;
         if (contHead != null) {
             contHead.animate().alpha(topA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
             cardsRow.animate().alpha(topA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
+            head2v.animate().alpha(midA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
+            rapRow.animate().alpha(midA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
         }
         if (isRapZone(z) && isRapZone(shownMode)) {
             shownMode = z;
-            cont.animate().translationY("rap2".equals(z) ? -px(630) : -px(330)).setDuration(anim ? 600 : 0)
+            cont.animate().translationY(px(contShift(z))).setDuration(anim ? 600 : 0)
                     .setStartDelay(0).setInterpolator(EASE).withEndAction(null).start();
             return;
         }
@@ -1199,7 +1287,7 @@ public class MainActivity extends Activity {
         lift.animate().translationY(low ? -px(400) : 0).alpha(isRap ? 0f : 1f).setDuration(d).setStartDelay(0).setInterpolator(EASE).start();
         heroWrap.animate().alpha(low ? 0f : 1f).setDuration(anim ? 450 : 0).setStartDelay(0).start();
         cont.setVisibility(View.VISIBLE);
-        cont.animate().alpha(low ? 1f : 0f).translationY("rap2".equals(z) ? -px(630) : isRap ? -px(330) : (isCont ? 0 : px(260))).setDuration(d)
+        cont.animate().alpha(low ? 1f : 0f).translationY(isRap ? px(contShift(z)) : (isCont ? 0 : px(260))).setDuration(d)
                 .setStartDelay(isCont && anim && !fromRap ? 120 : 0).setInterpolator(EASE)
                 .withEndAction(low ? null : new Runnable() {
                     public void run() { if (!"cont".equals(shownMode) && !isRapZone(shownMode)) cont.setVisibility(View.INVISIBLE); }
@@ -1842,14 +1930,27 @@ public class MainActivity extends Activity {
             if ("left".equals(k)) rSel = Math.max(0, rSel - 1);
             else if ("right".equals(k)) rSel = Math.min(Rapper.OWN - 1, rSel + 1);
             else if ("up".equals(k)) zone = "cont";
-            else if ("down".equals(k)) { zone = "rap2"; rSel = Math.min(RAP.length - 1, rSel + Rapper.OWN); }
+            else if ("down".equals(k)) {
+                if (!albums.isEmpty()) zone = "alb";
+                else { zone = "rap2"; rSel = Math.min(RAP.length - 1, rSel + Rapper.OWN); }
+            }
             else if ("back".equals(k)) zone = "apps";
             else if ("ok".equals(k)) openRapper(RAP[rSel], rapCards[rSel].view);
+        } else if ("alb".equals(zone)) {
+            if ("left".equals(k)) aSel = Math.max(0, aSel - 1);
+            else if ("right".equals(k)) aSel = Math.min(albums.size() - 1, aSel + 1);
+            else if ("up".equals(k)) zone = "rap";
+            else if ("down".equals(k)) { zone = "rap2"; rSel = Rapper.OWN; }
+            else if ("back".equals(k)) zone = "apps";
+            else if ("ok".equals(k) && aSel < albums.size()) openAlbum(albums.get(aSel), albumCards[aSel].view);
         } else if ("rap2".equals(zone)) {
             if (rSel < Rapper.OWN) rSel = Rapper.OWN;
             if ("left".equals(k)) rSel = Math.max(Rapper.OWN, rSel - 1);
             else if ("right".equals(k)) rSel = Math.min(RAP.length - 1, rSel + 1);
-            else if ("up".equals(k)) { zone = "rap"; rSel = Math.max(0, rSel - Rapper.OWN); }
+            else if ("up".equals(k)) {
+                if (!albums.isEmpty()) zone = "alb";
+                else { zone = "rap"; rSel = Math.max(0, rSel - Rapper.OWN); }
+            }
             else if ("back".equals(k)) zone = "apps";
             else if ("ok".equals(k)) openRapper(RAP[rSel], rapCards[rSel].view);
         } else if ("top".equals(zone)) {
@@ -1990,6 +2091,20 @@ public class MainActivity extends Activity {
         }
         launchFx(src, a.t1, a.t2, a.name, new Callable<Boolean>() {
             public Boolean call() { return openApp(a); }
+        });
+    }
+
+    void openAlbum(final Album a, View src) {
+        if (launching) return;
+        final Rapper r = RAP[a.rapper];
+        launchFx(src, r.c1, r.c2, a.title, new Callable<Boolean>() {
+            public Boolean call() {
+                AppDef yt = AppDef.byId("youtube");
+                if (yt == null || yt.pkg == null) { showToast("YouTube nicht gefunden"); return false; }
+                MediaWatcher.startAlbum(MainActivity.this, yt.pkg, a.rapper, a.tracks, a.title);
+                overridePendingTransition(0, 0);
+                return true;
+            }
         });
     }
 

@@ -50,13 +50,26 @@ public class MediaWatcher extends NotificationListenerService {
 
     static void start(Context c, String pkg, int index) { start(c, pkg, index, null); }
 
+    /** Album / Mixtape in der richtigen Reihenfolge. */
+    static String albumTitle = null;
+
+    static void startAlbum(Context c, String pkg, int index, List<String> tracks, String title) {
+        albumTitle = title;
+        startQueue(c, pkg, index, new ArrayList<>(tracks), false, null);
+    }
+
     /** firstId: dieser Song zuerst (z. B. "Neu erschienen"), danach gemischt. */
     static void start(Context c, String pkg, int index, String firstId) {
+        albumTitle = null;
+        startQueue(c, pkg, index, Rapper.LIST[index].songs(c), true, firstId);
+    }
+
+    static void startQueue(Context c, String pkg, int index, List<String> songs, boolean shuffle, String firstId) {
         Rapper r = Rapper.LIST[index];
         queue.clear();
-        queue.addAll(r.songs(c));
+        queue.addAll(songs);
         members = r.members();
-        Collections.shuffle(queue);
+        if (shuffle) Collections.shuffle(queue);
         if (firstId != null) { queue.remove(firstId); queue.add(0, firstId); }
         pos = 0;
         ytPkg = pkg;
@@ -117,7 +130,7 @@ public class MediaWatcher extends NotificationListenerService {
 
     static boolean play(Context c) {
         if (queue.isEmpty() || ytPkg == null) return false;
-        if (pos >= queue.size()) { Collections.shuffle(queue); pos = 0; }
+        if (pos >= queue.size()) { if (albumTitle == null) Collections.shuffle(queue); pos = 0; }
         String id = queue.get(pos);
         launchedAt = SystemClock.elapsedRealtime();
         prevTitle = ourTitle;
