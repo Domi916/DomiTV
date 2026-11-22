@@ -611,7 +611,7 @@ public class MainActivity extends Activity {
         nl.leftMargin = px(22);
         nl.bottomMargin = px(48);
         f.addView(nm, nl);
-        TextView sub = text("Mix auf YouTube", 16, "Medium", Gfx.w(0.72f), 0);
+        TextView sub = text("Shuffle auf YouTube", 16, "Medium", Gfx.w(0.72f), 0);
         FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2);
         sl.gravity = Gravity.BOTTOM | Gravity.START;
         sl.leftMargin = px(22);
@@ -1829,14 +1829,17 @@ public class MainActivity extends Activity {
         });
     }
 
-    /** Startet auf YouTube direkt einen Mix: zufälliger Song des Rappers + seine Mix-Playlist. */
+    /** Startet auf YouTube die Songs des Rappers: zufälliger Einstieg in seine eigene Playlist. */
     boolean playRapper(Rapper r) {
         AppDef yt = AppDef.byId("youtube"), ym = AppDef.byId("ytmusic");
         JblBox.connect(this);
         if (yt != null && yt.pkg != null && r.videos.length > 0) {
             String id = r.videos[new Random().nextInt(r.videos.length)];
+            // Nur Songs des Künstlers: seine Uploads-Playlist, Start bei einem zufälligen Song
+            String uploads = "UU" + r.channel.substring(2);
             String[] urls = {
-                    "https://www.youtube.com/watch?v=" + id + "&list=RD" + id + "&start_radio=1",
+                    "https://www.youtube.com/watch?v=" + id + "&list=" + uploads,
+                    "https://www.youtube.com/playlist?list=" + uploads,
                     "https://www.youtube.com/watch?v=" + id,
             };
             for (String u : urls) {
