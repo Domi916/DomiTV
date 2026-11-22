@@ -323,7 +323,8 @@ public class MainActivity extends Activity {
             @Override
             public void onAnimationUpdate(ValueAnimator va) {
                 float e = (float) Math.exp(-3.2f * (Float) va.getAnimatedValue());
-                rapGlow.setAlpha(0.12f + 0.28f * e);
+                boolean hasPic = shownRapper >= 0 && rapPicCount(shownRapper) > 0;
+                rapGlow.setAlpha(hasPic ? 0.12f + 0.28f * e : 0.42f + 0.55f * e);
                 float sc = 1f + 0.06f * e;
                 rapGlow.setScaleX(sc); rapGlow.setScaleY(sc);
                 ImageView cur = rapUseA ? rapPicA : rapPicB;
@@ -1024,9 +1025,43 @@ public class MainActivity extends Activity {
     float rapBase = 1f;
     ValueAnimator rapZoom;
 
-    Bitmap loadRapPic(int r) {
+    int rapPicIdx = 0;
+
+    int[] rapCounts;
+
+    int rapPicCount(int r) {
+        if (rapCounts == null) {
+            rapCounts = new int[RAP.length];
+            for (int i = 0; i < RAP.length; i++) rapCounts[i] = countRapPics(i);
+        }
+        return rapCounts[r];
+    }
+
+    int countRapPics(int r) {
+        int n = 0;
         try {
-            InputStream in = getAssets().open("rap/" + r + ".jpg");
+            String[] all = getAssets().list("rap");
+            if (all != null) for (String f : all) if (f.startsWith(r + "_")) n++;
+        } catch (Exception ignored) { }
+        return n;
+    }
+
+    /** Wechselt alle 7 Sekunden zum nächsten Bild des Rappers. */
+    final Runnable rapCycle = new Runnable() {
+        public void run() {
+            if (!"rap".equals(shownMode) || shownRapper < 0) return;
+            int n = rapPicCount(shownRapper);
+            if (n > 1) {
+                rapPicIdx = (rapPicIdx + 1) % n;
+                showRapPic(loadRapPic(shownRapper, rapPicIdx), true, 900);
+            }
+            ui.postDelayed(this, 7000);
+        }
+    };
+
+    Bitmap loadRapPic(int r, int k) {
+        try {
+            InputStream in = getAssets().open("rap/" + r + "_" + k + ".jpg");
             Bitmap b = BitmapFactory.decodeStream(in);
             in.close();
             return b;
@@ -1037,30 +1072,38 @@ public class MainActivity extends Activity {
         if (r == shownRapper) return;
         shownRapper = r;
         rapGlow.setImageBitmap(rapGlows[r]);
+        rapPicIdx = 0;
+        Bitmap pic = rapPicCount(r) > 0 ? loadRapPic(r, 0) : null;
+        showRapPic(pic, anim, 550);
+        ui.removeCallbacks(rapCycle);
+        ui.postDelayed(rapCycle, 7000);
+    }
+
+    void showRapPic(Bitmap pic, boolean anim, long fadeMs) {
         final ImageView next = rapUseA ? rapPicB : rapPicA;
         final ImageView old = rapUseA ? rapPicA : rapPicB;
         rapUseA = !rapUseA;
-        next.setImageBitmap(loadRapPic(r));
+        next.setImageBitmap(pic);
         next.bringToFront();
         rapGlow.bringToFront();
         next.animate().cancel();
         old.animate().cancel();
-        // langsamer Zoom auf das Bild (Rapper kommt näher)
         if (rapZoom != null) rapZoom.cancel();
         rapZoom = ValueAnimator.ofFloat(1.1f, 1f);
-        rapZoom.setDuration(anim ? 6000 : 0);
+        rapZoom.setDuration(anim ? 7000 : 0);
         rapZoom.setInterpolator(EASE);
         rapZoom.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator va) { rapBase = (Float) va.getAnimatedValue(); }
         });
         rapZoom.start();
+        float target = pic == null ? 0f : 1f;
         if (anim) {
             next.setAlpha(0f);
-            next.animate().alpha(1f).setDuration(550).setStartDelay(0).setInterpolator(SOFT).withEndAction(null).start();
-            old.animate().alpha(0f).setDuration(450).setStartDelay(150).withEndAction(null).start();
+            next.animate().alpha(target).setDuration(fadeMs).setStartDelay(0).setInterpolator(SOFT).withEndAction(null).start();
+            old.animate().alpha(0f).setDuration(fadeMs).setStartDelay(150).withEndAction(null).start();
         } else {
-            next.setAlpha(1f);
+            next.setAlpha(target);
             old.setAlpha(0f);
         }
     }
