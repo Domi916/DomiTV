@@ -610,7 +610,7 @@ public class MainActivity extends Activity {
         nl.leftMargin = px(22);
         nl.bottomMargin = px(48);
         f.addView(nm, nl);
-        TextView sub = text("Auf YT Music hören", 16, "Medium", Gfx.w(0.72f), 0);
+        TextView sub = text("Mix auf YT Music", 16, "Medium", Gfx.w(0.72f), 0);
         FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2);
         sl.gravity = Gravity.BOTTOM | Gravity.START;
         sl.leftMargin = px(22);
@@ -1828,6 +1828,16 @@ public class MainActivity extends Activity {
         String q = Uri.encode(r.name);
         AppDef ym = AppDef.byId("ytmusic"), yt = AppDef.byId("youtube");
         if (ym != null && ym.pkg != null) {
+            // 1) Wie ein Sprachbefehl "Spiel <Rapper>": YT Music spielt direkt einen Mix des Künstlers
+            Intent play = new Intent("android.media.action.MEDIA_PLAY_FROM_SEARCH");
+            play.setPackage(ym.pkg);
+            play.putExtra(SearchManager.QUERY, r.name);
+            play.putExtra("android.intent.extra.focus", "vnd.android.cursor.item/artist");
+            play.putExtra("android.intent.extra.artist", r.name);
+            if (!getPackageManager().queryIntentActivities(play, 0).isEmpty() && start(play)) {
+                overridePendingTransition(0, 0);
+                return true;
+            }
             Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=" + q));
             i.setPackage(ym.pkg);
             if (start(i)) { overridePendingTransition(0, 0); return true; }
