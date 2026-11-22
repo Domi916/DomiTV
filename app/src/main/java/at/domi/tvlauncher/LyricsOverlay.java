@@ -184,7 +184,6 @@ final class LyricsOverlay {
         root.addView(lyricClip, new FrameLayout.LayoutParams(-1, -1));
         lyricBox = new LinearLayout(c);
         lyricBox.setOrientation(LinearLayout.VERTICAL);
-        lyricBox.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         lyricClip.addView(lyricBox, at(140, 0, 1300, -2));
 
 
@@ -470,6 +469,10 @@ final class LyricsOverlay {
             l.bottomMargin = (int) px(30);
             lyricBox.addView(t, l);
         }
+        // genug Höhe, damit alle Zeilen ausgelegt werden (sonst schneidet der Bildschirm sie ab)
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) lyricBox.getLayoutParams();
+        lp.height = (int) px(texts.size() * 260 + 1400);
+        lyricBox.setLayoutParams(lp);
         lyricBox.setTranslationY(px(ANCHOR));
         shownLine = -2;
     }
