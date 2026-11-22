@@ -7,6 +7,7 @@ import json, os, re, subprocess, sys
 ARTISTS = ["Ken Carson", "Bleood", "Protect", "OsamaSon", "Nettspend",
            "Destroy Lonely", "Playboi Carti", "che", "Yeat", "xaviersobased"]
 OUT = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "assets", "songs")
+ALB = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "assets", "albums")
 
 def norm(s):
     return re.sub(r"[^a-z0-9]+", " ", (s or "").lower()).strip()
@@ -43,6 +44,7 @@ def songs_of(name):
         except Exception as e:
             print("  kein Releases-Tab bei", cid, e); continue
         songs, seen = [], set()
+        albums = []
         for pl in rel.get("entries") or []:
             url = pl.get("url") or ""
             if "list=" not in url: continue
@@ -50,6 +52,9 @@ def songs_of(name):
                 d = ytdlp(url, timeout=120)
             except Exception as e:
                 print("  Playlist-Fehler", pl.get("title"), e); continue
+            tracks = [t.get("id") for t in (d.get("entries") or []) if t.get("id")]
+            if len(tracks) >= 5:  # Alben/Mixtapes, keine Singles
+                albums.append({"title": pl.get("title") or d.get("title") or "", "tracks": tracks})
             for t in d.get("entries") or []:
                 vid, title = t.get("id"), (t.get("title") or "").replace("|", "/")
                 key = norm(re.sub(r"\(.*?\)|\[.*?\]", "", title))
@@ -58,8 +63,11 @@ def songs_of(name):
                 songs.append((vid, title))
         print(f"  {name}: Kanal {cid}, {len(rel.get('entries') or [])} Releases, {len(songs)} Songs")
         if songs:
+            ALBUMS[name] = albums
             return songs
     return []
+
+ALBUMS = {}
 
 def main():
     os.makedirs(OUT, exist_ok=True)
@@ -73,6 +81,11 @@ def main():
         if len(s) >= 5:
             with open(os.path.join(OUT, slug(name) + ".txt"), "w", encoding="utf-8") as f:
                 f.write("\n".join(f"{v}|{t}" for v, t in s) + "\n")
+            if ALBUMS.get(name):
+                os.makedirs(ALB, exist_ok=True)
+                with open(os.path.join(ALB, slug(name) + ".json"), "w", encoding="utf-8") as f:
+                    json.dump(ALBUMS[name], f, ensure_ascii=False)
+                print(f"  {len(ALBUMS[name])} Alben")
             ok += 1
         else:
             print("  zu wenig Songs, alte Liste bleibt")
