@@ -155,7 +155,8 @@ public class MainActivity extends Activity {
     final View[] heroes = new View[APPS.length];
     final Slot[] slots = new Slot[APPS.length];
     ImageView beam, iGlow, iRing;
-    View iSweep, iBack, iFlash;
+    View iSweep, iBack, iFlash, iShade;
+    ImageView iPhoto;
     final ImageView[] dots = new ImageView[5];
     LinearLayout iWords;
     final List<TextView> words = new ArrayList<>();
@@ -548,6 +549,14 @@ public class MainActivity extends Activity {
         iBack = new View(this);
         iBack.setBackgroundColor(BG);
         intro.addView(iBack, new FrameLayout.LayoutParams(-1, -1));
+        // Foto (dasselbe wie der Startseiten-Hintergrund): man zoomt hinein und landet auf der Startseite
+        iPhoto = new ImageView(this);
+        iPhoto.setScaleType(ImageView.ScaleType.FIT_XY);
+        iPhoto.setAlpha(0f);
+        intro.addView(iPhoto, new FrameLayout.LayoutParams(-1, -1));
+        iShade = new View(this);
+        iShade.setBackground(Gfx.grad(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{0xF2000000, 0xB3000000, 0x40000000}, 0));
+        intro.addView(iShade, new FrameLayout.LayoutParams(-1, -1));
         iGlow = new ImageView(this);
         iGlow.setScaleType(ImageView.ScaleType.FIT_XY);
         try {
@@ -1570,7 +1579,7 @@ public class MainActivity extends Activity {
     // =====================================================================
     ValueAnimator introAnim;
     boolean revealed = true;
-    static final float INTRO_S = 4.6f;
+    static final float INTRO_S = 4.3f;
     float flyX, flyY, flyK;
     boolean flyReady = false, greetShown = false;
 
@@ -1584,6 +1593,9 @@ public class MainActivity extends Activity {
         intro.animate().cancel();
         intro.setVisibility(View.VISIBLE);
         intro.setAlpha(1f);
+        int bi = shownBg >= 0 ? shownBg : sel;
+        if (bgs[bi] != null && bgs[bi].getDrawable() != null) iPhoto.setImageDrawable(bgs[bi].getDrawable());
+        iPhoto.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         for (TextView w : words) w.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         iSub.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         setMainVisible(false);
@@ -1610,57 +1622,47 @@ public class MainActivity extends Activity {
 
     /** Ein Bild der Startanimation, s = Sekunden. Nur Transparenz, Größe, Drehung, Position. */
     void introFrame(float s) {
-        // 1) Fünf Lichtpunkte in den App-Farben kreisen spiralförmig zur Mitte
-        for (int d = 0; d < dots.length; d++) {
-            float a0 = (float) (d * Math.PI * 2 / dots.length) - 0.6f;
-            float spin = kf(s, new float[]{0.15f, 1.55f}, new float[]{0, 4.4f});
-            float r = kf(s, new float[]{0.15f, 1.55f}, new float[]{560, 150});
-            ImageView dot = dots[d];
-            dot.setTranslationX(px(r * (float) Math.cos(a0 + spin)));
-            dot.setTranslationY(px(r * 0.62f * (float) Math.sin(a0 + spin)) + px((1 - r / 560f) * 0));
-            dot.setAlpha(kf(s, new float[]{0.15f, 0.6f, 1.35f, 1.7f}, new float[]{0, 1, 1, 0}));
-            float ds = kf(s, new float[]{0.15f, 1.35f, 1.7f}, new float[]{0.6f, 1f, 1.8f});
-            dot.setScaleX(ds); dot.setScaleY(ds);
-        }
-        // 2) Ring entsteht, wo die Punkte ankommen; am Ende öffnet er sich wie ein Portal
-        iRing.setAlpha(kf(s, new float[]{1.25f, 1.7f, 3.35f, 4.05f}, new float[]{0, 1, 1, 0}));
-        float rs = kf(s, new float[]{1.25f, 1.7f, 3.35f, 4.05f}, new float[]{0.8f, 1f, 1.05f, 7f});
-        rs *= 1 + 0.12f * pulse(s, 1.45f, 0.3f);
-        iRing.setScaleX(rs); iRing.setScaleY(rs);
-        iRing.setRotation(kf(s, new float[]{1.25f, 4.05f}, new float[]{-90, 160}));
-        // 3) Farbschein blüht auf und dreht sich langsam
-        iGlow.setAlpha(kf(s, new float[]{1.0f, 2.1f, 3.35f, 4.1f}, new float[]{0, 0.95f, 0.95f, 0}));
-        float gs = kf(s, new float[]{1.0f, 2.1f, 3.35f, 4.1f}, new float[]{0.45f, 1f, 1.08f, 2.3f});
-        gs *= 1 + 0.16f * pulse(s, 1.45f, 0.45f);
-        iGlow.setAlpha(Math.min(1f, iGlow.getAlpha() + 0.35f * pulse(s, 1.45f, 0.4f)));
+        // Takt zum Sound: Anschwellen bis ~1,1 s, Höhepunkt ~2,3 s, danach klingt er aus.
+        // 1) Foto taucht aus dem Schwarz auf und schiebt sich langsam heran
+        iPhoto.setAlpha(kf(s, new float[]{0.05f, 1.1f, 2.2f, 3.0f}, new float[]{0, 0.55f, 0.6f, 1f}));
+        float ps = kf(s, new float[]{0f, 2.2f, 3.0f}, new float[]{1.0f, 1.07f, REVEAL_ZOOM});
+        iPhoto.setScaleX(ps); iPhoto.setScaleY(ps);
+        // Schatten links, damit der Gruß gut lesbar ist; beim Reinzoomen geht er weg
+        iShade.setAlpha(kf(s, new float[]{0f, 2.3f, 3.0f}, new float[]{1f, 1f, 0f}));
+        // 2) roter Schein in der Farbe des Bildes, pulsiert mit dem Sound
+        iGlow.setAlpha(kf(s, new float[]{0.6f, 1.3f, 2.4f, 3.0f}, new float[]{0, 0.45f, 0.5f, 0}) + 0.25f * pulse(s, 1.1f, 0.5f));
+        float gs = kf(s, new float[]{0.6f, 2.4f, 3.0f}, new float[]{0.7f, 1.05f, 2.2f});
         iGlow.setScaleX(gs); iGlow.setScaleY(gs);
-        iGlow.setRotation(kf(s, new float[]{1.0f, 4.1f}, new float[]{-40, 70}));
-        // 4) Lichtlinie
-        iSweep.setAlpha(kf(s, new float[]{1.35f, 1.5f, 1.95f, 2.6f}, new float[]{0, 1, 1, 0}));
-        iFlash.setAlpha(0.42f * pulse(s, 1.45f, 0.28f) + 0.12f * pulse(s, 4.25f, 0.35f));
-        iSweep.setScaleX(kf(s, new float[]{1.35f, 2.0f}, new float[]{0, 1}));
-        // 5) Gruß: Wort für Wort
+        iGlow.setRotation(kf(s, new float[]{0.6f, 3.0f}, new float[]{-30, 40}));
+        // alte Elemente (Punkte, Ring, Linie) bleiben aus
+        for (ImageView dot : dots) dot.setAlpha(0f);
+        iRing.setAlpha(0f);
+        iSweep.setAlpha(0f);
+        // Lichtblitz auf den Höhepunkten
+        iFlash.setAlpha(0.22f * pulse(s, 1.1f, 0.35f) + 0.35f * pulse(s, 2.35f, 0.3f));
+        // 3) Gruß: Wort für Wort, groß
         for (int i = 0; i < words.size(); i++) {
-            float st = 1.5f + i * 0.16f;
+            float st = 1.05f + i * 0.14f;
             TextView w = words.get(i);
-            w.setAlpha(kf(s, new float[]{st, st + 0.55f}, new float[]{0, 1}));
-            w.setTranslationY(px(kf(s, new float[]{st, st + 0.75f}, new float[]{56, 0})));
-            float ws = kf(s, new float[]{st, st + 0.75f}, new float[]{1.12f, 1f});
+            w.setAlpha(kf(s, new float[]{st, st + 0.5f}, new float[]{0, 1}));
+            w.setTranslationY(px(kf(s, new float[]{st, st + 0.7f}, new float[]{60, 0})));
+            float ws = kf(s, new float[]{st, st + 0.7f}, new float[]{1.15f, 1f});
             w.setScaleX(ws); w.setScaleY(ws);
         }
-        iSub.setAlpha(kf(s, new float[]{2.2f, 2.7f, 3.3f, 3.6f}, new float[]{0, 1, 1, 0}));
-        iSub.setTranslationY(px(kf(s, new float[]{2.2f, 2.8f}, new float[]{14, 0})));
+        iSub.setAlpha(kf(s, new float[]{1.7f, 2.1f, 2.6f, 2.9f}, new float[]{0, 1, 1, 0}));
+        iSub.setTranslationY(px(kf(s, new float[]{1.7f, 2.2f}, new float[]{14, 0})));
 
-        // 6) Übergang: Hintergrund öffnet sich, Gruß fliegt an seinen Platz oben links
-        if (!revealed && s >= 3.3f) reveal(true);
-        iBack.setAlpha(kf(s, new float[]{3.35f, 4.15f}, new float[]{1, 0}));
-        if (s >= 3.3f && !flyReady) prepareFly();
-        float f = flyReady ? kf(s, new float[]{3.35f, 4.35f}, new float[]{0, 1}) : 0;
+        // 4) Reinzoomen: Startseite erscheint mit genau diesem Bild, der Gruß fliegt an seinen Platz
+        if (!revealed && s >= 2.95f) reveal(true);
+        iBack.setAlpha(kf(s, new float[]{2.9f, 3.05f}, new float[]{1, 0}));
+        iPhoto.setVisibility(s >= 3.05f ? View.INVISIBLE : View.VISIBLE);
+        if (s >= 2.95f && !flyReady) prepareFly();
+        float f = flyReady ? kf(s, new float[]{2.95f, 3.95f}, new float[]{0, 1}) : 0;
         iWords.setTranslationX(flyX * f);
         iWords.setTranslationY(flyY * f);
         float k = 1 + (flyK - 1) * f;
         iWords.setScaleX(k); iWords.setScaleY(k);
-        if (s >= 4.35f && !greetShown) {
+        if (s >= 3.95f && !greetShown) {
             greetShown = true;
             greet.animate().cancel();
             greet.setAlpha(1f);      // kleiner Gruß übernimmt genau an derselben Stelle
@@ -1669,6 +1671,9 @@ public class MainActivity extends Activity {
             iWords.setAlpha(1f);
         }
     }
+
+    /** So weit zoomt das Intro ins Foto; die Startseite startet genau dort und gleitet zurück. */
+    static final float REVEAL_ZOOM = 1.22f;
 
     /** Berechnet, wohin der große Gruß fliegen muss (Position des kleinen Grußes oben). */
     void prepareFly() {
@@ -1730,8 +1735,8 @@ public class MainActivity extends Activity {
         View avatar = header.getChildAt(0);
         if (anim) {
             ImageView bg = bgs[shownBg >= 0 ? shownBg : sel];
-            bg.setScaleX(1.18f); bg.setScaleY(1.18f);
-            bg.animate().scaleX(1f).scaleY(1f).setDuration(1500).setStartDelay(0).setInterpolator(EASE).start();
+            bg.setScaleX(REVEAL_ZOOM); bg.setScaleY(REVEAL_ZOOM);
+            bg.animate().scaleX(1f).scaleY(1f).setDuration(1600).setStartDelay(120).setInterpolator(SOFT).start();
             header.setAlpha(1f); header.setTranslationY(0);
             for (View v : new View[]{pill, avatar, date}) {
                 v.setAlpha(0f);
