@@ -17,9 +17,9 @@ final class AppDef {
                     new String[]{"prime video", "amazon prime video"}),
             new AppDef("disney", "Disney+", "Familie & Blockbuster", "#5a7aff", "#2640a8", "#0a1033",
                     new String[]{"com.disney.disneyplus"}, new String[]{"disney+", "disney plus"}),
-            new AppDef("ytmusic", "YT Music", "Musik & Playlists", "#ff3a78", "#8a1a48", "#22051a",
-                    new String[]{"com.amazon.firetv.youtube.music", "com.google.android.youtube.tvmusic"},
-                    new String[]{"youtube music", "yt music"}),
+            new AppDef("spotify", "Spotify", "Musik & Playlists", "#1ed760", "#118a3e", "#03190b",
+                    new String[]{"com.spotify.tv.android", "com.spotify.music"},
+                    new String[]{"spotify"}),
     };
 
     final String id, name, kind;
