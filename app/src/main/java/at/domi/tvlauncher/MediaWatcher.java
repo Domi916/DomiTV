@@ -53,6 +53,7 @@ public class MediaWatcher extends NotificationListenerService {
         rapperName = r.name;
         rapperIndex = index;
         active = true;
+        foreignInRow = 0;
         appCtx = c.getApplicationContext();
         log(c, "Shuffle gestartet: " + r.name + " (" + queue.size() + " Songs)");
         HomeWatcherService.overlayShow(index);
@@ -142,6 +143,7 @@ public class MediaWatcher extends NotificationListenerService {
     static boolean playing = true;
     static float speed = 1f;
     static MediaController current;
+    static int foreignInRow = 0;
 
     static void trackStarted(MediaMetadata m) {
         curDur = m == null ? 0 : m.getLong(MediaMetadata.METADATA_KEY_DURATION);
@@ -259,6 +261,7 @@ public class MediaWatcher extends NotificationListenerService {
             // der Song, den wir gerade gestartet haben
             if (!t.equals(ourTitle)) {
                 trackStarted(m);
+                foreignInRow = 0;
                 log(this, "unser Song: " + t + " / " + artist + " dur=" + curDur);
                 unmute();
                 HomeWatcherService.overlayTrack(t, curDur);
@@ -277,6 +280,13 @@ public class MediaWatcher extends NotificationListenerService {
                 HomeWatcherService.overlayTrack(t, curDur);
             }
             ourTitle = t;
+            return;
+        }
+        // Schutz gegen Endlosschleife (z. B. Werbung, die vor jedem Song kommt)
+        foreignInRow++;
+        if (foreignInRow > 2) {
+            log(this, "fremd (" + t + "), aber schon " + foreignInRow + "x hintereinander: lasse laufen (Werbung?)");
+            unmute();
             return;
         }
         log(this, "fremd: " + t + " / " + artist + " -> stumm + nächster Song");
