@@ -25,7 +25,7 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.media.AudioAttributes;
-import android.media.SoundPool;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -154,10 +154,8 @@ public class MainActivity extends Activity {
     }
 
     // ---------- Startsound ----------
-    SoundPool pool;
-    int introId = 0;
-    volatile boolean introLoaded = false;
-    volatile float pendingVol = -1f;
+    MediaPlayer player;          // spielt den Sound komplett (SoundPool schneidet lange Sounds ab)
+    boolean soundReady = false, soundPending = false;
     static final float LAUTSTAERKE = 1.0f;
 
     final BroadcastReceiver screenOn = new BroadcastReceiver() {
@@ -1320,31 +1318,37 @@ public class MainActivity extends Activity {
 
     void loadSound() {
         try {
-            AudioAttributes aa = new AudioAttributes.Builder()
+            player = new MediaPlayer();
+            player.setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build();
-            pool = new SoundPool.Builder().setMaxStreams(1).setAudioAttributes(aa).build();
-            pool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build());
+            AssetFileDescriptor fd = getAssets().openFd("intro.ogg");
+            player.setDataSource(fd.getFileDescriptor(), fd.getStartOffset(), fd.getLength());
+            fd.close();
+            player.setVolume(LAUTSTAERKE, LAUTSTAERKE);
+            player.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                 @Override
-                public void onLoadComplete(SoundPool p, int id, int status) {
-                    if (status != 0) return;
-                    introLoaded = true;
-                    if (pendingVol >= 0) { p.play(id, pendingVol, pendingVol, 1, 0, 1f); pendingVol = -1f; }
+                public void onPrepared(MediaPlayer mp) {
+                    soundReady = true;
+                    if (soundPending) { soundPending = false; mp.start(); }
                 }
             });
-            AssetFileDescriptor fd = getAssets().openFd("intro.ogg");
-            introId = pool.load(fd, 1);
-            fd.close();
+            player.prepareAsync();
         } catch (Exception e) {
             Log.e(HomeWatcherService.TAG, "Startsound", e);
+            player = null;
         }
     }
 
     void playSound() {
-        if (pool == null || introId == 0) return;
-        if (introLoaded) pool.play(introId, LAUTSTAERKE, LAUTSTAERKE, 1, 0, 1f);
-        else pendingVol = LAUTSTAERKE;
+        if (player == null) return;
+        try {
+            if (!soundReady) { soundPending = true; return; }
+            if (player.isPlaying()) player.pause();
+            player.seekTo(0);
+            player.start();
+        } catch (Exception e) { Log.e(HomeWatcherService.TAG, "Startsound abspielen", e); }
     }
 
     // =====================================================================
@@ -1396,7 +1400,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         try { unregisterReceiver(screenOn); } catch (Exception ignored) { }
-        if (pool != null) pool.release();
+        if (player != null) player.release();
         super.onDestroy();
     }
 }
