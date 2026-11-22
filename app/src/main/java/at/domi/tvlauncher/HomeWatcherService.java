@@ -68,6 +68,7 @@ public class HomeWatcherService extends AccessibilityService {
                 // Box hat sich von selbst verbunden, aber es läuft kein Rapper-Mix: wieder trennen
                 int st = i.getIntExtra("android.bluetooth.profile.extra.STATE", -1);
                 android.bluetooth.BluetoothDevice d = i.getParcelableExtra("android.bluetooth.device.extra.DEVICE");
+                if (JblBox.isJbl(d)) JblBox.connected = st == 2;
                 if (st == 2 && JblBox.isJbl(d) && !JblBox.wanted) {
                     h.postDelayed(new Runnable() {
                         @Override
@@ -80,6 +81,7 @@ public class HomeWatcherService extends AccessibilityService {
                 screenOffAt = SystemClock.elapsedRealtime();
                 h.removeCallbacksAndMessages(null);
                 JblBox.wanted = false;
+                JblBox.manual = false;
             }
         }
     };

@@ -19,6 +19,10 @@ final class JblBox {
 
     /** true, solange ein Rapper-Zufallsmix läuft: nur dann darf die Box verbunden sein. */
     static volatile boolean wanted = false;
+    /** Über den Box-Knopf auf der Startseite verbunden: bleibt verbunden, bis du ihn wieder drückst. */
+    static volatile boolean manual = false;
+    /** Aktueller Zustand (vom Bluetooth-System gemeldet). */
+    static volatile boolean connected = false;
 
     static boolean isJbl(BluetoothDevice d) {
         String n = d == null ? null : d.getName();

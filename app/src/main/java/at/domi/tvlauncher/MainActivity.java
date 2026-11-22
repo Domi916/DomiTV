@@ -161,8 +161,8 @@ public class MainActivity extends Activity {
     final List<TextView> words = new ArrayList<>();
     TextView greet, date, time, toast, contSub, iSub;
     Gfx.Icon chev;
-    FrameLayout btnHome, btnSettings;
-    Gfx.Icon icHome, icSettings;
+    FrameLayout btnHome, btnSettings, btnBox;
+    Gfx.Icon icHome, icSettings, icBox;
     ObjectAnimator kenBurns;
     final List<ObjectAnimator> ringAnims = new ArrayList<>();
 
@@ -400,6 +400,11 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(-2, -2);
         tl.rightMargin = px(26);
         pill.addView(time, tl);
+        btnBox = iconButton(Gfx.Icon.SPEAKER);
+        icBox = (Gfx.Icon) btnBox.getChildAt(0);
+        LinearLayout.LayoutParams bl0 = new LinearLayout.LayoutParams(px(52), px(52));
+        bl0.rightMargin = px(12);
+        pill.addView(btnBox, bl0);
         btnHome = iconButton(Gfx.Icon.HOME);
         icHome = (Gfx.Icon) btnHome.getChildAt(0);
         btnSettings = iconButton(Gfx.Icon.SETTINGS);
@@ -964,8 +969,14 @@ public class MainActivity extends Activity {
         float par = isRapZone(zone) ? -2 * 30 : -(sel - (APPS.length - 1) / 2f) * 30;
         mv(bgWrap, anim, 1200).translationX(px(par));
         if (!anim) bgWrap.setTranslationX(px(par));
-        focusBtn(btnHome, icHome, "top".equals(zone) && tSel == 0, anim);
-        focusBtn(btnSettings, icSettings, "top".equals(zone) && tSel == 1, anim);
+        focusBtn(btnBox, icBox, "top".equals(zone) && tSel == 0, anim);
+        if (JblBox.connected || JblBox.manual) {
+            boolean f = "top".equals(zone) && tSel == 0;
+            btnBox.setBackground(Gfx.round(f ? 0xff1ed760 : 0x5c1ed760, px(26)));
+            icBox.setColor(f ? 0xff04120a : 0xffb8ffd0);
+        }
+        focusBtn(btnHome, icHome, "top".equals(zone) && tSel == 1, anim);
+        focusBtn(btnSettings, icSettings, "top".equals(zone) && tSel == 2, anim);
 
         float bx;
         if ("apps".equals(zone)) bx = 96 + 28 + sel * 312 + 140 - 360;
@@ -1129,6 +1140,22 @@ public class MainActivity extends Activity {
         c.ring.animate().alpha(on ? 1f : 0f).setDuration(anim ? 250 : 0).setStartDelay(0).start();
         if (c.play != null) c.play.animate().alpha(on ? 1f : 0f).scaleX(on ? 1f : 0.7f).scaleY(on ? 1f : 0.7f)
                 .setDuration(anim ? 350 : 0).setStartDelay(0).setInterpolator(EASE).start();
+    }
+
+    /** Box-Knopf oben rechts: JBL-Box verbinden / trennen. */
+    void toggleBox() {
+        if (JblBox.manual || JblBox.connected) {
+            JblBox.manual = false;
+            JblBox.wanted = false;
+            JblBox.disconnect(this);
+            JblBox.connected = false;
+            showToast("JBL-Box getrennt");
+        } else {
+            JblBox.manual = true;
+            JblBox.connect(this);
+            showToast("Verbinde mit der JBL-Box … (Box muss eingeschaltet sein)");
+        }
+        ui.postDelayed(new Runnable() { public void run() { applyAll(false); } }, 4000);
     }
 
     void focusBtn(FrameLayout b, Gfx.Icon ic, boolean on, boolean anim) {
@@ -1788,11 +1815,12 @@ public class MainActivity extends Activity {
             else if ("back".equals(k)) zone = "apps";
             else if ("ok".equals(k)) openRapper(RAP[rSel], rapCards[rSel].view);
         } else if ("top".equals(zone)) {
-            if ("left".equals(k)) tSel = 0;
-            else if ("right".equals(k)) tSel = 1;
+            if ("left".equals(k)) tSel = Math.max(0, tSel - 1);
+            else if ("right".equals(k)) tSel = Math.min(2, tSel + 1);
             else if ("down".equals(k) || "back".equals(k)) zone = "apps";
             else if ("ok".equals(k)) {
-                if (tSel == 0) openAmazonHome(); else openSettings();
+                if (tSel == 0) { toggleBox(); applyAll(true); return; }
+                if (tSel == 1) openAmazonHome(); else openSettings();
                 zone = "apps";
             }
         }
@@ -2182,10 +2210,12 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Zurück in Domi TV: Rapper-Mix ist vorbei, JBL-Box wieder trennen
+        // Zurück in Domi TV: Rapper-Mix ist vorbei, JBL-Box wieder trennen (außer per Box-Knopf verbunden)
         MediaWatcher.stop();
-        JblBox.wanted = false;
-        JblBox.disconnect(this);
+        if (!JblBox.manual) {
+            JblBox.wanted = false;
+            JblBox.disconnect(this);
+        }
         hideSystemUi();
         HomeWatcherService.allowAmazonHome = false;
         resetIdle();
