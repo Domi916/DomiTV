@@ -343,7 +343,7 @@ public class MainActivity extends Activity {
             public void onAnimationUpdate(ValueAnimator va) {
                 float e = 0.5f - 0.5f * (float) Math.cos(2 * Math.PI * (Float) va.getAnimatedValue());
                 boolean hasPic = shownRapper >= 0 && rapPicCount(shownRapper) > 0;
-                rapGlow.setAlpha(hasPic ? 0.10f + 0.12f * e : 0.35f + 0.25f * e);
+                rapGlow.setAlpha(hasPic ? 0.05f + 0.06f * e : 0.30f + 0.15f * e);
                 float sc = 1f + 0.04f * e;
                 rapGlow.setScaleX(sc); rapGlow.setScaleY(sc);
                 ImageView cur = rapUseA ? rapPicA : rapPicB;
@@ -658,11 +658,11 @@ public class MainActivity extends Activity {
         Random rnd = new Random(11 + i * 7);
         if (PHOTO_BG) {
             ImageView tint = new ImageView(this);
-            tint.setImageBitmap(Gfx.glow(a.glow, 0.55f));
+            tint.setImageBitmap(Gfx.glow(a.glow, 0.4f));
             tint.setScaleType(ImageView.ScaleType.FIT_XY);
             w.addView(tint, atD(700, -420, 1700, 1100));
             an.add(loop(tint, 6000, rnd,
-                    PropertyValuesHolder.ofFloat(View.ALPHA, 0.35f, 0.7f),
+                    PropertyValuesHolder.ofFloat(View.ALPHA, 0.18f, 0.32f),
                     PropertyValuesHolder.ofFloat(View.SCALE_X, 0.95f, 1.08f),
                     PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.95f, 1.08f)));
             return;
