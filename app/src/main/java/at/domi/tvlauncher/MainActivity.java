@@ -1828,6 +1828,7 @@ public class MainActivity extends Activity {
     // Apps öffnen
     // =====================================================================
     boolean openApp(AppDef a) {
+        if (a.pkg == null && "ytmusic".equals(a.id)) return openYouTubeMusic();
         if (a.pkg == null) { showToast(a.name + " ist nicht installiert"); return false; }
         PackageManager pm = getPackageManager();
         Intent i = pm.getLeanbackLaunchIntentForPackage(a.pkg);
@@ -1838,6 +1839,16 @@ public class MainActivity extends Activity {
         return true;
     }
 
+    /** Auf dem Fire TV gibt es keine eigene YT-Music-App: dann den Musik-Bereich in YouTube öffnen. */
+    boolean openYouTubeMusic() {
+        AppDef yt = AppDef.byId("youtube");
+        if (yt == null || yt.pkg == null) { showToast("YouTube nicht gefunden"); return false; }
+        Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/channel/UC-9-kyTW8ZkZNDHQJ6FgpwQ"));
+        v.setPackage(yt.pkg);
+        if (start(v)) { overridePendingTransition(0, 0); remember("ytmusic"); return true; }
+        return openApp(yt);
+    }
+
     // ---------- Kachel zieht auf Vollbild auf und blendet dunkel aus ----------
     FrameLayout launchFx;
     ValueAnimator launchAnim;
@@ -1845,7 +1856,9 @@ public class MainActivity extends Activity {
 
     void openAppFx(final AppDef a, View src) {
         if (launching) return;
-        if (a.pkg == null) { showToast(a.name + " ist nicht installiert"); return; }
+        if (a.pkg == null && !("ytmusic".equals(a.id) && AppDef.byId("youtube") != null && AppDef.byId("youtube").pkg != null)) {
+            showToast(a.name + " ist nicht installiert"); return;
+        }
         launchFx(src, a.t1, a.t2, a.name, new Callable<Boolean>() {
             public Boolean call() { return openApp(a); }
         });
