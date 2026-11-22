@@ -10,11 +10,26 @@ android {
         applicationId 'at.domi.tvlauncher'
         minSdk 25
         targetSdk 30
-        versionCode 1
-        versionName '1.0'
+        // jede Version bekommt eine höhere Nummer (für "Update suchen" in der App)
+        versionCode((System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int)
+        versionName "1." + (System.getenv('GITHUB_RUN_NUMBER') ?: '0')
+    }
+
+    // Fester Schlüssel: Updates lassen sich einfach drüber installieren (kein Deinstallieren mehr).
+    // Nur für diese private App, kein geheimer Release-Schlüssel.
+    signingConfigs {
+        debug {
+            storeFile file('domitv-debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
         }

@@ -196,7 +196,7 @@ final class LyricsOverlay {
         rapper = rapperIndex;
         if (root == null) build();
         Rapper r = Rapper.LIST[rapper];
-        label.setText(r.name.toUpperCase() + "  ·  SHUFFLE");
+        label.setText(r.isMix() ? "DEINE RAPPER  ·  MIX" : r.name.toUpperCase() + "  ·  SHUFFLE");
         label.setTextColor(r.c1);
         lines[2].setTextColor(Color.WHITE);
         try {
@@ -278,10 +278,18 @@ final class LyricsOverlay {
     }
 
     /** Neuer Song des Rappers läuft: Titel zeigen und Songtext laden. */
-    void track(String ytTitle, final long videoDur) {
+    void track(String ytTitle, String ytArtist, final long videoDur) {
         if (root == null || !added) return;
         final Rapper r = Rapper.LIST[rapper];
-        final String song = cleanTitle(ytTitle, r.name);
+        // beim Mix: welcher Rapper singt gerade?
+        String who = r.members()[0];
+        for (String m : r.members()) {
+            String n = MediaWatcher.norm(m);
+            if (MediaWatcher.hasWord(ytTitle, n) || MediaWatcher.hasWord(ytArtist, n)) { who = m; break; }
+        }
+        if (r.isMix()) label.setText(who.toUpperCase() + "  ·  MIX");
+        final String artistName = who;
+        final String song = cleanTitle(ytTitle, who);
         currentTitle = song;
         title.setText(song);
         clearLyrics("");
@@ -290,7 +298,7 @@ final class LyricsOverlay {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final Lyrics ly = fetch(r.name, song, videoDur);
+                final Lyrics ly = fetch(artistName, song, videoDur);
                 ui.post(new Runnable() {
                     @Override
                     public void run() {

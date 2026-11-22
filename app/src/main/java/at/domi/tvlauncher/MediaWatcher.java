@@ -40,13 +40,15 @@ public class MediaWatcher extends NotificationListenerService {
     static long launchedAt = 0;
     static String ourTitle = null;
     static String rapperName = "";
+    static String[] members = new String[0];
     static int rapperIndex = 0;
     static MediaWatcher instance;
 
     static void start(Context c, String pkg, int index) {
         Rapper r = Rapper.LIST[index];
         queue.clear();
-        Collections.addAll(queue, r.videos);
+        queue.addAll(r.songs(c));
+        members = r.members();
         Collections.shuffle(queue);
         pos = 0;
         ytPkg = pkg;
@@ -264,7 +266,7 @@ public class MediaWatcher extends NotificationListenerService {
                 foreignInRow = 0;
                 log(this, "unser Song: " + t + " / " + artist + " dur=" + curDur);
                 unmute();
-                HomeWatcherService.overlayTrack(t, curDur);
+                HomeWatcherService.overlayTrack(t, artist, curDur);
             }
             ourTitle = t;
             return;
@@ -272,12 +274,16 @@ public class MediaWatcher extends NotificationListenerService {
         if (t.equals(ourTitle)) return;
         // Songtext-/Audio-Modus von YouTube meldet die Song-Version mit anderem Titel: gleicher Song
         String author = m.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
-        String r = norm(rapperName);
-        if (hasWord(t, r) || hasWord(artist, r) || hasWord(author, r) || sameSong(t, ourTitle)) {
+        boolean mine = sameSong(t, ourTitle);
+        for (String mem : members) {
+            String r = norm(mem);
+            if (hasWord(t, r) || hasWord(artist, r) || hasWord(author, r)) mine = true;
+        }
+        if (mine) {
             log(this, "bleibt: " + t + " / " + artist);
             if (!sameSong(t, ourTitle)) {
                 trackStarted(m);
-                HomeWatcherService.overlayTrack(t, curDur);
+                HomeWatcherService.overlayTrack(t, artist, curDur);
             }
             ourTitle = t;
             return;

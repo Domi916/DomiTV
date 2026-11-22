@@ -1,0 +1,30 @@
+name: Songlisten aktualisieren
+
+on:
+  schedule:
+    - cron: '17 4 * * 1'   # jeden Montag früh
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  songs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: pip install -q -U yt-dlp
+      - name: Alle Songs der Rapper holen
+        run: python3 tools/songs.py
+      - name: Speichern und neu bauen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "Domi TV Bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add app/src/main/assets/songs
+          if git diff --cached --quiet; then echo "keine Änderung"; exit 0; fi
+          git commit -m "Songlisten aktualisiert"
+          git push
+          gh workflow run build.yml --ref main

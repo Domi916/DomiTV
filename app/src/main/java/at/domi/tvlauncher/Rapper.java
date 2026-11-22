@@ -14,6 +14,8 @@ final class Rapper {
                     "8Zuh44rji24", "aE-9hFktH40", "4DIQDnu3mr4", "Fy7WIdkxwDw", "lTQ8k9uysXo", "5EJ5Ci5UGgk", "6kTjJwPv5V0", "sXYXT70ICnw"),
             new Rapper("Nettspend", "UC6CvS47L6uTuPSPhinE5jKA", 0xffff4fd8, 0xff1c0420,
                     "BRfZe0mLcpw", "9SrWNGvrtVc", "fekiI4Vkt9Y", "wC1ho-3CZcg", "x8gEkJAVd-I", "aUtDhHNTJUE", "PvPGEBaXMRs", "KoH6Fpju-Y4"),
+            // ---- Mix aus allen deinen Rappern ----
+            new Rapper("Alle Rapper", "", 0xffffffff, 0xff141418),
             // ---- Rapper, die dir gefallen könnten (zweite Reihe) ----
             new Rapper("Destroy Lonely", "UCx95IwHfzVDujNhphVJAMMA", 0xffb05cff, 0xff14051f,
                     "UfNuombVZb4", "9vdgd4F9CuI", "6M1rd4n9e44", "UmJphrg_tfg", "-H4w1Z65ZzI", "QTmRmPDS9tw"),
@@ -27,8 +29,44 @@ final class Rapper {
                     "i1XqpO6TYkk", "KxF2Ok4zRIw", "Dr3mGAT5JLU", "ZjOPBoFe358"),
     };
 
-    /** Die ersten OWN Einträge sind "Deine Rapper", der Rest "Rapper, die dir gefallen könnten". */
-    static final int OWN = 5;
+    /** Die ersten OWN Einträge sind "Deine Rapper" (inkl. Mix), der Rest "Rapper, die dir gefallen könnten". */
+    static final int OWN = 6;
+    /** Index der Mix-Karte "Alle Rapper" (mischt die ersten MIX_OF Rapper). */
+    static final int MIX = 5, MIX_OF = 5;
+
+    boolean isMix() { return this == LIST[MIX]; }
+
+    /** Namen, deren Songs in diesem Shuffle erlaubt sind. */
+    String[] members() {
+        if (!isMix()) return new String[]{name};
+        String[] m = new String[MIX_OF];
+        for (int i = 0; i < MIX_OF; i++) m[i] = LIST[i].name;
+        return m;
+    }
+
+    static String slug(String s) { return s.toLowerCase().replaceAll("[^a-z0-9]+", "_").replaceAll("^_|_$", ""); }
+
+    /** Alle Songs (aus assets/songs/<name>.txt, von GitHub automatisch aktualisiert), sonst die feste Liste. */
+    java.util.List<String> songs(android.content.Context c) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        if (isMix()) {
+            for (int i = 0; i < MIX_OF; i++) out.addAll(LIST[i].songs(c));
+            return out;
+        }
+        try {
+            java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(
+                    c.getAssets().open("songs/" + slug(name) + ".txt"), "UTF-8"));
+            String line;
+            while ((line = r.readLine()) != null) {
+                int k = line.indexOf('|');
+                String id = (k > 0 ? line.substring(0, k) : line).trim();
+                if (id.length() == 11) out.add(id);
+            }
+            r.close();
+        } catch (Exception ignored) { }
+        if (out.size() < 5) { out.clear(); java.util.Collections.addAll(out, videos); }
+        return out;
+    }
 
     final String name;
     /** YouTube-Kanal des Künstlers: seine Uploads-Playlist (UU…) enthält nur seine eigenen Songs. */

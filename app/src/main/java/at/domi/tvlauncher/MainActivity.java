@@ -180,6 +180,7 @@ public class MainActivity extends Activity {
 
     static class Card {
         AppDef app;
+        int rapper = -1;
         String title, sub, right;
         boolean hint;
         FrameLayout view;
@@ -239,6 +240,7 @@ public class MainActivity extends Activity {
         loadOtherBackgrounds();
         long up = SystemClock.elapsedRealtime();
         if (up < 90000) intro.setAlpha(0f);
+        root.postDelayed(new Runnable() { public void run() { Updater.check(MainActivity.this, false); } }, 15000);
         root.postDelayed(new Runnable() { public void run() { playIntro(true); } }, up < 90000 ? 2500 : 0);
     }
 
@@ -624,10 +626,10 @@ public class MainActivity extends Activity {
         GradientDrawable stripe = Gfx.grad(GradientDrawable.Orientation.TL_BR, new int[]{0, Gfx.a(r.c1, 0.16f), 0, 0}, rad);
         GradientDrawable gloss = Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.w(0.14f), Gfx.w(0), Gfx.w(0)}, rad);
         f.setBackground(new LayerDrawable(new Drawable[]{base, glow, stripe, gloss}));
-        f.addView(text("RAPPER", 14, "Bold", Gfx.w(0.7f), 0.28f), atD(22, 22, -2, -2));
+        f.addView(text(r.isMix() ? "MIX" : "RAPPER", 14, "Bold", Gfx.w(0.7f), 0.28f), atD(22, 22, -2, -2));
         View dot = new View(this);
         dot.setBackground(Gfx.round(r.c1, px(5)));
-        f.addView(dot, atD(22 + 92, 26, 10, 10));
+        f.addView(dot, atD(22 + (r.isMix() ? 46 : 92), 26, 10, 10));
         int len = r.name.length();
         TextView nm = text(r.name.toUpperCase(Locale.ROOT), len > 12 ? 28 : len > 10 ? 33 : 40, "Black", Color.WHITE, -0.02f);
         nm.setSingleLine(true);
@@ -636,7 +638,7 @@ public class MainActivity extends Activity {
         nl.leftMargin = px(22);
         nl.bottomMargin = px(48);
         f.addView(nm, nl);
-        TextView sub = text("Shuffle auf YouTube", 16, "Medium", Gfx.w(0.72f), 0);
+        TextView sub = text(r.isMix() ? "Alle 5 gemischt" : "Shuffle auf YouTube", 16, "Medium", Gfx.w(0.72f), 0);
         FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2);
         sl.gravity = Gravity.BOTTOM | Gravity.START;
         sl.leftMargin = px(22);
@@ -975,7 +977,7 @@ public class MainActivity extends Activity {
         float cx = -Math.max(0, cSel - 3) * 436;
         mv(cardsRow, anim, 500).translationX(px(cx));
         if (!anim) cardsRow.setTranslationX(px(cx));
-        float rx = 0;
+        float rx = "rap".equals(zone) ? -Math.max(0, rSel - 4) * 348 : 0;
         mv(rapRow, anim, 500).translationX(px(rx));
         if (!anim) rapRow.setTranslationX(px(rx));
         setMode("top".equals(zone) ? "apps" : zone, anim);
@@ -1322,6 +1324,18 @@ public class MainActivity extends Activity {
                 cards.add(c);
             }
         } catch (Exception ignored) { }
+        // "Weiter hören": zuletzt gestarteter Rapper-Shuffle ganz vorne
+        int lr = prefs.getInt("lastRapper", -1);
+        AppDef ytApp = AppDef.byId("youtube");
+        if (lr >= 0 && lr < RAP.length && ytApp != null && ytApp.pkg != null) {
+            Card c = new Card();
+            c.app = ytApp;
+            c.rapper = lr;
+            c.title = RAP[lr].name;
+            c.sub = "Weiter hören · Shuffle";
+            c.right = ago(prefs.getLong("lastRapperTs", System.currentTimeMillis()));
+            cards.add(0, c);
+        }
         if (cards.isEmpty()) {
             Card c = new Card();
             c.hint = true;
@@ -1343,17 +1357,18 @@ public class MainActivity extends Activity {
         });
         f.setClipToOutline(true);
         int t1 = c.hint ? 0xff2a2a30 : c.app.t1, t2 = c.hint ? 0xff121215 : c.app.t2;
+        if (c.rapper >= 0) { t1 = Gfx.a(RAP[c.rapper].c1, 0.55f) | 0xff000000; t2 = RAP[c.rapper].c2; }
         GradientDrawable base = Gfx.grad(GradientDrawable.Orientation.TL_BR, new int[]{t1, t2}, rad);
         GradientDrawable glow = new GradientDrawable();
         glow.setGradientType(GradientDrawable.RADIAL_GRADIENT);
-        glow.setColors(new int[]{c.hint ? 0 : Gfx.a(c.app.glow, 0.6f), 0});
+        glow.setColors(new int[]{c.hint ? 0 : Gfx.a(c.rapper >= 0 ? RAP[c.rapper].c1 : c.app.glow, 0.6f), 0});
         glow.setGradientCenter(0.78f, 0.22f);
         glow.setGradientRadius(px(260));
         GradientDrawable gloss = Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM,
                 new int[]{Gfx.w(0.16f), Gfx.w(0), Gfx.w(0), 0x8c000000}, rad);
         f.setBackground(new LayerDrawable(new Drawable[]{base, glow, gloss}));
 
-        TextView tag = text(c.hint ? "Tipp" : c.app.name, 16, "SemiBold", Gfx.w(0.92f), 0);
+        TextView tag = text(c.hint ? "Tipp" : c.rapper >= 0 ? "Weiter hören" : c.app.name, 16, "SemiBold", Gfx.w(0.92f), 0);
         tag.setGravity(Gravity.CENTER);
         tag.setPadding(px(14), 0, px(14), 0);
         GradientDrawable tb = Gfx.round(0x52000000, px(17));
@@ -1737,7 +1752,7 @@ public class MainActivity extends Activity {
         resetIdle();
         if (saverOn) { hideSaver(true); return; }
         if (launching) return;
-        if (introRunning() && !"menu".equals(k)) { skipIntro(); return; }
+        if (introRunning()) { skipIntro(); return; }
         int n = APPS.length;
         if ("apps".equals(zone)) {
             if ("left".equals(k)) sel = Math.max(0, sel - 1);
@@ -1754,6 +1769,7 @@ public class MainActivity extends Activity {
             else if ("ok".equals(k) && cSel < cards.size()) {
                 Card c = cards.get(cSel);
                 if (c.hint) showToast("Öffne eine App, dann erscheint sie hier");
+                else if (c.rapper >= 0) openRapper(RAP[c.rapper], c.view);
                 else openAppFx(c.app, c.view);
             }
         } else if ("rap".equals(zone)) {
@@ -1780,7 +1796,7 @@ public class MainActivity extends Activity {
                 zone = "apps";
             }
         }
-        if ("menu".equals(k)) openSettings();
+        if ("menu".equals(k)) { Updater.check(this, true); return; }
         applyAll(true);
     }
 
@@ -1924,7 +1940,9 @@ public class MainActivity extends Activity {
         AppDef yt = AppDef.byId("youtube");
         if (yt == null || yt.pkg == null) { showToast("YouTube nicht gefunden"); return false; }
         // Nur Songs des Rappers, gemischt. MediaWatcher springt bei fremden Videos sofort zum nächsten.
-        MediaWatcher.start(this, yt.pkg, Math.max(0, java.util.Arrays.asList(Rapper.LIST).indexOf(r)));
+        int idx = Math.max(0, java.util.Arrays.asList(Rapper.LIST).indexOf(r));
+        prefs.edit().putInt("lastRapper", idx).putLong("lastRapperTs", System.currentTimeMillis()).apply();
+        MediaWatcher.start(this, yt.pkg, idx);
         overridePendingTransition(0, 0);
         return true;
     }

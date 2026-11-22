@@ -46,10 +46,10 @@ public class HomeWatcherService extends AccessibilityService {
         s.h.post(new Runnable() { public void run() { if (s.overlay != null) s.overlay.hide(); } });
     }
 
-    static void overlayTrack(final String title, final long dur) {
+    static void overlayTrack(final String title, final String artist, final long dur) {
         final HomeWatcherService s = instance;
         if (s == null) return;
-        s.h.post(new Runnable() { public void run() { if (s.overlay != null) s.overlay.track(title, dur); } });
+        s.h.post(new Runnable() { public void run() { if (s.overlay != null) s.overlay.track(title, artist, dur); } });
     }
 
     static void overlaySwitching() {
@@ -98,7 +98,7 @@ public class HomeWatcherService extends AccessibilityService {
             MediaWatcher.trackAt = SystemClock.elapsedRealtime() - i.getIntExtra("at", 0);
             MediaWatcher.lastPos = -1;
             overlay.show(r);
-            overlay.track(t, i.getLongExtra("dur", 0));
+            overlay.track(t, i.getStringExtra("artist"), i.getLongExtra("dur", 0));
         }
     };
 
