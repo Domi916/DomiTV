@@ -51,6 +51,13 @@ public class MediaWatcher extends NotificationListenerService {
 
     static void stop() { active = false; }
 
+    /** ⏩-Taste während des Shuffles: nächster Song des Rappers. */
+    static void skip(Context c) {
+        if (!active) return;
+        pos++;
+        play(c);
+    }
+
     static boolean play(Context c) {
         if (queue.isEmpty() || ytPkg == null) return false;
         if (pos >= queue.size()) { Collections.shuffle(queue); pos = 0; }
@@ -114,10 +121,12 @@ public class MediaWatcher extends NotificationListenerService {
 
                 @Override
                 public void onPlaybackStateChanged(PlaybackState s) {
-                    // Song zu Ende, YouTube würde ein fremdes Video starten: wir übernehmen
-                    if (active && s != null && s.getState() == PlaybackState.STATE_STOPPED
-                            && SystemClock.elapsedRealtime() - launchedAt > 8000) {
-                        next();
+                    if (s == null) return;
+                    if (s.getPosition() >= 0) {
+                        lastPos = s.getPosition();
+                        lastPosAt = s.getLastPositionUpdateTime() > 0 ? s.getLastPositionUpdateTime() : SystemClock.elapsedRealtime();
+                        playing = s.getState() == PlaybackState.STATE_PLAYING;
+                        speed = s.getPlaybackSpeed() > 0 ? s.getPlaybackSpeed() : 1f;
                     }
                 }
 
@@ -131,6 +140,23 @@ public class MediaWatcher extends NotificationListenerService {
         }
     }
 
+    // Wo steht der aktuelle Song? Damit unterscheiden wir "Song zu Ende" (Autoplay) von "du hast selbst etwas gewählt".
+    static long curDur = 0, lastPos = -1, lastPosAt = 0;
+    static boolean playing = false;
+    static float speed = 1f;
+
+    static void trackStarted(MediaMetadata m) {
+        curDur = m == null ? 0 : m.getLong(MediaMetadata.METADATA_KEY_DURATION);
+        lastPos = -1;
+    }
+
+    /** true = der vorige Song war (fast) zu Ende, also hat YouTube von selbst weitergemacht. */
+    static boolean endedNaturally() {
+        if (curDur <= 0 || lastPos < 0) return true; // unbekannt: wie bisher behandeln
+        long pos = lastPos + (playing ? (long) ((SystemClock.elapsedRealtime() - lastPosAt) * speed) : 0);
+        return pos >= curDur - 12000;
+    }
+
     void onTrack(MediaController mc, MediaMetadata m) {
         if (!active || m == null) return;
         String t = m.getString(MediaMetadata.METADATA_KEY_TITLE);
@@ -138,6 +164,7 @@ public class MediaWatcher extends NotificationListenerService {
         long since = SystemClock.elapsedRealtime() - launchedAt;
         if (since < 7000) {
             // Das ist der Song, den wir gerade gestartet haben
+            if (!t.equals(ourTitle)) trackStarted(m);
             ourTitle = t;
             return;
         }
@@ -150,7 +177,14 @@ public class MediaWatcher extends NotificationListenerService {
         if (norm(t).contains(r) || (artist != null && norm(artist).contains(r))
                 || (author != null && norm(author).contains(r)) || sameSong(t, ourTitle)) {
             Log.i(TAG, "Shuffle: gleicher Rapper/Song (" + t + "), bleibt");
+            if (!sameSong(t, ourTitle)) trackStarted(m);
             ourTitle = t;
+            return;
+        }
+        if (!endedNaturally()) {
+            // Mitten im Song etwas anderes gestartet: das hast du selbst ausgesucht, Shuffle hört auf
+            Log.i(TAG, "Shuffle: selbst gewählt (" + t + "), Shuffle aus");
+            active = false;
             return;
         }
         Log.i(TAG, "Shuffle: fremder Song erkannt (" + t + " / " + artist + "), nächster Song von " + rapperName);

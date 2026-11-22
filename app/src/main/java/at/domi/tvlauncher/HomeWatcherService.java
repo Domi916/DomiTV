@@ -120,6 +120,18 @@ public class HomeWatcherService extends AccessibilityService {
         }
     }
 
+    /** Während des Rapper-Shuffles: ⏩ (Vorspulen) springt zum nächsten Song des Rappers. */
+    @Override
+    protected boolean onKeyEvent(android.view.KeyEvent e) {
+        int k = e.getKeyCode();
+        if (MediaWatcher.active && (k == android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD
+                || k == android.view.KeyEvent.KEYCODE_MEDIA_NEXT)) {
+            if (e.getAction() == android.view.KeyEvent.ACTION_UP) MediaWatcher.skip(this);
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public void onInterrupt() { }
 }
