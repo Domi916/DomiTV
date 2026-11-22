@@ -335,16 +335,16 @@ public class MainActivity extends Activity {
         rapName.setVisibility(View.GONE);
         rapStage.addView(rapName, atD(60, 120, 4200, 420));
         rapPulse = ValueAnimator.ofFloat(0f, 1f);
-        rapPulse.setDuration(400);            // 150 BPM, wie ein Rage-Beat
+        rapPulse.setDuration(5200);           // langsames Atmen
         rapPulse.setRepeatCount(ValueAnimator.INFINITE);
         rapPulse.setInterpolator(new LinearInterpolator());
         rapPulse.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator va) {
-                float e = (float) Math.exp(-3.2f * (Float) va.getAnimatedValue());
-                boolean hasPic = !playlist().isEmpty();
-                rapGlow.setAlpha(hasPic ? 0.12f + 0.28f * e : 0.42f + 0.55f * e);
-                float sc = 1f + 0.06f * e;
+                float e = 0.5f - 0.5f * (float) Math.cos(2 * Math.PI * (Float) va.getAnimatedValue());
+                boolean hasPic = shownRapper >= 0 && rapPicCount(shownRapper) > 0;
+                rapGlow.setAlpha(hasPic ? 0.10f + 0.12f * e : 0.35f + 0.25f * e);
+                float sc = 1f + 0.04f * e;
                 rapGlow.setScaleX(sc); rapGlow.setScaleY(sc);
                 ImageView cur = rapUseA ? rapPicA : rapPicB;
                 if (cur.getAnimation() == null) {
@@ -415,7 +415,7 @@ public class MainActivity extends Activity {
         lift.addView(heroWrap, atD(0, -32, 1728, 322));
         dock = new FrameLayout(this);
         dock.setClipChildren(false);
-        GradientDrawable db = Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.w(0.085f), Gfx.w(0.03f)}, px(54));
+        GradientDrawable db = Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.w(0.05f), Gfx.w(0.012f)}, px(54));
         db.setStroke(Math.max(1, px(1)), Gfx.w(0.12f));
         dock.setBackground(db);
         lift.addView(dock, atD(0, 326, 28 * 2 + APPS.length * 280 + (APPS.length - 1) * 32, 214));
@@ -844,6 +844,13 @@ public class MainActivity extends Activity {
         return h;
     }
 
+    /** Getöntes Glas in der App-Farbe mit hellem Rand. */
+    GradientDrawable glassTile(AppDef a) {
+        GradientDrawable g = Gfx.grad(GradientDrawable.Orientation.TL_BR, new int[]{Gfx.a(a.t1, 0.42f), Gfx.a(a.t2, 0.18f)}, px(30));
+        g.setStroke(Math.max(1, px(1.5f)), Gfx.w(0.28f));
+        return g;
+    }
+
     Slot buildSlot(AppDef a, int i) {
         Slot s = new Slot();
         float x = 28 + i * 312, y = 28;
@@ -851,7 +858,7 @@ public class MainActivity extends Activity {
         GradientDrawable rd = Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.a(a.t1, 0.42f), Gfx.a(a.t2, 0.08f), Gfx.a(a.t2, 0)}, 0);
         rd.setCornerRadii(new float[]{px(30), px(30), px(30), px(30), 0, 0, 0, 0});
         s.reflect.setBackground(rd);
-        s.reflect.setAlpha(0.35f);
+        s.reflect.setAlpha(0.18f);
         dock.addView(s.reflect, atD(x, y + 166, 280, 120));
 
         s.glow = new ImageView(this);
@@ -862,15 +869,16 @@ public class MainActivity extends Activity {
 
         s.tile = new FrameLayout(this);
         Drawable[] layers = {
-                Gfx.grad(GradientDrawable.Orientation.TL_BR, new int[]{a.t1, a.t2}, px(30)),
-                Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.w(0.18f), Gfx.w(0), Gfx.w(0)}, px(30)),
+                glassTile(a),
+                Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.w(0.16f), Gfx.w(0.02f), Gfx.w(0)}, px(30)),
         };
         s.tile.setBackground(new LayerDrawable(layers));
         TextView lbl = text(a.name, 32, "Bold", TXT, -0.035f);
+        lbl.setShadowLayer(px(10), 0, px(2), 0x99000000);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2);
         lp.gravity = Gravity.CENTER;
         s.tile.addView(lbl, lp);
-        s.tile.setAlpha(0.62f);
+        s.tile.setAlpha(0.82f);
         s.tile.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         dock.addView(s.tile, atD(x, y, 280, 158));
 
@@ -1056,7 +1064,7 @@ public class MainActivity extends Activity {
         Slot s = slots[i];
         boolean missing = APPS[i].pkg == null;
         float sc = on ? 1.12f : 1f, ty = on ? -px(14) : 0;
-        float ta = on ? (missing ? 0.6f : 1f) : (missing ? 0.25f : 0.62f);
+        float ta = on ? (missing ? 0.6f : 1f) : (missing ? 0.3f : 0.82f);
         long d = anim ? 420 : 0;
         s.tile.animate().scaleX(sc).scaleY(sc).translationY(ty).alpha(ta).setDuration(d).setStartDelay(0).setInterpolator(EASE).start();
         s.fx.animate().scaleX(sc).scaleY(sc).translationY(ty).alpha(on ? 1f : 0f).setDuration(d).setStartDelay(0).setInterpolator(EASE).start();
@@ -1082,7 +1090,7 @@ public class MainActivity extends Activity {
             s.band.animate().translationX(px(600)).setDuration(950).setStartDelay(160).setInterpolator(SOFT).start();
         }
         s.bar.animate().scaleX(on ? 1f : 0f).alpha(on ? 1f : 0f).setDuration(anim ? 400 : 0).setStartDelay(0).setInterpolator(EASE).start();
-        s.reflect.animate().alpha(on ? 0.9f : 0.35f).setDuration(anim ? 350 : 0).setStartDelay(0).start();
+        s.reflect.animate().alpha(on ? 0.55f : 0.18f).setDuration(anim ? 350 : 0).setStartDelay(0).start();
     }
 
     void focusCard(Card c, boolean on, boolean anim) {
@@ -1118,8 +1126,6 @@ public class MainActivity extends Activity {
                     public void run() { if (!"cont".equals(shownMode) && !"rap".equals(shownMode)) cont.setVisibility(View.INVISIBLE); }
                 }).start();
         if (isRap) {
-            rapPlayPos = -1;
-            nextRapPic(anim, 550);
             ui.removeCallbacks(rapCycle);
             ui.postDelayed(rapCycle, 7000);
             rapStage.setVisibility(View.VISIBLE);
@@ -1185,11 +1191,22 @@ public class MainActivity extends Activity {
 
     final Runnable rapCycle = new Runnable() {
         public void run() {
-            if (!"rap".equals(shownMode)) return;
-            nextRapPic(true, 900);
+            if (!"rap".equals(shownMode) || shownRapper < 0) return;
+            int n = rapPicCount(shownRapper);
+            if (n > 1) {
+                rapPicIdx = (rapPicIdx + 1) % n;
+                showRapPic(loadRapPic(shownRapper, rapPicIdx), true, 900);
+            }
             ui.postDelayed(this, 7000);
         }
     };
+
+    void showRapperPics(int r, boolean anim) {
+        rapPicIdx = 0;
+        showRapPic(rapPicCount(r) > 0 ? loadRapPic(r, 0) : null, anim, 550);
+        ui.removeCallbacks(rapCycle);
+        ui.postDelayed(rapCycle, 7000);
+    }
 
     Bitmap loadRapPic(int r, int k) {
         try {
@@ -1204,6 +1221,7 @@ public class MainActivity extends Activity {
         if (r == shownRapper) return;
         shownRapper = r;
         rapGlow.setImageBitmap(rapGlows[r]);
+        showRapperPics(r, anim);
     }
 
     void showRapPic(Bitmap pic, boolean anim, long fadeMs) {
