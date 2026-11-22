@@ -224,11 +224,12 @@ public class HomeWatcherService extends AccessibilityService {
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) MediaWatcher.togglePause();
             return true;
         }
-        // ◀ ▶: Songtext früher/später, falls er nicht ganz passt
-        if (overlayOn && overlay.mode == LyricsOverlay.LYRICS
-                && (k == android.view.KeyEvent.KEYCODE_DPAD_LEFT || k == android.view.KeyEvent.KEYCODE_DPAD_RIGHT)) {
-            if (e.getAction() == android.view.KeyEvent.ACTION_DOWN)
-                overlay.shift(k == android.view.KeyEvent.KEYCODE_DPAD_RIGHT ? -400 : 400);
+        // ◀ ▶: vorheriger / nächster Song
+        if (overlayOn && (k == android.view.KeyEvent.KEYCODE_DPAD_LEFT || k == android.view.KeyEvent.KEYCODE_DPAD_RIGHT)) {
+            if (e.getAction() == android.view.KeyEvent.ACTION_UP) {
+                if (k == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) MediaWatcher.skip(this);
+                else MediaWatcher.previous(this);
+            }
             return true;
         }
         // ▼ Favorit ♥   ▲ Song nie wieder

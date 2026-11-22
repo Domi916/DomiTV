@@ -42,10 +42,10 @@ import java.util.regex.Pattern;
 
 /**
  * Domi-TV-Anzeige über YouTube während des Rapper-Shuffles:
- *  SONGTEXT – Foto + leuchtender, mitlaufender Songtext (Karaoke-Füllung)
+ *  SONGTEXT – Foto + mitlaufender Songtext
  *  AUDIO    – großes Foto + Titel + Fortschritt
  *  VIDEO    – nichts drüber, YouTube-Video
- * ☰ wechselt die Anzeige, OK = Pause, ◀ ▶ Songtext verschieben.
+ * ☰ wechselt die Anzeige, OK = Pause, ◀ ▶ vorheriger/nächster Song.
  */
 final class LyricsOverlay {
     static final String TAG = "DomiTV";
@@ -87,7 +87,7 @@ final class LyricsOverlay {
         wm = (WindowManager) c.getSystemService(Context.WINDOW_SERVICE);
         prefs = c.getSharedPreferences("domitv", Context.MODE_PRIVATE);
         mode = prefs.getInt("anzeige", LYRICS);
-        shift = prefs.getLong("lyricShift", 0);
+        shift = 0; // Songtext läuft immer live mit, kein manuelles Verschieben
     }
 
     float px(float v) {
@@ -263,7 +263,7 @@ final class LyricsOverlay {
         title.setText("");
         clearLyrics("");
         status.setText("Lädt …");
-        hint.setText("☰ Anzeige   OK Pause   ▼ ♥ Favorit   ▲ nie wieder   ⏩ nächster   ↩ Ende");
+        hint.setText("◀ ▶ Song   OK Pause   ▼ ♥ Favorit   ▲ nie wieder   ☰ Anzeige   ↩ Ende");
         if (!added) {
             try {
                 wm.addView(root, params());
@@ -437,7 +437,7 @@ final class LyricsOverlay {
 
     void updateStatus() {
         if (status == null) return;
-        if (!times.isEmpty()) status.setText(approx ? "Songtext ungefähr  ·  ◀ ▶ anpassen" : "Songtext live  ·  ◀ ▶ anpassen");
+        if (!times.isEmpty()) status.setText(approx ? "Songtext (ungefähr)" : "Songtext live");
         else if (request > 0 && !currentTitle.isEmpty()) status.setText(mode == LYRICS ? "Kein Songtext gefunden" : "");
     }
 

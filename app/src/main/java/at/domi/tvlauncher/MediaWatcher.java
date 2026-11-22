@@ -99,6 +99,14 @@ public class MediaWatcher extends NotificationListenerService {
         } catch (Exception ignored) { }
     }
 
+    /** ◀: vorheriger Song (oder dieser Song von vorne, wenn es der erste ist). */
+    static void previous(Context c) {
+        if (!active) return;
+        if (pos > 0) pos--;
+        HomeWatcherService.overlaySwitching();
+        play(c);
+    }
+
     /** ⏩ während des Shuffles: nächster Song des Rappers. */
     static void skip(Context c) {
         if (!active) return;
