@@ -54,7 +54,10 @@ def songs_of(name):
                 print("  Playlist-Fehler", pl.get("title"), e); continue
             tracks = [t.get("id") for t in (d.get("entries") or []) if t.get("id")]
             if len(tracks) >= 5:  # Alben/Mixtapes, keine Singles
-                albums.append({"title": pl.get("title") or d.get("title") or "", "tracks": tracks})
+                al = {"title": pl.get("title") or d.get("title") or "", "tracks": tracks}
+                cov = cover(tracks[0], f"{slug(name)}_{len(albums)}.jpg")
+                if cov: al["cover"] = cov
+                albums.append(al)
             for t in d.get("entries") or []:
                 vid, title = t.get("id"), (t.get("title") or "").replace("|", "/")
                 key = norm(re.sub(r"\(.*?\)|\[.*?\]", "", title))
@@ -68,6 +71,30 @@ def songs_of(name):
     return []
 
 ALBUMS = {}
+COV = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "assets", "covers")
+
+def cover(video_id, fname):
+    """Albumcover aus dem Vorschaubild des ersten Songs (offizielle Audio-Version zeigt das Cover mittig)."""
+    import io, urllib.request
+    from PIL import Image
+    for q in ("maxresdefault", "sddefault", "hqdefault"):
+        try:
+            data = urllib.request.urlopen(f"https://i.ytimg.com/vi/{video_id}/{q}.jpg", timeout=20).read()
+            im = Image.open(io.BytesIO(data)).convert("RGB")
+            w, h = im.size
+            if q == "hqdefault" or q == "sddefault":
+                # 4:3 mit schwarzen Balken: 16:9-Bereich in der Mitte
+                vh = int(w * 9 / 16); top = (h - vh) // 2
+                im = im.crop((0, top, w, top + vh)); w, h = im.size
+            side = h
+            left = (w - side) // 2
+            im = im.crop((left, 0, left + side, side)).resize((360, 360), Image.LANCZOS)
+            os.makedirs(COV, exist_ok=True)
+            im.save(os.path.join(COV, fname), quality=88)
+            return "covers/" + fname
+        except Exception:
+            continue
+    return None
 
 def main():
     os.makedirs(OUT, exist_ok=True)

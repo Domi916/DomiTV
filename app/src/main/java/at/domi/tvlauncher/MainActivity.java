@@ -512,7 +512,7 @@ public class MainActivity extends Activity {
         albumCards = new RapCard[albums.size()];
         for (int i = 0; i < albums.size(); i++) {
             albumCards[i] = buildAlbumCard(albums.get(i));
-            albumRow.addView(albumCards[i].view, atD(i * 348, 0, 320, 190));
+            albumRow.addView(albumCards[i].view, atD(i * 236, 0, 210, 210));
         }
         cont.addView(head3, atD(0, 950, -2, -2));
         head3v = head3;
@@ -662,21 +662,48 @@ public class MainActivity extends Activity {
         GradientDrawable base = Gfx.grad(GradientDrawable.Orientation.BL_TR, new int[]{0xff08080b, r.c2, Gfx.a(r.c1, 0.55f)}, rad);
         GradientDrawable gloss = Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.w(0.12f), Gfx.w(0), Gfx.w(0)}, rad);
         f.setBackground(new LayerDrawable(new Drawable[]{base, gloss}));
-        f.addView(text("ALBUM", 14, "Bold", Gfx.w(0.7f), 0.28f), atD(22, 22, -2, -2));
-        TextView nm = text(a.title, a.title.length() > 16 ? 26 : 32, "Black", Color.WHITE, -0.02f);
+        Bitmap cov = null;
+        if (a.cover != null) {
+            try {
+                InputStream in = getAssets().open(a.cover);
+                BitmapFactory.Options o = new BitmapFactory.Options();
+                o.inPreferredConfig = Bitmap.Config.RGB_565;
+                cov = BitmapFactory.decodeStream(in, null, o);
+                in.close();
+            } catch (Exception ignored) { }
+        }
+        if (cov != null) {
+            // Albumcover füllt die ganze Karte, unten ein dezenter Verlauf für den Rapper-Namen
+            ImageView iv = new ImageView(this);
+            iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            iv.setImageBitmap(cov);
+            f.addView(iv, new FrameLayout.LayoutParams(-1, -1));
+            View sh = new View(this);
+            sh.setBackground(Gfx.grad(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{0xCC000000, 0x00000000}, 0));
+            FrameLayout.LayoutParams shl = new FrameLayout.LayoutParams(-1, px(80));
+            shl.gravity = Gravity.BOTTOM;
+            f.addView(sh, shl);
+            TextView who = text(r.name, 15, "SemiBold", Gfx.w(0.9f), 0);
+            FrameLayout.LayoutParams wl = new FrameLayout.LayoutParams(-2, -2);
+            wl.gravity = Gravity.BOTTOM | Gravity.START;
+            wl.leftMargin = px(16);
+            wl.bottomMargin = px(14);
+            f.addView(who, wl);
+        }
+        if (cov == null) f.addView(text("ALBUM", 14, "Bold", Gfx.w(0.7f), 0.28f), atD(22, 22, -2, -2));
+        TextView nm = text(a.title, a.title.length() > 12 ? 22 : 28, "Black", Color.WHITE, -0.02f);
         nm.setMaxLines(2);
         nm.setEllipsize(TextUtils.TruncateAt.END);
-        FrameLayout.LayoutParams nl = new FrameLayout.LayoutParams(px(276), -2);
+        FrameLayout.LayoutParams nl = new FrameLayout.LayoutParams(px(176), -2);
         nl.gravity = Gravity.BOTTOM | Gravity.START;
         nl.leftMargin = px(22);
         nl.bottomMargin = px(48);
-        f.addView(nm, nl);
         TextView sub = text(r.name + " · " + a.tracks.size() + " Songs", 16, "Medium", Gfx.w(0.72f), 0);
         FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2);
         sl.gravity = Gravity.BOTTOM | Gravity.START;
         sl.leftMargin = px(22);
         sl.bottomMargin = px(22);
-        f.addView(sub, sl);
+        if (cov == null) { f.addView(nm, nl); f.addView(sub, sl); }
         FrameLayout play = new FrameLayout(this);
         play.setBackground(Gfx.round(r.c1, px(25)));
         Gfx.Icon pi = new Gfx.Icon(this, Gfx.Icon.PLAY);
@@ -686,7 +713,7 @@ public class MainActivity extends Activity {
         pl.leftMargin = px(3);
         play.addView(pi, pl);
         play.setAlpha(0f);
-        f.addView(play, atD(320 - 20 - 50, 18, 50, 50));
+        f.addView(play, atD(210 - 14 - 44, 14, 44, 44));
         View ring = new View(this);
         GradientDrawable rg = Gfx.round(Color.TRANSPARENT, rad);
         rg.setStroke(Math.max(2, px(3)), Gfx.w(0.95f));
@@ -1079,7 +1106,7 @@ public class MainActivity extends Activity {
         mv(cardsRow, anim, 500).translationX(px(cx));
         if (!anim) cardsRow.setTranslationX(px(cx));
         float rx = "rap".equals(zone) ? -Math.max(0, rSel - 4) * 348 : 0;
-        float ax = "alb".equals(zone) ? -Math.max(0, aSel - 3) * 348 : 0;
+        float ax = "alb".equals(zone) ? -Math.max(0, aSel - 5) * 236 : 0;
         mv(albumRow, anim, 500).translationX(px(ax));
         if (!anim) albumRow.setTranslationX(px(ax));
         mv(rapRow, anim, 500).translationX(px(rx));

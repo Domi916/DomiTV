@@ -14,6 +14,7 @@ import java.util.List;
 final class Album {
     final int rapper;
     final String title;
+    String cover; // Pfad in assets/ (covers/…jpg) oder null
     final List<String> tracks = new ArrayList<>();
 
     Album(int rapper, String title) {
@@ -37,6 +38,7 @@ final class Album {
                 for (int i = 0; i < a.length(); i++) {
                     JSONObject o = a.getJSONObject(i);
                     Album al = new Album(r, o.optString("title"));
+                    al.cover = o.has("cover") ? o.optString("cover") : null;
                     JSONArray t = o.getJSONArray("tracks");
                     for (int k = 0; k < t.length(); k++) al.tracks.add(t.getString(k));
                     if (al.tracks.size() >= 5) list.add(al);

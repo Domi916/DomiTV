@@ -62,8 +62,10 @@ final class LyricsOverlay {
     View scrim;
     TextView label, title, status, hint, modeBadge, timeL, timeR, pauseIcon;
     View barBg, barFill;
-    final TextView[] lines = new TextView[5];
-    LinearLayout lyricBox;
+    LinearLayout lyricBox;      // alle Zeilen untereinander, gleitet nach oben
+    FrameLayout lyricClip;      // Bereich, in dem der Songtext läuft
+    static final float ANCHOR = 470; // Höhe der aktuellen Zeile (Design-Pixel)
+    static final PathInterpolator SMOOTH = new PathInterpolator(0.42f, 0f, 0.18f, 1f);
     boolean added = false;
     int mode;
     int rapper = 0;
@@ -97,10 +99,10 @@ final class LyricsOverlay {
         for (View v : new View[]{label, title, status, hint, barBg, barFill, timeL, timeR})
             if (v != null) v.animate().alpha(a).setDuration(d).start();
         photo.animate().alpha(on ? 0.35f : 1f).setDuration(d).start();
-        lyricBox.setPivotX(0);
-        lyricBox.setPivotY(lyricBox.getHeight() / 2f);
-        float sc = on ? 1.25f : 1f;
-        lyricBox.animate().scaleX(sc).scaleY(sc).setDuration(d).setInterpolator(EASE).start();
+        lyricClip.setPivotX(px(140));
+        lyricClip.setPivotY(px(ANCHOR));
+        float sc = on ? 1.22f : 1f;
+        lyricClip.animate().scaleX(sc).scaleY(sc).setDuration(d).setInterpolator(EASE).start();
     }
 
     LyricsOverlay(Context c) {
@@ -176,27 +178,15 @@ final class LyricsOverlay {
         label.setLetterSpacing(0.18f);
         root.addView(label, at(140, 96, -2, -2));
 
-        // Songtext
+        // Songtext: alle Zeilen in einer Liste, die weich nach oben gleitet (wie Apple Music)
+        lyricClip = new FrameLayout(c);
+        lyricClip.setClipChildren(true);
+        root.addView(lyricClip, new FrameLayout.LayoutParams(-1, -1));
         lyricBox = new LinearLayout(c);
         lyricBox.setOrientation(LinearLayout.VERTICAL);
-        lyricBox.setClipChildren(false);
-        float[] sizes = {38, 46, 84, 46, 38};
-        for (int i = 0; i < 5; i++) {
-            TextView t = text(sizes[i], i == 2 ? "Black" : "Bold", Color.WHITE);
-            t.setMaxLines(2);
-            t.setLineSpacing(0, 1.02f);
-            t.setLetterSpacing(i == 2 ? -0.02f : -0.01f);
-            LinearLayout.LayoutParams l = new LinearLayout.LayoutParams(-1, -2);
-            l.topMargin = (int) px(i == 2 ? 34 : 20);
-            l.bottomMargin = (int) px(i == 2 ? 14 : 0);
-            lyricBox.addView(t, l);
-            lines[i] = t;
-        }
-        FrameLayout.LayoutParams ll = new FrameLayout.LayoutParams((int) px(1300), -2);
-        ll.gravity = Gravity.CENTER_VERTICAL | Gravity.START;
-        ll.leftMargin = (int) px(140);
-        ll.topMargin = -(int) px(70);
-        root.addView(lyricBox, ll);
+        lyricBox.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        lyricClip.addView(lyricBox, at(140, 0, 1300, -2));
+
 
         // Titel + Fortschritt unten
         title = text(56, "Black", Color.WHITE);
@@ -345,7 +335,7 @@ final class LyricsOverlay {
 
     void hide() {
         ui.removeCallbacks(tick);
-        if (big) { big = false; lyricBox.setScaleX(1f); lyricBox.setScaleY(1f); photo.setAlpha(1f);
+        if (big) { big = false; lyricClip.setScaleX(1f); lyricClip.setScaleY(1f); photo.setAlpha(1f);
             for (View v : new View[]{label, title, status, hint, barBg, barFill, timeL, timeR}) v.setAlpha(1f); }
         request++;
         if (breathe != null) breathe.cancel();
@@ -373,7 +363,7 @@ final class LyricsOverlay {
         if (root == null) return;
         root.animate().cancel();
         root.animate().alpha(mode == VIDEO ? 0f : 1f).setDuration(400).start();
-        lyricBox.animate().alpha(mode == LYRICS ? 1f : 0f).setDuration(400).start();
+        lyricClip.animate().alpha(mode == LYRICS ? 1f : 0f).setDuration(400).start();
         // Audio: Foto heller, Titel größer
         scrim.animate().alpha(mode == AUDIO ? 0.75f : 1f).setDuration(500).start();
         if (announce) badge("Anzeige: " + MODE_NAMES[mode]);
@@ -400,8 +390,9 @@ final class LyricsOverlay {
         texts.clear();
         plain = null;
         shownLine = -2;
-        for (TextView t : lines) { t.setText(""); t.getPaint().setShader(null); }
-        lines[2].setText(msg);
+        lyricBox.removeAllViews();
+        lyricBox.animate().cancel();
+        lyricBox.setTranslationY(px(ANCHOR));
     }
 
     void track(String ytTitle, String ytArtist, final long videoDur) {
@@ -443,6 +434,7 @@ final class LyricsOverlay {
                             offset = ly.offset;
                             approx = ly.approx;
                         }
+                        buildLines();
                         shownLine = -2;
                         updateStatus();
                         tick.run();
@@ -459,6 +451,52 @@ final class LyricsOverlay {
         boolean fav = id != null && Library.isFavorite(c, id);
         String t = currentTitle;
         title.setText(fav ? t + "  ♥" : t);
+    }
+
+    /** Eine TextView pro Songtext-Zeile. */
+    void buildLines() {
+        lyricBox.removeAllViews();
+        for (String tx : texts) {
+            TextView t = text(64, "Black", Color.WHITE);
+            t.setText(tx);
+            t.setMaxLines(3);
+            t.setLineSpacing(0, 1.04f);
+            t.setLetterSpacing(-0.02f);
+            t.setAlpha(0f);
+            t.setPivotX(0);
+            t.setScaleX(0.9f);
+            t.setScaleY(0.9f);
+            LinearLayout.LayoutParams l = new LinearLayout.LayoutParams(-1, -2);
+            l.bottomMargin = (int) px(30);
+            lyricBox.addView(t, l);
+        }
+        lyricBox.setTranslationY(px(ANCHOR));
+        shownLine = -2;
+    }
+
+    /** Aktuelle Zeile in die Mitte gleiten lassen, Nachbarzeilen weich abdunkeln. */
+    void focusLine(int idx, boolean anim) {
+        int n = lyricBox.getChildCount();
+        if (n == 0) return;
+        View cur = lyricBox.getChildAt(Math.max(0, Math.min(n - 1, idx)));
+        if (cur.getHeight() == 0) { shownLine = -2; return; } // noch nicht ausgelegt: beim nächsten Tick
+        float target = px(ANCHOR) - (cur.getTop() + cur.getHeight() / 2f);
+        if (idx < 0) target += px(140); // vor der ersten Zeile: erste Zeile wartet etwas tiefer
+        long d = anim ? 760 : 0;
+        lyricBox.animate().cancel();
+        lyricBox.animate().translationY(target).setDuration(d).setInterpolator(SMOOTH).start();
+        int c0 = idx < 0 ? -1 : idx;
+        for (int i = 0; i < n; i++) {
+            View v = lyricBox.getChildAt(i);
+            int dist = i - c0;
+            // darüber schnell weg, darunter sanft auslaufend
+            float a = dist == 0 ? 1f : dist == -1 ? 0.32f : dist == -2 ? 0.14f : dist < 0 ? 0f
+                    : dist == 1 ? 0.45f : dist == 2 ? 0.26f : dist == 3 ? 0.12f : 0f;
+            float sc = dist == 0 ? 1f : 0.9f;
+            if (Math.abs(v.getAlpha() - a) < 0.01f && Math.abs(v.getScaleX() - sc) < 0.01f) continue;
+            v.setPivotY(v.getHeight() / 2f);
+            v.animate().alpha(a).scaleX(sc).scaleY(sc).setDuration(d).setInterpolator(SMOOTH).start();
+        }
     }
 
     void updateStatus() {
@@ -497,31 +535,16 @@ final class LyricsOverlay {
             if (pl != wasPlaying) {
                 wasPlaying = pl;
                 pauseIcon.animate().alpha(pl ? 0f : 0.9f).scaleX(pl ? 1.3f : 1f).scaleY(pl ? 1.3f : 1f).setDuration(300).start();
-                lyricBox.animate().alpha(mode == LYRICS ? (pl ? 1f : 0.35f) : 0f).setDuration(300).start();
+                lyricClip.animate().alpha(mode == LYRICS ? (pl ? 1f : 0.35f) : 0f).setDuration(300).start();
             }
             if (mode != LYRICS || times.isEmpty()) { if (big) setBig(false); return; }
             if (!big && pl && android.os.SystemClock.elapsedRealtime() - lastKey > 20000) setBig(true);
-            long t = pos - offset - shift;
+            long t = pos - offset - shift + 250; // Übergang beginnt minimal vorher, wirkt flüssiger
             int idx = -1;
             for (int i = 0; i < times.size(); i++) { if (times.get(i) <= t) idx = i; else break; }
             if (idx != shownLine) {
                 shownLine = idx;
-                for (int k = -2; k <= 2; k++) {
-                    int j = idx + k;
-                    lines[k + 2].setText(j >= 0 && j < texts.size() ? texts.get(j) : "");
-                }
-                if (idx == -1) lines[3].setText(texts.get(0));
-                int[] alpha = {0x26, 0x47, 0xFF, 0x59, 0x33};
-                for (int i = 0; i < 5; i++) {
-                    lines[i].getPaint().setShader(null);
-                    lines[i].setTextColor((alpha[i] << 24) | 0xFFFFFF);
-                }
-                lines[2].setShadowLayer(0, 0, 0, 0);
-                // ruhig nach oben gleiten, neue Zeile blendet weich auf
-                lyricBox.setTranslationY(px(30));
-                lyricBox.animate().translationY(0).setDuration(520).setInterpolator(EASE).start();
-                lines[2].setAlpha(0.5f);
-                lines[2].animate().alpha(1f).setDuration(520).setInterpolator(EASE).start();
+                focusLine(idx, true);
             }
         }
     };
