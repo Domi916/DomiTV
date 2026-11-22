@@ -62,7 +62,7 @@ def songs_of(name):
                     return "video" not in ti and "visualizer" not in ti and "live" not in ti
                 audio = [t["id"] for t in ents if is_audio(t)]
                 pick = audio[0] if audio else tracks[0]
-                cov = cover([], pick, f"{slug(name)}_{len(albums)}.jpg")
+                cov = cover(itunes_art(name, al["title"]), pick, f"{slug(name)}_{len(albums)}.jpg")
                 if cov: al["cover"] = cov
                 albums.append(al)
             for t in d.get("entries") or []:
@@ -79,6 +79,25 @@ def songs_of(name):
 
 ALBUMS = {}
 COV = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "assets", "covers")
+
+def itunes_art(artist, album):
+    """Offizielles Albumcover über die öffentliche iTunes-Suche (600x600)."""
+    import urllib.request, urllib.parse
+    try:
+        q = urllib.parse.urlencode({"term": f"{artist} {album}", "entity": "album", "limit": 10, "country": "US"})
+        data = json.loads(urllib.request.urlopen("https://itunes.apple.com/search?" + q, timeout=20).read())
+        na, nb = norm(artist), norm(re.sub(r"\(.*?\)|\[.*?\]", "", album))
+        best = None
+        for r in data.get("results") or []:
+            ra, rb = norm(r.get("artistName")), norm(re.sub(r"\(.*?\)|\[.*?\]", "", r.get("collectionName") or ""))
+            if na not in ra: continue
+            if rb == nb or (nb and (nb in rb or rb in nb)):
+                best = r; break
+        if best and best.get("artworkUrl100"):
+            return [best["artworkUrl100"].replace("100x100bb", "600x600bb")]
+    except Exception as e:
+        print("  iTunes:", e)
+    return []
 
 def cover(urls, video_id, fname):
     """Albumcover: zuerst das Bild der Album-Playlist (echtes Cover), sonst Vorschaubild des ersten Songs."""
