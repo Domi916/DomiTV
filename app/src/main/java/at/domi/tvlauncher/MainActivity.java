@@ -135,7 +135,7 @@ public class MainActivity extends Activity {
     final Bitmap[] rapGlows = new Bitmap[Rapper.LIST.length];
     int rSel = 0;
     ImageView rapGlow;
-    Gfx.OutlineText rapName;
+    TextView rapName;
     ValueAnimator rapPulse;
     ObjectAnimator rapDrift;
     final ImageView[] bgs = new ImageView[APPS.length];
@@ -296,13 +296,12 @@ public class MainActivity extends Activity {
         rapGlow.setScaleType(ImageView.ScaleType.FIT_XY);
         rapStage.addView(rapGlow, atD(420, -300, 1900, 1150));
         for (int r = 0; r < RAP.length; r++) rapGlows[r] = Gfx.glow(RAP[r].c1, 0.7f);
-        rapName = new Gfx.OutlineText(this);
+        rapName = new TextView(this);
         rapName.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(340));
         rapName.setTypeface(font("Black"));
         rapName.setLetterSpacing(-0.03f);
         rapName.setIncludeFontPadding(false);
         rapName.setSingleLine(true);
-        rapName.stroke(Math.max(2, px(3)));
         rapName.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         rapStage.addView(rapName, atD(60, 120, 4200, 420));
         rapPulse = ValueAnimator.ofFloat(0f, 1f);
@@ -811,7 +810,7 @@ public class MainActivity extends Activity {
         float cx = -Math.max(0, cSel - 3) * 436;
         mv(cardsRow, anim, 500).translationX(px(cx));
         if (!anim) cardsRow.setTranslationX(px(cx));
-        float rx = -Math.max(0, rSel - 3) * 348;
+        float rx = 0;
         mv(rapRow, anim, 500).translationX(px(rx));
         if (!anim) rapRow.setTranslationX(px(rx));
         setMode("top".equals(zone) ? "apps" : zone, anim);
@@ -1015,14 +1014,14 @@ public class MainActivity extends Activity {
             rapName.animate().alpha(0f).setDuration(140).setStartDelay(0).withEndAction(new Runnable() {
                 public void run() {
                     rapName.setText(RAP[r].name.toUpperCase(Locale.ROOT));
-                    rapName.setTextColor(Gfx.a(RAP[r].c1, 0.55f));
+                    rapName.setTextColor(Gfx.a(RAP[r].c1, 0.16f));
                     rapName.setTranslationY(px(30));
                     rapName.animate().alpha(1f).translationY(0).setDuration(500).setInterpolator(EASE).withEndAction(null).start();
                 }
             }).start();
         } else {
             rapName.setText(RAP[r].name.toUpperCase(Locale.ROOT));
-            rapName.setTextColor(Gfx.a(RAP[r].c1, 0.55f));
+            rapName.setTextColor(Gfx.a(RAP[r].c1, 0.16f));
             rapName.setAlpha(1f);
         }
     }
