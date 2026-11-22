@@ -1,0 +1,15 @@
+name: lrcprobe
+on:
+  push:
+    branches: [lrcprobe]
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          q() { r=$(curl -s -G 'https://lrclib.net/api/search' --data-urlencode "artist_name=$1" --data-urlencode "track_name=$2" -A 'DomiTV/1.0'); echo "RES $1 | $2 | n=$(echo "$r" | jq length) synced=$(echo "$r" | jq '[.[]|select(.syncedLyrics!=null)]|length') first=$(echo "$r" | jq -r '.[0].trackName+" / "+.[0].artistName')"; }
+          q "Ken Carson" "overseas"; q "Ken Carson" "Lord Of Chaos"; q "Ken Carson" "delusional"; q "Ken Carson" "margiela"; q "Ken Carson" "ss"; q "Ken Carson" "Fighting My Demons"
+          q "bleood" "alucard"; q "bleood" "friend or foe"; q "bleood" "bpd"; q "bleood" "munni & drugs"
+          q "Protect" "Keyshia"; q "Protect" "Hotspot"; q "Protect" "Oops"
+          q "OsamaSon" "ik what you did last summer"; q "OsamaSon" "Trenches"; q "OsamaSon" "The Whole World Is Free"
+          q "Nettspend" "F*CK SWAG"; q "Nettspend" "stressed"; q "Nettspend" "Shine N Peace"
