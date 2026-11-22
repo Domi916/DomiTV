@@ -158,7 +158,7 @@ public class MainActivity extends Activity {
     int introId = 0;
     volatile boolean introLoaded = false;
     volatile float pendingVol = -1f;
-    static final float LAUTSTAERKE = 0.5f;
+    static final float LAUTSTAERKE = 0.55f;
 
     final BroadcastReceiver screenOn = new BroadcastReceiver() {
         @Override
