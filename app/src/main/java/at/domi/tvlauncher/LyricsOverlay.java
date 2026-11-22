@@ -101,7 +101,7 @@ final class LyricsOverlay {
         photo.animate().alpha(on ? 0.35f : 1f).setDuration(d).start();
         lyricClip.setPivotX(px(140));
         lyricClip.setPivotY(px(ANCHOR));
-        lyricClip.setClipChildren(!on);
+        lyricClip.setClipToOutline(!on);
         float sc = on ? 1.22f : 1f;
         lyricClip.animate().scaleX(sc).scaleY(sc).setDuration(d).setInterpolator(EASE).start();
     }
@@ -182,6 +182,8 @@ final class LyricsOverlay {
         // Songtext: alle Zeilen in einer Liste, die weich nach oben gleitet (wie Apple Music)
         lyricClip = new FrameLayout(c);
         lyricClip.setClipChildren(true);
+        lyricClip.setOutlineProvider(android.view.ViewOutlineProvider.BOUNDS);
+        lyricClip.setClipToOutline(true); // Zeilen außerhalb des Bereichs abschneiden
         // nur zwischen Kopfzeile und Titel sichtbar
         root.addView(lyricClip, at(0, 160, 1560, 660));
         lyricBox = new LinearLayout(c);
