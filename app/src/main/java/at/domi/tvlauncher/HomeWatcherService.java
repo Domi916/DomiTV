@@ -106,6 +106,12 @@ public class HomeWatcherService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         instance = this;
+        try {
+            android.accessibilityservice.AccessibilityServiceInfo info = getServiceInfo();
+            info.flags |= android.accessibilityservice.AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS;
+            setServiceInfo(info);
+            Log.i(TAG, "Tastenfilter aktiv, flags=" + info.flags);
+        } catch (Exception ex) { Log.e(TAG, "Tastenfilter", ex); }
         if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) registerReceiver(test, new IntentFilter("at.domi.tvlauncher.TEST_OVERLAY"));
         IntentFilter f = new IntentFilter(Intent.ACTION_SCREEN_OFF);
         f.addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED");
@@ -178,7 +184,7 @@ public class HomeWatcherService extends AccessibilityService {
     @Override
     protected boolean onKeyEvent(android.view.KeyEvent e) {
         int k = e.getKeyCode();
-        if (MediaWatcher.active && e.getAction() == android.view.KeyEvent.ACTION_UP) Log.i(TAG, "Taste " + k);
+        if (e.getAction() == android.view.KeyEvent.ACTION_UP) Log.i(TAG, "Taste " + k + " shuffle=" + MediaWatcher.active);
         if (MediaWatcher.active && (k == android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD
                 || k == android.view.KeyEvent.KEYCODE_MEDIA_NEXT)) {
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) MediaWatcher.skip(this);

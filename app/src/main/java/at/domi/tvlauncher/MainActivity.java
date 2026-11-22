@@ -133,6 +133,7 @@ public class MainActivity extends Activity {
 
     // ---------- Ansichten ----------
     FrameLayout root, bgWrap, kbWrap, ringWrap, lift, heroWrap, dock, cont, cardsRow, intro, header, rapStage, rapRow, rapRow2;
+    View contHead;
     final FrameLayout[] fxw = new FrameLayout[AppDef.APPS.length];
     final List<List<Animator>> fxAnims = new ArrayList<>();
     final List<List<View>> heroLetters = new ArrayList<>();
@@ -451,6 +452,7 @@ public class MainActivity extends Activity {
         cl.leftMargin = px(18);
         head.addView(contSub, cl);
         cont.addView(head, atD(0, 0, -2, -2));
+        contHead = head;
         cardsRow = new FrameLayout(this);
         cardsRow.setClipChildren(false);
         cont.addView(cardsRow, atD(0, 70, 4000, 300));
@@ -626,7 +628,9 @@ public class MainActivity extends Activity {
         View dot = new View(this);
         dot.setBackground(Gfx.round(r.c1, px(5)));
         f.addView(dot, atD(22 + 92, 26, 10, 10));
-        TextView nm = text(r.name.toUpperCase(Locale.ROOT), 40, "Black", Color.WHITE, -0.02f);
+        int len = r.name.length();
+        TextView nm = text(r.name.toUpperCase(Locale.ROOT), len > 12 ? 28 : len > 10 ? 33 : 40, "Black", Color.WHITE, -0.02f);
+        nm.setSingleLine(true);
         FrameLayout.LayoutParams nl = new FrameLayout.LayoutParams(-2, -2);
         nl.gravity = Gravity.BOTTOM | Gravity.START;
         nl.leftMargin = px(22);
@@ -1137,6 +1141,11 @@ public class MainActivity extends Activity {
 
     void setMode(String z, boolean anim) {
         if (z.equals(shownMode) && anim) return;
+        float topA = "rap2".equals(z) ? 0f : 1f;
+        if (contHead != null) {
+            contHead.animate().alpha(topA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
+            cardsRow.animate().alpha(topA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
+        }
         if (isRapZone(z) && isRapZone(shownMode)) {
             shownMode = z;
             cont.animate().translationY("rap2".equals(z) ? -px(630) : -px(330)).setDuration(anim ? 600 : 0)
