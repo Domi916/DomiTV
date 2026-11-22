@@ -78,6 +78,9 @@ public class MainActivity extends Activity {
     final PathInterpolator SOFT = new PathInterpolator(0.25f, 0.1f, 0.25f, 1f);
     final Handler ui = new Handler(Looper.getMainLooper());
     float S = 1f;
+    /** Starkes Gerät (z. B. Fire TV Stick 4K): schärfere Bilder, mehr Effekte. */
+    boolean HIGH = false;
+    final List<Animator> ambient = new ArrayList<>();
     final Map<String, Typeface> fonts = new HashMap<>();
     SharedPreferences prefs;
 
@@ -202,6 +205,13 @@ public class MainActivity extends Activity {
         int sw = Math.max(dm.widthPixels, dm.heightPixels), sh = Math.min(dm.widthPixels, dm.heightPixels);
         S = Math.min(sw / 1920f, sh / 1080f);
 
+        try {
+            android.app.ActivityManager am = (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
+            android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
+            am.getMemoryInfo(mi);
+            HIGH = mi.totalMem >= 1600L * 1024 * 1024 && !am.isLowRamDevice();
+        } catch (Exception ignored) { }
+        Log.i(HomeWatcherService.TAG, "Gerät stark: " + HIGH);
         resolveApps();
         // Nur für den automatischen Test im Emulator: erste Kachel öffnet Domi TV selbst
         if (getIntent() != null && getIntent().getBooleanExtra("fx_test", false)) APPS[0].pkg = getPackageName();
@@ -265,6 +275,7 @@ public class MainActivity extends Activity {
             }
         }
         for (int i = 0; i < APPS.length; i++) buildSceneFx(i);
+        if (HIGH) buildAmbient();
         kbWrap.setPivotX(px(1150));
         kbWrap.setPivotY(px(380));
         kenBurns = ObjectAnimator.ofPropertyValuesHolder(kbWrap,
@@ -616,12 +627,12 @@ public class MainActivity extends Activity {
         Random rnd = new Random(11 + i * 7);
         if ("netflix".equals(a.id)) {
             Bitmap st = Gfx.streak(0xffff3040);
-            for (int k = 0; k < 5; k++) {
+            for (int k = 0; k < (HIGH ? 7 : 5); k++) {
                 ImageView v = new ImageView(this);
                 v.setImageBitmap(st);
                 v.setScaleType(ImageView.ScaleType.FIT_XY);
                 float wd = 110 + rnd.nextFloat() * 70;
-                w.addView(v, atD(1000 + k * 165 + rnd.nextFloat() * 40, -160, wd, 1050));
+                w.addView(v, atD(1000 + k * (HIGH ? 120 : 165) + rnd.nextFloat() * 40, -160, wd, 1050));
                 v.setPivotX(px(wd / 2));
                 v.setPivotY(0);
                 float r0 = 2 + rnd.nextFloat() * 3;
@@ -652,7 +663,7 @@ public class MainActivity extends Activity {
                     PropertyValuesHolder.ofFloat(View.ALPHA, 0.45f, 1f)));
         } else if ("disney".equals(a.id)) {
             Bitmap star = Gfx.dot(0xffcfd8ff);
-            for (int k = 0; k < 18; k++) {
+            for (int k = 0; k < (HIGH ? 34 : 18); k++) {
                 ImageView v = new ImageView(this);
                 v.setImageBitmap(star);
                 v.setScaleType(ImageView.ScaleType.FIT_XY);
@@ -666,6 +677,65 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** Nur auf starken Geräten: schwebende Lichtpartikel + feines, lebendiges Filmkorn. */
+    void buildAmbient() {
+        FrameLayout dust = new FrameLayout(this);
+        bgWrap.addView(dust, new FrameLayout.LayoutParams(-1, -1));
+        Bitmap mote = Gfx.dot(0xfffff2e0);
+        Random rnd = new Random(42);
+        for (int k = 0; k < 30; k++) {
+            ImageView v = new ImageView(this);
+            v.setImageBitmap(mote);
+            v.setScaleType(ImageView.ScaleType.FIT_XY);
+            float sz = 8 + rnd.nextFloat() * 22;
+            dust.addView(v, atD(rnd.nextFloat() * 1920, 200 + rnd.nextFloat() * 900, sz, sz));
+            v.setAlpha(0f);
+            float peak = 0.15f + rnd.nextFloat() * 0.45f;
+            ObjectAnimator o = ObjectAnimator.ofPropertyValuesHolder(v,
+                    PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, 0f, -px(220 + rnd.nextFloat() * 260)),
+                    PropertyValuesHolder.ofFloat(View.TRANSLATION_X, 0f, px((rnd.nextFloat() - 0.5f) * 160)),
+                    PropertyValuesHolder.ofKeyframe(View.ALPHA,
+                            android.animation.Keyframe.ofFloat(0f, 0f),
+                            android.animation.Keyframe.ofFloat(0.3f, peak),
+                            android.animation.Keyframe.ofFloat(0.7f, peak),
+                            android.animation.Keyframe.ofFloat(1f, 0f)));
+            long ms = 11000 + rnd.nextInt(12000);
+            o.setDuration(ms);
+            o.setRepeatCount(ValueAnimator.INFINITE);
+            o.setInterpolator(new LinearInterpolator());
+            o.setCurrentPlayTime((long) (rnd.nextFloat() * ms));
+            ambient.add(o);
+        }
+        // Filmkorn: kleines Rauschbild, gekachelt, springt leicht -> wirkt wie echter Film
+        Bitmap nb = Bitmap.createBitmap(192, 192, Bitmap.Config.ARGB_8888);
+        int[] px = new int[192 * 192];
+        for (int i = 0; i < px.length; i++) { int g = rnd.nextInt(256); px[i] = Color.argb(255, g, g, g); }
+        nb.setPixels(px, 0, 192, 0, 0, 192, 192);
+        android.graphics.drawable.BitmapDrawable bd = new android.graphics.drawable.BitmapDrawable(getResources(), nb);
+        bd.setTileModeXY(android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT);
+        final View grain = new View(this);
+        grain.setBackground(bd);
+        grain.setAlpha(0.035f);
+        FrameLayout.LayoutParams gl = new FrameLayout.LayoutParams(px(1920 + 200), px(1080 + 200));
+        gl.leftMargin = -px(100);
+        gl.topMargin = -px(100);
+        bgWrap.addView(grain, gl);
+        final Random gr = new Random(7);
+        ValueAnimator g = ValueAnimator.ofFloat(0f, 1f);
+        g.setDuration(1000);
+        g.setRepeatCount(ValueAnimator.INFINITE);
+        g.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            int f = 0;
+            @Override
+            public void onAnimationUpdate(ValueAnimator va) {
+                if ((f++ & 1) != 0) return;   // alle 2 Bilder neu, wie 30-fps-Film
+                grain.setTranslationX(gr.nextInt(px(96)));
+                grain.setTranslationY(gr.nextInt(px(96)));
+            }
+        });
+        ambient.add(g);
+    }
+
     ObjectAnimator loop(View v, long ms, Random rnd, PropertyValuesHolder... p) {
         ObjectAnimator o = ObjectAnimator.ofPropertyValuesHolder(v, p);
         o.setDuration(ms);
@@ -677,11 +747,13 @@ public class MainActivity extends Activity {
     }
 
     void pauseFx() {
+        for (Animator a : ambient) a.pause();
         for (List<Animator> l : fxAnims) for (Animator a : l) a.pause();
         if (rapPulse != null) { rapPulse.pause(); rapDrift.pause(); }
     }
 
     void resumeFx() {
+        for (Animator a : ambient) { if (!a.isStarted()) a.start(); else a.resume(); }
         if (shownBg >= 0 && shownBg < fxAnims.size())
             for (Animator a : fxAnims.get(shownBg)) { if (!a.isStarted()) a.start(); else a.resume(); }
         if ("rap".equals(shownMode)) { rapPulse.resume(); rapDrift.resume(); }
@@ -1795,6 +1867,7 @@ public class MainActivity extends Activity {
             InputStream in = getAssets().open("bg/bg_" + APPS[i].id + ".jpg");
             BitmapFactory.Options o = new BitmapFactory.Options();
             o.inPreferredConfig = Bitmap.Config.ARGB_8888;
+            if (!HIGH) { o.inScaled = true; o.inDensity = 3; o.inTargetDensity = 2; }
             Bitmap b = BitmapFactory.decodeStream(in, null, o);
             in.close();
             return b;
