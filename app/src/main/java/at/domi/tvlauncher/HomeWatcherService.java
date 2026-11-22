@@ -97,8 +97,11 @@ public class HomeWatcherService extends AccessibilityService {
             MediaWatcher.appCtx = getApplicationContext();
             MediaWatcher.active = true;
             MediaWatcher.rapperIndex = r;
-            MediaWatcher.trackAt = SystemClock.elapsedRealtime() - i.getIntExtra("at", 0);
             MediaWatcher.lastPos = -1;
+            MediaWatcher.playing = true;
+            MediaWatcher.wallBase = i.getIntExtra("at", 0);
+            MediaWatcher.wallStart = SystemClock.elapsedRealtime();
+            MediaWatcher.curDur = 170000;
             overlay.show(r);
             overlay.track(t, i.getStringExtra("artist"), i.getLongExtra("dur", 0));
         }
