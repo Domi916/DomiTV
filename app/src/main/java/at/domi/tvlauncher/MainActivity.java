@@ -240,7 +240,8 @@ public class MainActivity extends Activity {
         loadOtherBackgrounds();
         long up = SystemClock.elapsedRealtime();
         if (up < 90000) intro.setAlpha(0f);
-        root.postDelayed(new Runnable() { public void run() { Updater.check(MainActivity.this, false); } }, 15000);
+        if (!getIntent().getBooleanExtra("fx_test", false))
+            root.postDelayed(new Runnable() { public void run() { Updater.check(MainActivity.this, false); } }, 15000);
         root.postDelayed(new Runnable() { public void run() { playIntro(true); } }, up < 90000 ? 2500 : 0);
     }
 
