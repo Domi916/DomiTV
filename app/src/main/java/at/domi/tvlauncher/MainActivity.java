@@ -1734,14 +1734,25 @@ public class MainActivity extends Activity {
         ui.postDelayed(saverCycle, 8000);
     }
 
+    String[] saverFiles;
+
     void nextSaverPic() {
-        List<int[]> pl = playlist();
-        if (pl.isEmpty()) return;
-        svPos = (svPos + 1) % pl.size();
-        int[] e = pl.get(svPos);
+        if (saverFiles == null) {
+            try { saverFiles = getAssets().list("saver"); } catch (Exception e) { saverFiles = new String[0]; }
+            if (saverFiles == null) saverFiles = new String[0];
+            java.util.Arrays.sort(saverFiles);
+        }
+        if (saverFiles.length == 0) return;
+        svPos = (svPos + 1) % saverFiles.length;
+        Bitmap pic = null;
+        try {
+            InputStream in = getAssets().open("saver/" + saverFiles[svPos]);
+            pic = BitmapFactory.decodeStream(in);
+            in.close();
+        } catch (Exception ignored) { }
         final ImageView next = svUseA ? svB : svA, old = svUseA ? svA : svB;
         svUseA = !svUseA;
-        next.setImageBitmap(loadRapPic(e[0], e[1]));
+        next.setImageBitmap(pic);
         next.animate().cancel();
         old.animate().cancel();
         next.setAlpha(0f);
@@ -1995,7 +2006,7 @@ public class MainActivity extends Activity {
     // =====================================================================
     Bitmap loadBg(int i) {
         try {
-            InputStream in = getAssets().open("rap/" + APP_PHOTO[i] + ".jpg");
+            InputStream in = getAssets().open("home/" + i + ".jpg");
             BitmapFactory.Options o = new BitmapFactory.Options();
             o.inPreferredConfig = Bitmap.Config.ARGB_8888;
             Bitmap b = BitmapFactory.decodeStream(in, null, o);
