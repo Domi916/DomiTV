@@ -20,6 +20,8 @@ adb shell input keyevent 20; sleep 1.5; shot 08_down
 adb shell input keyevent 20; sleep 1.8; shot 08b_rap
 adb shell input keyevent 22; sleep 1.2; shot 08c_rap2
 adb shell input keyevent 22; adb shell input keyevent 22; adb shell input keyevent 22; sleep 1.4; shot 08d_rap5
+adb shell input keyevent 20; sleep 1.5; shot 08h_alb
+adb shell input keyevent 22; adb shell input keyevent 22; adb shell input keyevent 22; adb shell input keyevent 22; adb shell input keyevent 22; sleep 1.5; shot 08i_alb5
 adb shell input keyevent 20; sleep 1.5; shot 08e_rap2
 adb shell input keyevent 21; sleep 1.0; shot 08f_rap2b
 adb shell input keyevent 19; sleep 1.2; shot 08g_back_rap
