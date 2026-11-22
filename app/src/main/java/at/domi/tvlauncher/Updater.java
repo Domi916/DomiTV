@@ -135,7 +135,11 @@ final class Updater {
                     confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     c.startActivity(confirm);
                 }
-            } else if (st != PackageInstaller.STATUS_SUCCESS) {
+            } else if (st == PackageInstaller.STATUS_SUCCESS) {
+                Intent start = new Intent(c, MainActivity.class);
+                start.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                try { c.startActivity(start); } catch (Exception ignored) { }
+            } else {
                 Toast.makeText(c, "Update fehlgeschlagen: " + i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE), Toast.LENGTH_LONG).show();
             }
         }

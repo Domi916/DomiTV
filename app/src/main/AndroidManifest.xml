@@ -59,6 +59,13 @@
         <!-- Ergebnis von "Update suchen" -->
         <receiver android:name=".Updater$Result" android:exported="false" />
 
+        <!-- Nach einem Update automatisch wieder starten -->
+        <receiver android:name=".UpdatedReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Sieht, welcher Song in YouTube läuft: hält den Rapper-Shuffle auf seinen eigenen Songs -->
         <service
             android:name=".MediaWatcher"
