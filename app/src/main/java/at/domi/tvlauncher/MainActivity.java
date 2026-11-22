@@ -156,7 +156,7 @@ public class MainActivity extends Activity {
     // ---------- Startsound ----------
     MediaPlayer player;          // spielt den Sound komplett (SoundPool schneidet lange Sounds ab)
     boolean soundReady = false, soundPending = false;
-    static final float LAUTSTAERKE = 1.0f;
+    static final float LAUTSTAERKE = 0.9f;
 
     final BroadcastReceiver screenOn = new BroadcastReceiver() {
         @Override
@@ -899,8 +899,7 @@ public class MainActivity extends Activity {
             dot.setTranslationX(px(r * (float) Math.cos(a0 + spin)));
             dot.setTranslationY(px(r * 0.62f * (float) Math.sin(a0 + spin)) + px((1 - r / 560f) * 0));
             dot.setAlpha(kf(s, new float[]{0.15f, 0.6f, 1.35f, 1.7f}, new float[]{0, 1, 1, 0}));
-            float beat = pulse(s, 0.05f, 0.16f) + pulse(s, 0.55f, 0.16f) + pulse(s, 1.05f, 0.16f);
-            float ds = kf(s, new float[]{0.15f, 1.35f, 1.7f}, new float[]{0.6f, 1f, 1.8f}) * (1 + 0.7f * beat);
+            float ds = kf(s, new float[]{0.15f, 1.35f, 1.7f}, new float[]{0.6f, 1f, 1.8f});
             dot.setScaleX(ds); dot.setScaleY(ds);
         }
         // 2) Ring entsteht, wo die Punkte ankommen; am Ende öffnet er sich wie ein Portal
