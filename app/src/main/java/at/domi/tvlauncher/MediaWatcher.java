@@ -147,17 +147,47 @@ public class MediaWatcher extends NotificationListenerService {
     static MediaController current;
     static int foreignInRow = 0;
 
+    // Ersatz-Uhr, falls YouTube keine Position meldet: zählt nur, während wirklich abgespielt wird
+    static long wallBase = 0, wallStart = 0;
+
     static void trackStarted(MediaMetadata m) {
         curDur = m == null ? 0 : m.getLong(MediaMetadata.METADATA_KEY_DURATION);
         lastPos = -1;
         trackAt = SystemClock.elapsedRealtime();
+        wallBase = 0;
+        wallStart = playing ? trackAt : 0;
     }
 
-    /** Aktuelle Position im Song in ms (aus YouTube, sonst geschätzt). */
+    static void applyState(PlaybackState s) {
+        if (s == null) return;
+        long now = SystemClock.elapsedRealtime();
+        boolean nowPlaying = s.getState() == PlaybackState.STATE_PLAYING;
+        if (nowPlaying && wallStart == 0) wallStart = now;
+        if (!nowPlaying && wallStart > 0) { wallBase += now - wallStart; wallStart = 0; }
+        playing = nowPlaying;
+        if (s.getPosition() > 0) {
+            lastPos = s.getPosition();
+            lastPosAt = s.getLastPositionUpdateTime() > 0 ? s.getLastPositionUpdateTime() : now;
+            speed = s.getPlaybackSpeed() > 0 ? s.getPlaybackSpeed() : 1f;
+        }
+    }
+
+    /** Aktuelle Position im Song in ms (aus YouTube, sonst nur gezählte Abspielzeit). */
     static long position() {
         long now = SystemClock.elapsedRealtime();
         if (lastPos >= 0) return lastPos + (playing ? (long) ((now - lastPosAt) * speed) : 0);
-        return trackAt > 0 ? now - trackAt : 0;
+        return wallBase + (wallStart > 0 ? now - wallStart : 0);
+    }
+
+    static boolean isPlaying() { return playing; }
+
+    /** OK / ⏯ während der Anzeige: Pause bzw. weiter. */
+    static void togglePause() {
+        try {
+            if (current == null) return;
+            if (playing) current.getTransportControls().pause();
+            else current.getTransportControls().play();
+        } catch (Exception ignored) { }
     }
 
     static boolean positionKnown() { return lastPos >= 0; }
@@ -182,6 +212,8 @@ public class MediaWatcher extends NotificationListenerService {
         @Override
         public void run() {
             h.postDelayed(this, 400);
+            // manche Apps melden die Position nur auf Nachfrage
+            try { if (active && current != null) applyState(current.getPlaybackState()); } catch (Exception ignored) { }
             if (!active || curDur <= 0 || !positionKnown() || !playing) return;
             if (SystemClock.elapsedRealtime() - launchedAt < 8000) return;
             if (position() >= curDur - 1500) {
@@ -232,14 +264,8 @@ public class MediaWatcher extends NotificationListenerService {
 
                 @Override
                 public void onPlaybackStateChanged(PlaybackState s) {
-                    if (s == null) return;
                     current = mc;
-                    playing = s.getState() == PlaybackState.STATE_PLAYING || s.getState() == PlaybackState.STATE_BUFFERING;
-                    if (s.getPosition() > 0) {
-                        lastPos = s.getPosition();
-                        lastPosAt = s.getLastPositionUpdateTime() > 0 ? s.getLastPositionUpdateTime() : SystemClock.elapsedRealtime();
-                        speed = s.getPlaybackSpeed() > 0 ? s.getPlaybackSpeed() : 1f;
-                    }
+                    applyState(s);
                 }
 
                 @Override

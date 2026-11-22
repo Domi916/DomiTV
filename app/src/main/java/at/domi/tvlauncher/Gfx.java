@@ -38,6 +38,16 @@ final class Gfx {
     }
 
     /** Weicher, farbiger Lichtfleck (für das Leuchten unter der gewählten Kachel). */
+    /** Kleines Rauschbild für Filmkorn. */
+    static Bitmap grain(int n) {
+        Bitmap b = Bitmap.createBitmap(n, n, Bitmap.Config.ARGB_8888);
+        int[] p = new int[n * n];
+        java.util.Random r = new java.util.Random(7);
+        for (int i = 0; i < p.length; i++) { int g = r.nextInt(256); p[i] = 0xff000000 | (g << 16) | (g << 8) | g; }
+        b.setPixels(p, 0, n, 0, 0, n, n);
+        return b;
+    }
+
     static Bitmap glow(int color, float alpha) {
         int W = 290, H = 210;
         Bitmap b = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888);

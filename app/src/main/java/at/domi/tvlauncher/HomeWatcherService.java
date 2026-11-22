@@ -192,6 +192,23 @@ public class HomeWatcherService extends AccessibilityService {
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) MediaWatcher.skip(this);
             return true;
         }
+        boolean overlayOn = MediaWatcher.active && overlay != null && overlay.mode != LyricsOverlay.VIDEO;
+        // OK / ⏯: Pause bzw. weiter (in der Songtext-/Audio-Anzeige)
+        if (overlayOn && (k == android.view.KeyEvent.KEYCODE_DPAD_CENTER || k == android.view.KeyEvent.KEYCODE_ENTER
+                || k == android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || k == android.view.KeyEvent.KEYCODE_MEDIA_PLAY
+                || k == android.view.KeyEvent.KEYCODE_MEDIA_PAUSE)) {
+            if (e.getAction() == android.view.KeyEvent.ACTION_UP) MediaWatcher.togglePause();
+            return true;
+        }
+        // ◀ ▶: Songtext früher/später, falls er nicht ganz passt
+        if (overlayOn && overlay.mode == LyricsOverlay.LYRICS
+                && (k == android.view.KeyEvent.KEYCODE_DPAD_LEFT || k == android.view.KeyEvent.KEYCODE_DPAD_RIGHT)) {
+            if (e.getAction() == android.view.KeyEvent.ACTION_DOWN)
+                overlay.shift(k == android.view.KeyEvent.KEYCODE_DPAD_RIGHT ? -400 : 400);
+            return true;
+        }
+        // ▲ ▼ in der Anzeige: nichts in YouTube verstellen
+        if (overlayOn && (k == android.view.KeyEvent.KEYCODE_DPAD_UP || k == android.view.KeyEvent.KEYCODE_DPAD_DOWN)) return true;
         // ☰ Menü-Taste: Anzeige wechseln (Songtext → Audio → Video)
         if (MediaWatcher.active && k == android.view.KeyEvent.KEYCODE_MENU) {
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) {
