@@ -127,7 +127,7 @@ public class MainActivity extends Activity {
     final View[] heroes = new View[APPS.length];
     final Slot[] slots = new Slot[APPS.length];
     ImageView beam, iGlow, iRing;
-    View iSweep, iBack;
+    View iSweep, iBack, iFlash;
     final ImageView[] dots = new ImageView[5];
     LinearLayout iWords;
     final List<TextView> words = new ArrayList<>();
@@ -405,6 +405,10 @@ public class MainActivity extends Activity {
         iSub = text("", 28, "Medium", Gfx.a(TXT, 0.62f), 0.02f);
         iSub.setGravity(Gravity.CENTER);
         intro.addView(iSub, atD(0, 598, 1920, 40));
+        iFlash = new View(this);
+        iFlash.setBackgroundColor(Color.WHITE);
+        iFlash.setAlpha(0f);
+        intro.addView(iFlash, new FrameLayout.LayoutParams(-1, -1));
     }
 
     String wordsText = "";
@@ -890,21 +894,26 @@ public class MainActivity extends Activity {
             dot.setTranslationX(px(r * (float) Math.cos(a0 + spin)));
             dot.setTranslationY(px(r * 0.62f * (float) Math.sin(a0 + spin)) + px((1 - r / 560f) * 0));
             dot.setAlpha(kf(s, new float[]{0.15f, 0.6f, 1.35f, 1.7f}, new float[]{0, 1, 1, 0}));
-            float ds = kf(s, new float[]{0.15f, 1.35f, 1.7f}, new float[]{0.6f, 1f, 1.8f});
+            float beat = pulse(s, 0.05f, 0.16f) + pulse(s, 0.55f, 0.16f) + pulse(s, 1.05f, 0.16f);
+            float ds = kf(s, new float[]{0.15f, 1.35f, 1.7f}, new float[]{0.6f, 1f, 1.8f}) * (1 + 0.7f * beat);
             dot.setScaleX(ds); dot.setScaleY(ds);
         }
         // 2) Ring entsteht, wo die Punkte ankommen; am Ende öffnet er sich wie ein Portal
         iRing.setAlpha(kf(s, new float[]{1.25f, 1.7f, 3.35f, 4.05f}, new float[]{0, 1, 1, 0}));
         float rs = kf(s, new float[]{1.25f, 1.7f, 3.35f, 4.05f}, new float[]{0.8f, 1f, 1.05f, 7f});
+        rs *= 1 + 0.12f * pulse(s, 1.45f, 0.3f);
         iRing.setScaleX(rs); iRing.setScaleY(rs);
         iRing.setRotation(kf(s, new float[]{1.25f, 4.05f}, new float[]{-90, 160}));
         // 3) Farbschein blüht auf und dreht sich langsam
         iGlow.setAlpha(kf(s, new float[]{1.0f, 2.1f, 3.35f, 4.1f}, new float[]{0, 0.95f, 0.95f, 0}));
         float gs = kf(s, new float[]{1.0f, 2.1f, 3.35f, 4.1f}, new float[]{0.45f, 1f, 1.08f, 2.3f});
+        gs *= 1 + 0.16f * pulse(s, 1.45f, 0.45f);
+        iGlow.setAlpha(Math.min(1f, iGlow.getAlpha() + 0.35f * pulse(s, 1.45f, 0.4f)));
         iGlow.setScaleX(gs); iGlow.setScaleY(gs);
         iGlow.setRotation(kf(s, new float[]{1.0f, 4.1f}, new float[]{-40, 70}));
         // 4) Lichtlinie
         iSweep.setAlpha(kf(s, new float[]{1.35f, 1.5f, 1.95f, 2.6f}, new float[]{0, 1, 1, 0}));
+        iFlash.setAlpha(0.16f * pulse(s, 1.45f, 0.22f) + 0.06f * pulse(s, 4.25f, 0.3f));
         iSweep.setScaleX(kf(s, new float[]{1.35f, 2.0f}, new float[]{0, 1}));
         // 5) Gruß: Wort für Wort
         for (int i = 0; i < words.size(); i++) {
@@ -956,6 +965,12 @@ public class MainActivity extends Activity {
         flyX = gL - textL;
         flyY = gT - textT;
         if (textR - textL <= 0) flyReady = false;
+    }
+
+    /** Kurzer Impuls zum Sound: springt bei c auf 1 und klingt ab. */
+    static float pulse(float s, float c, float dec) {
+        if (s < c) return 0f;
+        return (float) Math.exp(-(s - c) / dec);
     }
 
     /** Wert zwischen Stützpunkten, jeweils weich auslaufend. */
@@ -1028,6 +1043,7 @@ public class MainActivity extends Activity {
         iWords.setTranslationX(0); iWords.setTranslationY(0);
         iWords.setScaleX(1); iWords.setScaleY(1); iWords.setAlpha(1);
         iBack.setAlpha(1f);
+        iFlash.setAlpha(0f);
         for (TextView w : words) w.setLayerType(View.LAYER_TYPE_NONE, null);
         iSub.setLayerType(View.LAYER_TYPE_NONE, null);
     }
