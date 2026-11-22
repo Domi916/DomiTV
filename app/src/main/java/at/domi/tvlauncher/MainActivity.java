@@ -1832,6 +1832,7 @@ public class MainActivity extends Activity {
     /** Startet auf YouTube direkt einen Mix: zufälliger Song des Rappers + seine Mix-Playlist. */
     boolean playRapper(Rapper r) {
         AppDef yt = AppDef.byId("youtube"), ym = AppDef.byId("ytmusic");
+        JblBox.connect(this);
         if (yt != null && yt.pkg != null && r.videos.length > 0) {
             String id = r.videos[new Random().nextInt(r.videos.length)];
             String[] urls = {
