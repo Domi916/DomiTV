@@ -484,32 +484,17 @@ final class LyricsOverlay {
                     lines[k + 2].setText(j >= 0 && j < texts.size() ? texts.get(j) : "");
                 }
                 if (idx == -1) lines[3].setText(texts.get(0));
-                int[] alpha = {0x38, 0x66, 0xFF, 0x80, 0x4D};
+                int[] alpha = {0x26, 0x47, 0xFF, 0x59, 0x33};
                 for (int i = 0; i < 5; i++) {
                     lines[i].getPaint().setShader(null);
                     lines[i].setTextColor((alpha[i] << 24) | 0xFFFFFF);
                 }
-                lines[2].setShadowLayer(px(28), 0, 0, (accent & 0x00FFFFFF) | 0x99000000);
-                lyricBox.setTranslationY(px(44));
-                lyricBox.animate().translationY(0).setDuration(380).setInterpolator(EASE).start();
-                lines[2].setScaleX(0.96f);
-                lines[2].setScaleY(0.96f);
-                lines[2].setPivotX(0);
-                lines[2].animate().scaleX(1f).scaleY(1f).setDuration(380).setInterpolator(EASE).start();
-            }
-            // Karaoke: aktuelle Zeile füllt sich von links mit der Farbe des Rappers
-            if (idx >= 0 && idx < times.size()) {
-                long a = times.get(idx);
-                long b = idx + 1 < times.size() ? times.get(idx + 1) : a + 4000;
-                float f = Math.max(0f, Math.min(1f, (t - a) / (float) Math.max(600, Math.min(b - a, 8000) - 250)));
-                TextView cur = lines[2];
-                float w = cur.getWidth() > 0 ? cur.getWidth() : px(1300);
-                float x = w * f;
-                LinearGradient g = new LinearGradient(x - px(40), 0, x + px(40), 0,
-                        new int[]{Color.WHITE, (accent & 0x00FFFFFF) | 0xFF000000, 0x8CFFFFFF},
-                        new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP);
-                cur.getPaint().setShader(g);
-                cur.invalidate();
+                lines[2].setShadowLayer(0, 0, 0, 0);
+                // ruhig nach oben gleiten, neue Zeile blendet weich auf
+                lyricBox.setTranslationY(px(30));
+                lyricBox.animate().translationY(0).setDuration(520).setInterpolator(EASE).start();
+                lines[2].setAlpha(0.5f);
+                lines[2].animate().alpha(1f).setDuration(520).setInterpolator(EASE).start();
             }
         }
     };
