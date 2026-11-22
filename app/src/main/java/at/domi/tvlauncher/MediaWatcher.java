@@ -68,7 +68,12 @@ public class MediaWatcher extends NotificationListenerService {
         unmuteHard(c);
         log(c, "Shuffle gestartet: " + r.name + " (" + queue.size() + " Songs)");
         HomeWatcherService.overlayShow(index);
-        play(c);
+        JblBox.wanted = true;
+        final Context app = c.getApplicationContext();
+        // erst die Box verbinden, dann YouTube starten (sonst bleibt YouTube beim Ton-Wechsel hängen)
+        JblBox.connectThen(app, new Runnable() {
+            public void run() { if (active) play(app); }
+        });
     }
 
     static void stop() {
@@ -200,6 +205,11 @@ public class MediaWatcher extends NotificationListenerService {
     }
 
     static boolean isPlaying() { return playing; }
+
+    /** Nach einem Ton-Wechsel (Box kam dazu): YouTube anstupsen, damit es weiterspielt. */
+    static void resumePlay() {
+        try { if (active && current != null) current.getTransportControls().play(); } catch (Exception ignored) { }
+    }
 
     /** OK / ⏯ während der Anzeige: Pause bzw. weiter. */
     static void togglePause() {

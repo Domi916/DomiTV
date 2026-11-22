@@ -69,6 +69,11 @@ public class HomeWatcherService extends AccessibilityService {
                 int st = i.getIntExtra("android.bluetooth.profile.extra.STATE", -1);
                 android.bluetooth.BluetoothDevice d = i.getParcelableExtra("android.bluetooth.device.extra.DEVICE");
                 if (JblBox.isJbl(d)) JblBox.connected = st == 2;
+                // Box kam mitten im Song dazu: YouTube weiterspielen lassen
+                if (st == 2 && JblBox.isJbl(d) && MediaWatcher.active) {
+                    h.postDelayed(new Runnable() { public void run() { MediaWatcher.resumePlay(); } }, 1500);
+                    h.postDelayed(new Runnable() { public void run() { MediaWatcher.resumePlay(); } }, 4000);
+                }
                 if (st == 2 && JblBox.isJbl(d) && !JblBox.wanted) {
                     h.postDelayed(new Runnable() {
                         @Override

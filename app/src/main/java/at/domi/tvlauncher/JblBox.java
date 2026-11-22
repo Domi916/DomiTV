@@ -58,6 +58,66 @@ final class JblBox {
         }
     }
 
+    /**
+     * Box verbinden und erst DANN weitermachen (z. B. YouTube starten).
+     * Grund: Wechselt der Ton mitten im Lied vom Fernseher zur Box, bleibt YouTube hängen.
+     * Ist die Box aus oder nicht gekoppelt, geht es nach kurzer Zeit ohne Box weiter.
+     */
+    static void connectThen(final Context ctx, final Runnable then) {
+        final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+        final boolean[] done = {false};
+        final Runnable go = new Runnable() {
+            public void run() {
+                if (done[0]) return;
+                done[0] = true;
+                then.run();
+            }
+        };
+        try {
+            final BluetoothAdapter bt = BluetoothAdapter.getDefaultAdapter();
+            BluetoothDevice box = null;
+            if (bt != null && bt.isEnabled()) for (BluetoothDevice d : bt.getBondedDevices()) if (isJbl(d)) { box = d; break; }
+            if (box == null) { go.run(); return; }
+            final BluetoothDevice target = box;
+            bt.getProfileProxy(ctx.getApplicationContext(), new BluetoothProfile.ServiceListener() {
+                @Override
+                public void onServiceConnected(int profile, final BluetoothProfile proxy) {
+                    try {
+                        if (proxy.getConnectedDevices().contains(target)) {
+                            connected = true;
+                            h.post(go);
+                        } else {
+                            wanted = true;
+                            Method m = BluetoothA2dp.class.getMethod("connect", BluetoothDevice.class);
+                            Log.i(TAG, "JBL verbinden (vor dem Start): " + m.invoke(proxy, target));
+                            // warten, bis sie verbunden ist (höchstens 7 Sekunden)
+                            final long t0 = android.os.SystemClock.elapsedRealtime();
+                            h.post(new Runnable() {
+                                public void run() {
+                                    if (done[0]) return;
+                                    boolean on = false;
+                                    try { on = proxy.getConnectedDevices().contains(target); } catch (Throwable ignored) { }
+                                    if (on) { connected = true; h.postDelayed(go, 700); return; }
+                                    if (android.os.SystemClock.elapsedRealtime() - t0 > 7000) { Log.i(TAG, "JBL nicht erreichbar, ohne Box weiter"); go.run(); return; }
+                                    h.postDelayed(this, 300);
+                                }
+                            });
+                        }
+                    } catch (Throwable e) {
+                        Log.e(TAG, "JBL", e);
+                        h.post(go);
+                    }
+                }
+
+                @Override
+                public void onServiceDisconnected(int profile) { }
+            }, BluetoothProfile.A2DP);
+            h.postDelayed(go, 9000); // Sicherheit
+        } catch (Throwable e) {
+            go.run();
+        }
+    }
+
     static void connect(Context ctx) {
         wanted = true;
         try {

@@ -2008,7 +2008,6 @@ public class MainActivity extends Activity {
 
     /** Startet auf YouTube die Songs des Rappers: zufälliger Einstieg in seine eigene Playlist. */
     boolean playRapper(Rapper r, String firstId) {
-        JblBox.connect(this);
         AppDef yt = AppDef.byId("youtube");
         if (yt == null || yt.pkg == null) { showToast("YouTube nicht gefunden"); return false; }
         // Nur Songs des Rappers, gemischt. MediaWatcher springt bei fremden Videos sofort zum nächsten.
