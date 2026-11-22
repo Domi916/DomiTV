@@ -2137,6 +2137,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        // Zurück in Domi TV: Rapper-Mix ist vorbei, JBL-Box wieder trennen
+        JblBox.wanted = false;
+        JblBox.disconnect(this);
         hideSystemUi();
         HomeWatcherService.allowAmazonHome = false;
         resetIdle();

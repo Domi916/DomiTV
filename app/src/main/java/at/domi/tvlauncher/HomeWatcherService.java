@@ -33,9 +33,22 @@ public class HomeWatcherService extends AccessibilityService {
     private final BroadcastReceiver power = new BroadcastReceiver() {
         @Override
         public void onReceive(Context c, Intent i) {
+            if ("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED".equals(i.getAction())) {
+                // Box hat sich von selbst verbunden, aber es läuft kein Rapper-Mix: wieder trennen
+                int st = i.getIntExtra("android.bluetooth.profile.extra.STATE", -1);
+                android.bluetooth.BluetoothDevice d = i.getParcelableExtra("android.bluetooth.device.extra.DEVICE");
+                if (st == 2 && JblBox.isJbl(d) && !JblBox.wanted) {
+                    h.postDelayed(new Runnable() {
+                        @Override
+                        public void run() { if (!JblBox.wanted) JblBox.disconnect(HomeWatcherService.this); }
+                    }, 1500);
+                }
+                return;
+            }
             if (Intent.ACTION_SCREEN_OFF.equals(i.getAction())) {
                 screenOffAt = SystemClock.elapsedRealtime();
                 h.removeCallbacksAndMessages(null);
+                JblBox.wanted = false;
             }
         }
     };
@@ -44,6 +57,7 @@ public class HomeWatcherService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         IntentFilter f = new IntentFilter(Intent.ACTION_SCREEN_OFF);
+        f.addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED");
         registerReceiver(power, f);
     }
 
