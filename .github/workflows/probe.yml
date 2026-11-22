@@ -1,7 +1,8 @@
 name: probe
-on: [push, workflow_dispatch]
+on: [push]
 jobs:
   p:
     runs-on: ubuntu-latest
     steps:
-      - run: curl -s -o /dev/null -D - -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0" -H "Cookie: SOCS=CAI; CONSENT=YES+" "https://www.youtube.com/watch_videos?video_ids=80M6sAU9DY4,vkhsaxlCSmc,gpbQ4A4tQuU" | grep -i "^location\|^HTTP"
+      - run: |
+          curl -s -o /dev/null -D - -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0' -H 'Cookie: SOCS=CAI; CONSENT=YES+' 'https://www.youtube.com/watch_videos?video_ids=80M6sAU9DY4,vkhsaxlCSmc,gpbQ4A4tQuU' | grep -i '^location\|^HTTP' || true
