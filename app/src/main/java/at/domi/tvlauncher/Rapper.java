@@ -15,7 +15,7 @@ final class Rapper {
             new Rapper("Nettspend", "UC6CvS47L6uTuPSPhinE5jKA", 0xffff4fd8, 0xff1c0420,
                     "BRfZe0mLcpw", "9SrWNGvrtVc", "fekiI4Vkt9Y", "wC1ho-3CZcg", "x8gEkJAVd-I", "aUtDhHNTJUE", "PvPGEBaXMRs", "KoH6Fpju-Y4"),
             // ---- Mix aus allen deinen Rappern ----
-            new Rapper("Alle Rapper", "", 0xffffffff, 0xff141418),
+            new Rapper("Alle Rapper", "", 0xffffb52e, 0xff1f1302),
             // ---- Rapper, die dir gefallen könnten (zweite Reihe) ----
             new Rapper("Destroy Lonely", "UCx95IwHfzVDujNhphVJAMMA", 0xffb05cff, 0xff14051f,
                     "UfNuombVZb4", "9vdgd4F9CuI", "6M1rd4n9e44", "UmJphrg_tfg", "-H4w1Z65ZzI", "QTmRmPDS9tw"),
