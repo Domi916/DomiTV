@@ -41,6 +41,7 @@ public class MediaWatcher extends NotificationListenerService {
     static String ourTitle = null;
     /** Nach dem Starten eines Songs: der erste neue Titel, den YouTube meldet, ist unserer (egal wie lange das Laden dauert). */
     static boolean awaitingOurs = false;
+    static int stuck = 0;
     static String prevTitle = null;
     static String rapperName = "";
     static String[] members = new String[0];
@@ -233,6 +234,20 @@ public class MediaWatcher extends NotificationListenerService {
             h.postDelayed(this, 400);
             // manche Apps melden die Position nur auf Nachfrage
             try { if (active && current != null) applyState(current.getPlaybackState()); } catch (Exception ignored) { }
+            // Notbremse: Song lädt seit 30 Sekunden nicht -> nächster Song, nach 3 Fehlversuchen Schluss
+            if (active && awaitingOurs && SystemClock.elapsedRealtime() - launchedAt > 30000) {
+                stuck++;
+                unmute();
+                if (stuck >= 3) {
+                    log(MediaWatcher.this, "YouTube lädt nicht, Shuffle beendet");
+                    stop();
+                } else {
+                    log(MediaWatcher.this, "Song lädt nicht, nächster Versuch");
+                    pos++;
+                    HomeWatcherService.overlaySwitching();
+                    play(MediaWatcher.this);
+                }
+            }
             if (!active || curDur <= 0 || !positionKnown() || !playing) return;
             if (SystemClock.elapsedRealtime() - launchedAt < 8000) return;
             if (position() >= curDur - 1500) {
@@ -307,6 +322,7 @@ public class MediaWatcher extends NotificationListenerService {
         boolean stale = prevTitle != null && t.equals(prevTitle) && since < 15000;
         if (!stale && ((awaitingOurs && since < 60000) || since < 7000)) {
             awaitingOurs = false;
+            stuck = 0;
             // der Song, den wir gerade gestartet haben
             if (!t.equals(ourTitle)) {
                 trackStarted(m);

@@ -147,6 +147,14 @@ public class HomeWatcherService extends AccessibilityService {
         String cls = event.getClassName() == null ? "" : event.getClassName().toString();
         Log.i(TAG, "Fenster: " + pkg + " / " + cls);
 
+        // Notbremse: Shuffle läuft, aber YouTube ist nicht mehr vorne (Home-Taste, andere App) -> Anzeige weg
+        if (MediaWatcher.active && !pkg.contains("youtube") && !pkg.equals("com.android.systemui")
+                && !pkg.equals("com.amazon.tv.notificationcenter") && !pkg.startsWith("com.google.android.packageinstaller")
+                && !pkg.equals(getPackageName())) {
+            MediaWatcher.log(this, "YouTube nicht mehr vorne (" + pkg + "), Shuffle beendet");
+            MediaWatcher.stop();
+        }
+
         if (pkg.equals(getPackageName())) {
             allowAmazonHome = false;
             return;
