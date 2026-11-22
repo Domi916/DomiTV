@@ -6,6 +6,10 @@ import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
 import android.animation.ValueAnimator;
 import android.app.Activity;
+import android.app.SearchManager;
+import android.net.Uri;
+import java.util.Random;
+import java.util.concurrent.Callable;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -122,7 +126,18 @@ public class MainActivity extends Activity {
     boolean wokeUp = false;
 
     // ---------- Ansichten ----------
-    FrameLayout root, bgWrap, ringWrap, lift, heroWrap, dock, cont, cardsRow, intro, header;
+    FrameLayout root, bgWrap, kbWrap, ringWrap, lift, heroWrap, dock, cont, cardsRow, intro, header, rapStage, rapRow;
+    final FrameLayout[] fxw = new FrameLayout[AppDef.APPS.length];
+    final List<List<Animator>> fxAnims = new ArrayList<>();
+    final List<List<View>> heroLetters = new ArrayList<>();
+    final Rapper[] RAP = Rapper.LIST;
+    final RapCard[] rapCards = new RapCard[Rapper.LIST.length];
+    final Bitmap[] rapGlows = new Bitmap[Rapper.LIST.length];
+    int rSel = 0;
+    ImageView rapGlow;
+    Gfx.OutlineText rapName;
+    ValueAnimator rapPulse;
+    ObjectAnimator rapDrift;
     final ImageView[] bgs = new ImageView[APPS.length];
     final View[] heroes = new View[APPS.length];
     final Slot[] slots = new Slot[APPS.length];
@@ -138,8 +153,14 @@ public class MainActivity extends Activity {
     ObjectAnimator kenBurns;
     final List<ObjectAnimator> ringAnims = new ArrayList<>();
 
+    static class RapCard {
+        FrameLayout view;
+        View ring, play;
+    }
+
     static class Slot {
-        View reflect, fx, bar;
+        View reflect, fx, bar, band;
+        FrameLayout sheen;
         ImageView glow;
         FrameLayout tile;
     }
@@ -206,18 +227,20 @@ public class MainActivity extends Activity {
         // --- Hintergründe (fertige Bilder) ---
         bgWrap = new FrameLayout(this);
         root.addView(bgWrap, new FrameLayout.LayoutParams(-1, -1));
+        kbWrap = new FrameLayout(this);
+        bgWrap.addView(kbWrap, new FrameLayout.LayoutParams(-1, -1));
         for (int i = 0; i < APPS.length; i++) {
             ImageView iv = new ImageView(this);
             iv.setScaleType(ImageView.ScaleType.FIT_XY);
             iv.setAlpha(0f);
             iv.setVisibility(View.INVISIBLE);
             bgs[i] = iv;
-            bgWrap.addView(iv, new FrameLayout.LayoutParams(-1, -1));
+            kbWrap.addView(iv, new FrameLayout.LayoutParams(-1, -1));
             if ("ytmusic".equals(APPS[i].id)) {
                 ringWrap = new FrameLayout(this);
                 ringWrap.setAlpha(0f);
                 ringWrap.setVisibility(View.INVISIBLE);
-                bgWrap.addView(ringWrap, new FrameLayout.LayoutParams(-1, -1));
+                kbWrap.addView(ringWrap, new FrameLayout.LayoutParams(-1, -1));
                 Bitmap rb = Gfx.pinkRing();
                 for (int r = 0; r < 3; r++) {
                     ImageView ring = new ImageView(this);
@@ -240,11 +263,12 @@ public class MainActivity extends Activity {
                 }
             }
         }
-        bgWrap.setPivotX(px(1150));
-        bgWrap.setPivotY(px(380));
-        kenBurns = ObjectAnimator.ofPropertyValuesHolder(bgWrap,
-                PropertyValuesHolder.ofFloat(View.SCALE_X, 1.03f, 1.1f),
-                PropertyValuesHolder.ofFloat(View.SCALE_Y, 1.03f, 1.1f),
+        for (int i = 0; i < APPS.length; i++) buildSceneFx(i);
+        kbWrap.setPivotX(px(1150));
+        kbWrap.setPivotY(px(380));
+        kenBurns = ObjectAnimator.ofPropertyValuesHolder(kbWrap,
+                PropertyValuesHolder.ofFloat(View.SCALE_X, 1.08f, 1.15f),
+                PropertyValuesHolder.ofFloat(View.SCALE_Y, 1.08f, 1.15f),
                 PropertyValuesHolder.ofFloat(View.TRANSLATION_X, 0f, -px(24)),
                 PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, 0f, px(12)));
         kenBurns.setDuration(38000);
@@ -258,6 +282,47 @@ public class MainActivity extends Activity {
         beam.setImageBitmap(Gfx.beam());
         beam.setScaleType(ImageView.ScaleType.FIT_XY);
         root.addView(beam, atD(0, 0, 720, 1080));
+
+        // --- Rapper-Bühne (Hintergrund in der Rapper-Reihe) ---
+        rapStage = new FrameLayout(this);
+        rapStage.setAlpha(0f);
+        rapStage.setVisibility(View.INVISIBLE);
+        rapStage.setClipChildren(false);
+        root.addView(rapStage, new FrameLayout.LayoutParams(-1, -1));
+        View rapDark = new View(this);
+        rapDark.setBackgroundColor(0xdc050507);
+        rapStage.addView(rapDark, new FrameLayout.LayoutParams(-1, -1));
+        rapGlow = new ImageView(this);
+        rapGlow.setScaleType(ImageView.ScaleType.FIT_XY);
+        rapStage.addView(rapGlow, atD(420, -300, 1900, 1150));
+        for (int r = 0; r < RAP.length; r++) rapGlows[r] = Gfx.glow(RAP[r].c1, 0.7f);
+        rapName = new Gfx.OutlineText(this);
+        rapName.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(340));
+        rapName.setTypeface(font("Black"));
+        rapName.setLetterSpacing(-0.03f);
+        rapName.setIncludeFontPadding(false);
+        rapName.setSingleLine(true);
+        rapName.stroke(Math.max(2, px(3)));
+        rapName.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        rapStage.addView(rapName, atD(60, 120, 4200, 420));
+        rapPulse = ValueAnimator.ofFloat(0f, 1f);
+        rapPulse.setDuration(400);            // 150 BPM, wie ein Rage-Beat
+        rapPulse.setRepeatCount(ValueAnimator.INFINITE);
+        rapPulse.setInterpolator(new LinearInterpolator());
+        rapPulse.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator va) {
+                float e = (float) Math.exp(-3.2f * (Float) va.getAnimatedValue());
+                rapGlow.setAlpha(0.42f + 0.55f * e);
+                float sc = 1f + 0.06f * e;
+                rapGlow.setScaleX(sc); rapGlow.setScaleY(sc);
+            }
+        });
+        rapDrift = ObjectAnimator.ofFloat(rapName, View.TRANSLATION_X, 0f, -px(900));
+        rapDrift.setDuration(24000);
+        rapDrift.setRepeatMode(ValueAnimator.REVERSE);
+        rapDrift.setRepeatCount(ValueAnimator.INFINITE);
+        rapDrift.setInterpolator(SOFT);
 
         // --- Kopfzeile ---
         header = new FrameLayout(this);
@@ -335,7 +400,7 @@ public class MainActivity extends Activity {
         cont.setAlpha(0f);
         cont.setTranslationY(px(260));
         cont.setVisibility(View.INVISIBLE);
-        root.addView(cont, atD(96, 650, 1728, 430));
+        root.addView(cont, atD(96, 650, 1728, 760));
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setBaselineAligned(true);
@@ -348,6 +413,22 @@ public class MainActivity extends Activity {
         cardsRow = new FrameLayout(this);
         cardsRow.setClipChildren(false);
         cont.addView(cardsRow, atD(0, 70, 4000, 300));
+        LinearLayout head2 = new LinearLayout(this);
+        head2.setOrientation(LinearLayout.HORIZONTAL);
+        head2.setBaselineAligned(true);
+        head2.addView(text("Deine Rapper", 34, "Bold", TXT, -0.025f));
+        TextView sub2 = text("Direkt in YT Music", 22, "Medium", Gfx.a(TXT, 0.55f), 0);
+        LinearLayout.LayoutParams cl2 = new LinearLayout.LayoutParams(-2, -2);
+        cl2.leftMargin = px(18);
+        head2.addView(sub2, cl2);
+        cont.addView(head2, atD(0, 350, -2, -2));
+        rapRow = new FrameLayout(this);
+        rapRow.setClipChildren(false);
+        cont.addView(rapRow, atD(0, 420, 2000, 260));
+        for (int r = 0; r < RAP.length; r++) {
+            rapCards[r] = buildRapCard(RAP[r]);
+            rapRow.addView(rapCards[r].view, atD(r * 348, 0, 320, 190));
+        }
 
         // --- Pfeil unten ---
         chev = new Gfx.Icon(this, Gfx.Icon.CHEVRON);
@@ -443,6 +524,153 @@ public class MainActivity extends Activity {
         return f;
     }
 
+    RapCard buildRapCard(Rapper r) {
+        RapCard rc = new RapCard();
+        FrameLayout f = new FrameLayout(this);
+        final float rad = px(28);
+        f.setOutlineProvider(new ViewOutlineProvider() {
+            @Override
+            public void getOutline(View v, Outline o) { o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), rad); }
+        });
+        f.setClipToOutline(true);
+        GradientDrawable base = Gfx.grad(GradientDrawable.Orientation.TL_BR, new int[]{0xff0c0c10, r.c2}, rad);
+        GradientDrawable glow = new GradientDrawable();
+        glow.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+        glow.setColors(new int[]{Gfx.a(r.c1, 0.75f), 0});
+        glow.setGradientCenter(0.12f, 1.0f);
+        glow.setGradientRadius(px(300));
+        GradientDrawable stripe = Gfx.grad(GradientDrawable.Orientation.TL_BR, new int[]{0, Gfx.a(r.c1, 0.16f), 0, 0}, rad);
+        GradientDrawable gloss = Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.w(0.14f), Gfx.w(0), Gfx.w(0)}, rad);
+        f.setBackground(new LayerDrawable(new Drawable[]{base, glow, stripe, gloss}));
+        f.addView(text("RAPPER", 14, "Bold", Gfx.w(0.7f), 0.28f), atD(22, 22, -2, -2));
+        View dot = new View(this);
+        dot.setBackground(Gfx.round(r.c1, px(5)));
+        f.addView(dot, atD(22 + 92, 26, 10, 10));
+        TextView nm = text(r.name.toUpperCase(Locale.ROOT), 40, "Black", Color.WHITE, -0.02f);
+        FrameLayout.LayoutParams nl = new FrameLayout.LayoutParams(-2, -2);
+        nl.gravity = Gravity.BOTTOM | Gravity.START;
+        nl.leftMargin = px(22);
+        nl.bottomMargin = px(48);
+        f.addView(nm, nl);
+        TextView sub = text("Auf YT Music hören", 16, "Medium", Gfx.w(0.72f), 0);
+        FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2);
+        sl.gravity = Gravity.BOTTOM | Gravity.START;
+        sl.leftMargin = px(22);
+        sl.bottomMargin = px(22);
+        f.addView(sub, sl);
+        FrameLayout play = new FrameLayout(this);
+        play.setBackground(Gfx.round(r.c1, px(25)));
+        Gfx.Icon pi = new Gfx.Icon(this, Gfx.Icon.PLAY);
+        pi.setColor(Color.WHITE);
+        FrameLayout.LayoutParams pl = new FrameLayout.LayoutParams(px(22), px(22));
+        pl.gravity = Gravity.CENTER;
+        pl.leftMargin = px(3);
+        play.addView(pi, pl);
+        play.setAlpha(0f);
+        f.addView(play, atD(320 - 20 - 50, 18, 50, 50));
+        View ring = new View(this);
+        GradientDrawable rg = Gfx.round(Color.TRANSPARENT, rad);
+        rg.setStroke(Math.max(2, px(3)), Gfx.w(0.95f));
+        ring.setBackground(rg);
+        ring.setAlpha(0f);
+        f.addView(ring, new FrameLayout.LayoutParams(-1, -1));
+        f.setAlpha(0.62f);
+        f.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        rc.view = f;
+        rc.ring = ring;
+        rc.play = play;
+        return rc;
+    }
+
+    /** Lebendige Hintergründe: kleine Ebenen, die sich nur bewegen (GPU). */
+    void buildSceneFx(int i) {
+        AppDef a = APPS[i];
+        List<Animator> an = new ArrayList<>();
+        fxAnims.add(an);
+        if ("ytmusic".equals(a.id)) {
+            fxw[i] = ringWrap;
+            an.addAll(ringAnims);
+            return;
+        }
+        FrameLayout w = new FrameLayout(this);
+        w.setAlpha(0f);
+        w.setVisibility(View.INVISIBLE);
+        kbWrap.addView(w, new FrameLayout.LayoutParams(-1, -1));
+        fxw[i] = w;
+        Random rnd = new Random(11 + i * 7);
+        if ("netflix".equals(a.id)) {
+            Bitmap st = Gfx.streak(0xffff3040);
+            for (int k = 0; k < 5; k++) {
+                ImageView v = new ImageView(this);
+                v.setImageBitmap(st);
+                v.setScaleType(ImageView.ScaleType.FIT_XY);
+                float wd = 110 + rnd.nextFloat() * 70;
+                w.addView(v, atD(1000 + k * 165 + rnd.nextFloat() * 40, -160, wd, 1050));
+                v.setPivotX(px(wd / 2));
+                v.setPivotY(0);
+                float r0 = 2 + rnd.nextFloat() * 3;
+                an.add(loop(v, 4200 + rnd.nextInt(4000), rnd,
+                        PropertyValuesHolder.ofFloat(View.ROTATION, -r0, r0),
+                        PropertyValuesHolder.ofFloat(View.ALPHA, 0.2f, 0.75f)));
+            }
+        } else if ("youtube".equals(a.id)) {
+            Bitmap g = Gfx.glow(Color.WHITE, 0.2f);
+            float[][] pos = {{820, 60, 1000, 640}, {1180, 300, 900, 560}};
+            for (int k = 0; k < pos.length; k++) {
+                ImageView v = new ImageView(this);
+                v.setImageBitmap(g);
+                v.setScaleType(ImageView.ScaleType.FIT_XY);
+                w.addView(v, atD(pos[k][0], pos[k][1], pos[k][2], pos[k][3]));
+                an.add(loop(v, 9000 + k * 3500, rnd,
+                        PropertyValuesHolder.ofFloat(View.TRANSLATION_X, -px(220), px(220)),
+                        PropertyValuesHolder.ofFloat(View.ALPHA, 0.35f, 0.95f)));
+            }
+        } else if ("prime".equals(a.id)) {
+            ImageView sun = new ImageView(this);
+            sun.setImageBitmap(Gfx.glow(0xff9fe6ff, 0.75f));
+            sun.setScaleType(ImageView.ScaleType.FIT_XY);
+            w.addView(sun, atD(1400 - 520, 660 - 230, 1040, 460));
+            an.add(loop(sun, 5200, rnd,
+                    PropertyValuesHolder.ofFloat(View.SCALE_X, 0.88f, 1.18f),
+                    PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.88f, 1.12f),
+                    PropertyValuesHolder.ofFloat(View.ALPHA, 0.45f, 1f)));
+        } else if ("disney".equals(a.id)) {
+            Bitmap star = Gfx.dot(0xffcfd8ff);
+            for (int k = 0; k < 18; k++) {
+                ImageView v = new ImageView(this);
+                v.setImageBitmap(star);
+                v.setScaleType(ImageView.ScaleType.FIT_XY);
+                float sz = 18 + rnd.nextFloat() * 26;
+                w.addView(v, atD(860 + rnd.nextFloat() * 1020, 30 + rnd.nextFloat() * 600, sz, sz));
+                an.add(loop(v, 1300 + rnd.nextInt(2600), rnd,
+                        PropertyValuesHolder.ofFloat(View.ALPHA, 0.05f, 1f),
+                        PropertyValuesHolder.ofFloat(View.SCALE_X, 0.6f, 1.25f),
+                        PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.6f, 1.25f)));
+            }
+        }
+    }
+
+    ObjectAnimator loop(View v, long ms, Random rnd, PropertyValuesHolder... p) {
+        ObjectAnimator o = ObjectAnimator.ofPropertyValuesHolder(v, p);
+        o.setDuration(ms);
+        o.setRepeatMode(ValueAnimator.REVERSE);
+        o.setRepeatCount(ValueAnimator.INFINITE);
+        o.setInterpolator(SOFT);
+        o.setCurrentPlayTime((long) (rnd.nextFloat() * ms));
+        return o;
+    }
+
+    void pauseFx() {
+        for (List<Animator> l : fxAnims) for (Animator a : l) a.pause();
+        if (rapPulse != null) { rapPulse.pause(); rapDrift.pause(); }
+    }
+
+    void resumeFx() {
+        if (shownBg >= 0 && shownBg < fxAnims.size())
+            for (Animator a : fxAnims.get(shownBg)) { if (!a.isStarted()) a.start(); else a.resume(); }
+        if ("rap".equals(shownMode)) { rapPulse.resume(); rapDrift.resume(); }
+    }
+
     View buildHero(AppDef a, int i) {
         LinearLayout h = new LinearLayout(this);
         h.setOrientation(LinearLayout.VERTICAL);
@@ -459,19 +687,28 @@ public class MainActivity extends Activity {
         meta.addView(line, ll);
         meta.addView(text(a.kind.toUpperCase(Locale.GERMAN), 22, "SemiBold", Gfx.a(TXT, 0.64f), 0.18f));
         h.addView(meta);
-        Gfx.GradientText title = new Gfx.GradientText(this);
-        title.setText(a.name);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(200));
-        title.setTypeface(font("Black"));
-        title.setLetterSpacing(-0.055f);
-        title.setIncludeFontPadding(false);
-        title.setSingleLine(true);
-        title.setTextColor(Color.WHITE);
-        title.setPadding(0, 0, px(20), px(6));
+        LinearLayout title = new LinearLayout(this);
+        title.setOrientation(LinearLayout.HORIZONTAL);
+        List<View> letters = new ArrayList<>();
+        for (int c = 0; c < a.name.length(); c++) {
+            Gfx.GradientText lt = new Gfx.GradientText(this);
+            lt.setText(a.name.substring(c, c + 1));
+            lt.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(200));
+            lt.setTypeface(font("Black"));
+            lt.setIncludeFontPadding(false);
+            lt.setSingleLine(true);
+            lt.setTextColor(Color.WHITE);
+            lt.setPadding(0, 0, 0, px(6));
+            lt.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+            if (c > 0) lp.leftMargin = -px(11);
+            title.addView(lt, lp);
+            letters.add(lt);
+        }
+        heroLetters.add(letters);
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(-2, -2);
         tl.topMargin = px(10);
         h.addView(title, tl);
-        h.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         h.setAlpha(0f);
         h.setVisibility(View.INVISIBLE);
         return h;
@@ -519,6 +756,20 @@ public class MainActivity extends Activity {
         s.fx.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         dock.addView(s.fx, atD(x, y, 280, 158));
 
+        s.sheen = new FrameLayout(this);
+        final float srad = px(30);
+        s.sheen.setOutlineProvider(new ViewOutlineProvider() {
+            @Override
+            public void getOutline(View v, Outline o) { o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), srad); }
+        });
+        s.sheen.setClipToOutline(true);
+        s.band = new View(this);
+        s.band.setBackground(Gfx.grad(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{Gfx.w(0), Gfx.w(0.42f), Gfx.w(0)}, 0));
+        s.band.setRotation(18);
+        s.band.setAlpha(0f);
+        s.sheen.addView(s.band, atD(-220, -70, 110, 300));
+        dock.addView(s.sheen, atD(x, y, 280, 158));
+
         s.bar = new View(this);
         s.bar.setBackground(Gfx.round(Color.WHITE, px(2)));
         s.bar.setAlpha(0f);
@@ -542,20 +793,28 @@ public class MainActivity extends Activity {
         showHero(sel, anim);
         for (int i = 0; i < slots.length; i++) focusSlot(i, "apps".equals(zone) && i == sel, anim);
         for (int i = 0; i < cards.size(); i++) focusCard(cards.get(i), "cont".equals(zone) && i == cSel, anim);
+        for (int i = 0; i < rapCards.length; i++) focusRap(rapCards[i], "rap".equals(zone) && i == rSel, anim);
+        if ("rap".equals(zone)) setRapper(rSel, anim);
+        float par = "rap".equals(zone) ? -2 * 30 : -(sel - (APPS.length - 1) / 2f) * 30;
+        mv(bgWrap, anim, 1200).translationX(px(par));
+        if (!anim) bgWrap.setTranslationX(px(par));
         focusBtn(btnHome, icHome, "top".equals(zone) && tSel == 0, anim);
         focusBtn(btnSettings, icSettings, "top".equals(zone) && tSel == 1, anim);
 
         float bx;
         if ("apps".equals(zone)) bx = 96 + 28 + sel * 312 + 140 - 360;
         else bx = 96 + Math.min(cSel, 3) * 436 + 200 - 360;
-        float ba = "top".equals(zone) ? 0f : 1f;
+        float ba = "top".equals(zone) || "rap".equals(zone) ? 0f : 1f;
         mv(beam, anim, 550).translationX(px(bx)).alpha(ba);
         if (!anim) { beam.setTranslationX(px(bx)); beam.setAlpha(ba); }
 
         float cx = -Math.max(0, cSel - 3) * 436;
         mv(cardsRow, anim, 500).translationX(px(cx));
         if (!anim) cardsRow.setTranslationX(px(cx));
-        setContMode("cont".equals(zone), anim);
+        float rx = -Math.max(0, rSel - 3) * 348;
+        mv(rapRow, anim, 500).translationX(px(rx));
+        if (!anim) rapRow.setTranslationX(px(rx));
+        setMode("top".equals(zone) ? "apps" : zone, anim);
     }
 
     android.view.ViewPropertyAnimator mv(View v, boolean anim, long ms) {
@@ -585,18 +844,21 @@ public class MainActivity extends Activity {
             n.setAlpha(1f); n.setScaleX(1f); n.setScaleY(1f);
         }
         n.bringToFront();
-        boolean music = "ytmusic".equals(APPS[i].id);
-        if (ringWrap != null) {
-            if (music) {
-                ringWrap.bringToFront();
-                ringWrap.setVisibility(View.VISIBLE);
-                ringWrap.animate().alpha(1f).setDuration(anim ? 900 : 0).setStartDelay(0).withEndAction(null).start();
-                for (ObjectAnimator r : ringAnims) if (!r.isStarted()) r.start(); else r.resume();
-            } else {
-                ringWrap.animate().alpha(0f).setDuration(anim ? 500 : 0).withEndAction(new Runnable() {
+        for (int k = 0; k < fxw.length; k++) {
+            final FrameLayout w = fxw[k];
+            if (w == null) continue;
+            final int kk = k;
+            if (k == i) {
+                w.bringToFront();
+                w.setVisibility(View.VISIBLE);
+                w.animate().alpha(1f).setDuration(anim ? 900 : 0).setStartDelay(0).withEndAction(null).start();
+                for (Animator a : fxAnims.get(k)) { if (!a.isStarted()) a.start(); else a.resume(); }
+            } else if (w.getVisibility() == View.VISIBLE) {
+                w.animate().alpha(0f).setDuration(anim ? 500 : 0).setStartDelay(0).withEndAction(new Runnable() {
                     public void run() {
-                        ringWrap.setVisibility(View.INVISIBLE);
-                        for (ObjectAnimator r : ringAnims) r.pause();
+                        if (shownBg == kk) return;
+                        w.setVisibility(View.INVISIBLE);
+                        for (Animator a : fxAnims.get(kk)) a.pause();
                     }
                 }).start();
             }
@@ -623,12 +885,23 @@ public class MainActivity extends Activity {
         View n = heroes[i];
         n.animate().cancel();
         n.setVisibility(View.VISIBLE);
+        List<View> lts = heroLetters.get(i);
         if (anim) {
-            n.setTranslationX(px(40) * dir);
-            n.animate().alpha(1f).translationX(0).setDuration(600).setStartDelay(60).setInterpolator(EASE).withEndAction(null).start();
+            n.setTranslationX(px(30) * dir);
+            n.animate().alpha(1f).translationX(0).setDuration(500).setStartDelay(0).setInterpolator(EASE).withEndAction(null).start();
+            for (int j = 0; j < lts.size(); j++) {
+                View v = lts.get(j);
+                v.animate().cancel();
+                v.setAlpha(0f);
+                v.setTranslationY(px(90));
+                v.setScaleY(1.25f);
+                v.animate().alpha(1f).translationY(0).scaleY(1f).setDuration(620).setStartDelay(80 + j * 42)
+                        .setInterpolator(EASE).start();
+            }
         } else {
             n.setAlpha(1f);
             n.setTranslationX(0);
+            for (View v : lts) { v.animate().cancel(); v.setAlpha(1f); v.setTranslationY(0); v.setScaleY(1f); }
         }
         if (old >= 0) {
             final View o = heroes[old];
@@ -657,7 +930,27 @@ public class MainActivity extends Activity {
         long d = anim ? 420 : 0;
         s.tile.animate().scaleX(sc).scaleY(sc).translationY(ty).alpha(ta).setDuration(d).setStartDelay(0).setInterpolator(EASE).start();
         s.fx.animate().scaleX(sc).scaleY(sc).translationY(ty).alpha(on ? 1f : 0f).setDuration(d).setStartDelay(0).setInterpolator(EASE).start();
-        s.glow.animate().scaleX(sc).scaleY(sc).translationY(ty).alpha(on ? 1f : 0f).setDuration(anim ? 480 : 0).setStartDelay(0).setInterpolator(EASE).start();
+        s.sheen.animate().scaleX(sc).scaleY(sc).translationY(ty).setDuration(d).setStartDelay(0).setInterpolator(EASE).start();
+        final Slot ss = s;
+        final int si = i;
+        s.glow.animate().scaleX(sc).scaleY(sc).translationY(ty).alpha(on ? 1f : 0f).setDuration(anim ? 480 : 0).setStartDelay(0).setInterpolator(EASE)
+                .withEndAction(on && anim ? new Runnable() {
+                    public void run() {
+                        if (!slotOn[si]) return;
+                        ss.glow.animate().scaleX(1.32f).scaleY(1.32f).setDuration(240).setInterpolator(SOFT).withEndAction(new Runnable() {
+                            public void run() {
+                                if (!slotOn[si]) return;
+                                ss.glow.animate().scaleX(1.12f).scaleY(1.12f).setDuration(800).setInterpolator(EASE).withEndAction(null).start();
+                            }
+                        }).start();
+                    }
+                } : null).start();
+        if (on && anim) {
+            s.band.animate().cancel();
+            s.band.setTranslationX(0);
+            s.band.setAlpha(1f);
+            s.band.animate().translationX(px(600)).setDuration(950).setStartDelay(160).setInterpolator(SOFT).start();
+        }
         s.bar.animate().scaleX(on ? 1f : 0f).alpha(on ? 1f : 0f).setDuration(anim ? 400 : 0).setStartDelay(0).setInterpolator(EASE).start();
         s.reflect.animate().alpha(on ? 0.9f : 0.35f).setDuration(anim ? 350 : 0).setStartDelay(0).start();
     }
@@ -678,20 +971,70 @@ public class MainActivity extends Activity {
         b.animate().scaleX(on ? 1.18f : 1f).scaleY(on ? 1.18f : 1f).setDuration(anim ? 300 : 0).setInterpolator(EASE).start();
     }
 
-    boolean contShown = false;
+    String shownMode = "";
 
-    void setContMode(boolean on, boolean anim) {
-        if (on == contShown && anim) return;
-        contShown = on;
+    void setMode(String z, boolean anim) {
+        if (z.equals(shownMode) && anim) return;
+        final boolean fromRap = "rap".equals(shownMode);
+        shownMode = z;
+        boolean isCont = "cont".equals(z), isRap = "rap".equals(z), low = isCont || isRap;
         long d = anim ? 700 : 0;
-        lift.animate().translationY(on ? -px(400) : 0).setDuration(d).setStartDelay(0).setInterpolator(EASE).start();
-        heroWrap.animate().alpha(on ? 0f : 1f).setDuration(anim ? 450 : 0).setStartDelay(0).start();
+        lift.animate().translationY(low ? -px(400) : 0).alpha(isRap ? 0f : 1f).setDuration(d).setStartDelay(0).setInterpolator(EASE).start();
+        heroWrap.animate().alpha(low ? 0f : 1f).setDuration(anim ? 450 : 0).setStartDelay(0).start();
         cont.setVisibility(View.VISIBLE);
-        cont.animate().alpha(on ? 1f : 0f).translationY(on ? 0 : px(260)).setDuration(d).setStartDelay(on && anim ? 120 : 0)
-                .setInterpolator(EASE).withEndAction(on ? null : new Runnable() {
-                    public void run() { if (!contShown) cont.setVisibility(View.INVISIBLE); }
+        cont.animate().alpha(low ? 1f : 0f).translationY(isRap ? -px(330) : (isCont ? 0 : px(260))).setDuration(d)
+                .setStartDelay(isCont && anim && !fromRap ? 120 : 0).setInterpolator(EASE)
+                .withEndAction(low ? null : new Runnable() {
+                    public void run() { if (!"cont".equals(shownMode) && !"rap".equals(shownMode)) cont.setVisibility(View.INVISIBLE); }
                 }).start();
-        chev.animate().rotation(on ? 180 : 0).alpha(on ? 0.55f : 0.4f).setDuration(anim ? 500 : 0).setInterpolator(EASE).start();
+        if (isRap) {
+            rapStage.setVisibility(View.VISIBLE);
+            rapStage.animate().alpha(1f).setDuration(anim ? 600 : 0).setStartDelay(0).withEndAction(null).start();
+            if (!rapPulse.isStarted()) rapPulse.start(); else rapPulse.resume();
+            if (!rapDrift.isStarted()) rapDrift.start(); else rapDrift.resume();
+        } else {
+            rapStage.animate().alpha(0f).setDuration(anim ? 450 : 0).setStartDelay(0).withEndAction(new Runnable() {
+                public void run() {
+                    if ("rap".equals(shownMode)) return;
+                    rapStage.setVisibility(View.INVISIBLE);
+                    rapPulse.pause();
+                    rapDrift.pause();
+                }
+            }).start();
+        }
+        chev.animate().rotation(isRap ? 180 : 0).alpha(low ? 0.55f : 0.4f).setDuration(anim ? 500 : 0).setInterpolator(EASE).start();
+    }
+
+    int shownRapper = -1;
+
+    void setRapper(final int r, boolean anim) {
+        if (r == shownRapper) return;
+        shownRapper = r;
+        rapGlow.setImageBitmap(rapGlows[r]);
+        if (anim) {
+            rapName.animate().alpha(0f).setDuration(140).setStartDelay(0).withEndAction(new Runnable() {
+                public void run() {
+                    rapName.setText(RAP[r].name.toUpperCase(Locale.ROOT));
+                    rapName.setTextColor(Gfx.a(RAP[r].c1, 0.55f));
+                    rapName.setTranslationY(px(30));
+                    rapName.animate().alpha(1f).translationY(0).setDuration(500).setInterpolator(EASE).withEndAction(null).start();
+                }
+            }).start();
+        } else {
+            rapName.setText(RAP[r].name.toUpperCase(Locale.ROOT));
+            rapName.setTextColor(Gfx.a(RAP[r].c1, 0.55f));
+            rapName.setAlpha(1f);
+        }
+    }
+
+    void focusRap(RapCard c, boolean on, boolean anim) {
+        long d = anim ? 420 : 0;
+        float sc = on ? 1.1f : 1f;
+        c.view.animate().scaleX(sc).scaleY(sc).translationY(on ? -px(12) : 0).alpha(on ? 1f : 0.62f)
+                .setDuration(d).setStartDelay(0).setInterpolator(EASE).start();
+        c.ring.animate().alpha(on ? 1f : 0f).setDuration(anim ? 250 : 0).setStartDelay(0).start();
+        c.play.animate().alpha(on ? 1f : 0f).scaleX(on ? 1f : 0.6f).scaleY(on ? 1f : 0.6f)
+                .setDuration(anim ? 350 : 0).setStartDelay(0).setInterpolator(EASE).start();
     }
 
     // =====================================================================
@@ -996,8 +1339,8 @@ public class MainActivity extends Activity {
         header.setVisibility(vis);
         lift.setVisibility(vis);
         chev.setVisibility(vis);
-        if (!on) cont.setVisibility(View.INVISIBLE);
-        if (on) kenBurns.resume(); else kenBurns.pause();
+        if (!on) { cont.setVisibility(View.INVISIBLE); rapStage.setVisibility(View.INVISIBLE); }
+        if (on) { kenBurns.resume(); resumeFx(); } else { kenBurns.pause(); pauseFx(); }
     }
 
     /** Startseite fährt ins Bild: Hintergrund zoomt heran, Leiste gleitet hoch. */
@@ -1103,11 +1446,18 @@ public class MainActivity extends Activity {
             if ("left".equals(k)) cSel = Math.max(0, cSel - 1);
             else if ("right".equals(k)) cSel = Math.min(cards.size() - 1, cSel + 1);
             else if ("up".equals(k) || "back".equals(k)) zone = "apps";
+            else if ("down".equals(k)) zone = "rap";
             else if ("ok".equals(k) && cSel < cards.size()) {
                 Card c = cards.get(cSel);
                 if (c.hint) showToast("Öffne eine App, dann erscheint sie hier");
                 else openAppFx(c.app, c.view);
             }
+        } else if ("rap".equals(zone)) {
+            if ("left".equals(k)) rSel = Math.max(0, rSel - 1);
+            else if ("right".equals(k)) rSel = Math.min(RAP.length - 1, rSel + 1);
+            else if ("up".equals(k)) zone = "cont";
+            else if ("back".equals(k)) zone = "apps";
+            else if ("ok".equals(k)) openRapper(RAP[rSel], rapCards[rSel].view);
         } else if ("top".equals(zone)) {
             if ("left".equals(k)) tSel = 0;
             else if ("right".equals(k)) tSel = 1;
@@ -1153,6 +1503,41 @@ public class MainActivity extends Activity {
     void openAppFx(final AppDef a, View src) {
         if (launching) return;
         if (a.pkg == null) { showToast(a.name + " ist nicht installiert"); return; }
+        launchFx(src, a.t1, a.t2, a.name, new Callable<Boolean>() {
+            public Boolean call() { return openApp(a); }
+        });
+    }
+
+    void openRapper(final Rapper r, View src) {
+        if (launching) return;
+        launchFx(src, r.c1, r.c2, r.name, new Callable<Boolean>() {
+            public Boolean call() { return playRapper(r); }
+        });
+    }
+
+    /** Öffnet die Musik eines Rappers: zuerst YT Music, sonst YouTube. */
+    boolean playRapper(Rapper r) {
+        String q = Uri.encode(r.name);
+        AppDef ym = AppDef.byId("ytmusic"), yt = AppDef.byId("youtube");
+        if (ym != null && ym.pkg != null) {
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=" + q));
+            i.setPackage(ym.pkg);
+            if (start(i)) { overridePendingTransition(0, 0); return true; }
+        }
+        if (yt != null && yt.pkg != null) {
+            Intent s2 = new Intent(Intent.ACTION_SEARCH);
+            s2.setPackage(yt.pkg);
+            s2.putExtra(SearchManager.QUERY, r.name);
+            if (start(s2)) { overridePendingTransition(0, 0); return true; }
+            Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + q));
+            v.setPackage(yt.pkg);
+            if (start(v)) { overridePendingTransition(0, 0); return true; }
+        }
+        showToast("YT Music oder YouTube nicht gefunden");
+        return false;
+    }
+
+    void launchFx(View src, int t1, int t2, String name, final Callable<Boolean> go) {
         launching = true;
         final int W = root.getWidth(), H = root.getHeight();
         float[] c = centerOf(src);
@@ -1161,7 +1546,7 @@ public class MainActivity extends Activity {
 
         final FrameLayout fx = new FrameLayout(this);
         fx.setBackground(new LayerDrawable(new Drawable[]{
-                new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{a.t1, a.t2}),
+                new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{t1, t2}),
                 new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.w(0.18f), Gfx.w(0), Gfx.w(0)}),
         }));
         final float[] rad = {px(30) / sx0};
@@ -1170,7 +1555,7 @@ public class MainActivity extends Activity {
             public void getOutline(View v, Outline o) { o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), rad[0]); }
         });
         fx.setClipToOutline(true);
-        final TextView lbl = text(a.name, 32, "Bold", TXT, -0.035f);
+        final TextView lbl = text(name, 32, "Bold", TXT, -0.035f);
         lbl.setTextSize(TypedValue.COMPLEX_UNIT_PX, px(32) / sx0);
         FrameLayout.LayoutParams ll = new FrameLayout.LayoutParams(-2, -2);
         ll.gravity = Gravity.CENTER;
@@ -1207,7 +1592,9 @@ public class MainActivity extends Activity {
         launchAnim.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator an) {
-                if (!openApp(a)) clearLaunchFx(true);
+                boolean ok = false;
+                try { ok = go.call(); } catch (Exception e) { Log.e(HomeWatcherService.TAG, "Start", e); }
+                if (!ok) clearLaunchFx(true);
             }
         });
         launchAnim.start();
@@ -1400,7 +1787,7 @@ public class MainActivity extends Activity {
         boolean intro = woke || away > 120000;
         clearLaunchFx(!intro);
         if (intro) playIntro(woke);
-        else kenBurns.resume();
+        else { kenBurns.resume(); resumeFx(); }
     }
 
     @Override
@@ -1408,7 +1795,7 @@ public class MainActivity extends Activity {
         super.onPause();
         pausedAt = SystemClock.elapsedRealtime();
         kenBurns.pause();
-        for (ObjectAnimator r : ringAnims) r.pause();
+        pauseFx();
     }
 
     @Override

@@ -17,6 +17,10 @@ for i in 1 2 3 4; do adb shell input keyevent 22; sleep 1.6; shot "06_right_$i";
 adb shell input keyevent 21; sleep 0.25; shot 07_mid_switch
 sleep 1.5
 adb shell input keyevent 20; sleep 1.5; shot 08_down
+adb shell input keyevent 20; sleep 1.8; shot 08b_rap
+adb shell input keyevent 22; sleep 1.2; shot 08c_rap2
+adb shell input keyevent 22; adb shell input keyevent 22; adb shell input keyevent 22; sleep 1.4; shot 08d_rap5
+adb shell input keyevent 4; sleep 1.5
 adb shell input keyevent 19; sleep 0.8; adb shell input keyevent 19; sleep 1.0; shot 09_top
 adb shell input keyevent 20; sleep 1.0
 sleep 1; adb pull /sdcard/intro.mp4 shots/intro.mp4

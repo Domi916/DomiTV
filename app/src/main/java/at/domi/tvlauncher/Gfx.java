@@ -121,6 +121,30 @@ final class Gfx {
         return b;
     }
 
+    /** Weicher, senkrechter Lichtstreifen (Netflix-Hintergrund). */
+    static Bitmap streak(int color) {
+        int W = 80, H = 600;
+        Bitmap b = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(b);
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        p.setShader(new LinearGradient(0, 0, 0, H, new int[]{a(color, 0), a(color, 0.85f), a(color, 0)},
+                new float[]{0, 0.42f, 1}, Shader.TileMode.CLAMP));
+        p.setMaskFilter(new BlurMaskFilter(16, BlurMaskFilter.Blur.NORMAL));
+        c.drawRoundRect(new android.graphics.RectF(26, 10, 54, H - 10), 14, 14, p);
+        return b;
+    }
+
+    /** Umriss-Schrift (riesiger Rapper-Name im Hintergrund). */
+    static class OutlineText extends TextView {
+        OutlineText(Context c) {
+            super(c);
+            getPaint().setStyle(Paint.Style.STROKE);
+            getPaint().setStrokeWidth(3);
+        }
+
+        void stroke(float px) { getPaint().setStrokeWidth(px); invalidate(); }
+    }
+
     /** Text mit Verlauf von weiß nach halbtransparent (große App-Namen). */
     static class GradientText extends TextView {
         GradientText(Context c) { super(c); }
