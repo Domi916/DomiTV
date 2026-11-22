@@ -614,7 +614,7 @@ public class MainActivity extends Activity {
         nl.leftMargin = px(22);
         nl.bottomMargin = px(48);
         f.addView(nm, nl);
-        TextView sub = text("Shuffle · nur seine Songs", 16, "Medium", Gfx.w(0.72f), 0);
+        TextView sub = text("Shuffle auf YouTube", 16, "Medium", Gfx.w(0.72f), 0);
         FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2);
         sl.gravity = Gravity.BOTTOM | Gravity.START;
         sl.leftMargin = px(22);
@@ -1872,18 +1872,12 @@ public class MainActivity extends Activity {
     /** Startet auf YouTube die Songs des Rappers: zufälliger Einstieg in seine eigene Playlist. */
     boolean playRapper(Rapper r) {
         JblBox.connect(this);
-        int idx = java.util.Arrays.asList(Rapper.LIST).indexOf(r);
-        Intent i = new Intent(this, PlayerActivity.class);
-        i.putExtra("rapper", Math.max(0, idx));
-        try {
-            startActivity(i);
-            overridePendingTransition(0, 0);
-            return true;
-        } catch (Exception e) {
-            Log.e(HomeWatcherService.TAG, "Player", e);
-            showToast("Player konnte nicht starten");
-            return false;
-        }
+        AppDef yt = AppDef.byId("youtube");
+        if (yt == null || yt.pkg == null) { showToast("YouTube nicht gefunden"); return false; }
+        // Nur Songs des Rappers, gemischt. MediaWatcher springt bei fremden Videos sofort zum nächsten.
+        MediaWatcher.start(this, yt.pkg, r.name, r.videos);
+        overridePendingTransition(0, 0);
+        return true;
     }
 
     void launchFx(View src, int t1, int t2, String name, final Callable<Boolean> go) {
@@ -2122,6 +2116,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         // Zurück in Domi TV: Rapper-Mix ist vorbei, JBL-Box wieder trennen
+        MediaWatcher.stop();
         JblBox.wanted = false;
         JblBox.disconnect(this);
         hideSystemUi();
