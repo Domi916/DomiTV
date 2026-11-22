@@ -7,9 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          q() { r=$(curl -s -G 'https://lrclib.net/api/search' --data-urlencode "artist_name=$1" --data-urlencode "track_name=$2" -A 'DomiTV/1.0'); echo "RES $1 | $2 | n=$(echo "$r" | jq length) synced=$(echo "$r" | jq '[.[]|select(.syncedLyrics!=null)]|length') first=$(echo "$r" | jq -r '.[0].trackName+" / "+.[0].artistName')"; }
-          q "Ken Carson" "overseas"; q "Ken Carson" "Lord Of Chaos"; q "Ken Carson" "delusional"; q "Ken Carson" "margiela"; q "Ken Carson" "ss"; q "Ken Carson" "Fighting My Demons"
-          q "bleood" "alucard"; q "bleood" "friend or foe"; q "bleood" "bpd"; q "bleood" "munni & drugs"
-          q "Protect" "Keyshia"; q "Protect" "Hotspot"; q "Protect" "Oops"
-          q "OsamaSon" "ik what you did last summer"; q "OsamaSon" "Trenches"; q "OsamaSon" "The Whole World Is Free"
-          q "Nettspend" "F*CK SWAG"; q "Nettspend" "stressed"; q "Nettspend" "Shine N Peace"
+          pip install -q -U yt-dlp
+          for u in "https://www.youtube.com/channel/UCaG2V4fBeGjBVuLQu7bCcGg/releases" "https://music.youtube.com/channel/UCaG2V4fBeGjBVuLQu7bCcGg" "https://www.youtube.com/@kencarson/releases"; do
+            echo "== $u"; timeout 120 yt-dlp --flat-playlist --print "RES %(id)s|%(title)s|%(url)s" "$u" 2>&1 | head -15
+          done
+          echo "== search topic"; timeout 60 yt-dlp --flat-playlist --print "RES %(channel)s|%(channel_id)s|%(title)s" "ytsearch5:Ken Carson Topic" 2>&1 | head
