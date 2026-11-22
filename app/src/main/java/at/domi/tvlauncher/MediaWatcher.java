@@ -196,12 +196,6 @@ public class MediaWatcher extends NotificationListenerService {
             ourTitle = t;
             return;
         }
-        if (!endedNaturally()) {
-            // Mitten im Song etwas anderes gestartet: das hast du selbst ausgesucht, Shuffle hört auf
-            log(this, "selbst gewählt? " + t + " / " + artist + " pos=" + lastPos + " dur=" + curDur + " -> Shuffle aus");
-            active = false;
-            return;
-        }
         log(this, "fremd: " + t + " / " + artist + " pos=" + lastPos + " dur=" + curDur + " -> nächster Song");
         next();
     }
@@ -217,7 +211,9 @@ public class MediaWatcher extends NotificationListenerService {
     static boolean sameSong(String a, String b) {
         String x = norm(a), y = norm(b);
         if (x.isEmpty() || y.isEmpty()) return false;
-        return x.contains(y) || y.contains(x);
+        if (x.equals(y)) return true;
+        // kurze Titel wie "pain" nicht in fremden Titeln wiederfinden
+        return (y.length() >= 6 && x.contains(y)) || (x.length() >= 6 && y.contains(x));
     }
 
     void next() {

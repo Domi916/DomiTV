@@ -129,6 +129,16 @@ public class HomeWatcherService extends AccessibilityService {
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) MediaWatcher.skip(this);
             return true;
         }
+        // ⏪ (Zurückspulen) während des Shuffles: Shuffle aus, du kannst in YouTube frei wählen
+        if (MediaWatcher.active && (k == android.view.KeyEvent.KEYCODE_MEDIA_REWIND
+                || k == android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS)) {
+            if (e.getAction() == android.view.KeyEvent.ACTION_UP) {
+                MediaWatcher.log(this, "Shuffle aus per ⏪");
+                MediaWatcher.active = false;
+                android.widget.Toast.makeText(this, "Shuffle aus – du kannst jetzt frei wählen", android.widget.Toast.LENGTH_SHORT).show();
+            }
+            return true;
+        }
         return false;
     }
 
