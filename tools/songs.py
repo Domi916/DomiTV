@@ -55,7 +55,14 @@ def songs_of(name):
             tracks = [t.get("id") for t in (d.get("entries") or []) if t.get("id")]
             if len(tracks) >= 5:  # Alben/Mixtapes, keine Singles
                 al = {"title": pl.get("title") or d.get("title") or "", "tracks": tracks}
-                cov = cover(tracks[0], f"{slug(name)}_{len(albums)}.jpg")
+                # Cover: Vorschaubild eines "Official Audio"-Songs zeigt das Albumcover (Musikvideos nicht)
+                ents = [t for t in (d.get("entries") or []) if t.get("id")]
+                def is_audio(t):
+                    ti = (t.get("title") or "").lower()
+                    return "video" not in ti and "visualizer" not in ti and "live" not in ti
+                audio = [t["id"] for t in ents if is_audio(t)]
+                pick = audio[0] if audio else tracks[0]
+                cov = cover([], pick, f"{slug(name)}_{len(albums)}.jpg")
                 if cov: al["cover"] = cov
                 albums.append(al)
             for t in d.get("entries") or []:
@@ -73,22 +80,26 @@ def songs_of(name):
 ALBUMS = {}
 COV = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "assets", "covers")
 
-def cover(video_id, fname):
-    """Albumcover aus dem Vorschaubild des ersten Songs (offizielle Audio-Version zeigt das Cover mittig)."""
+def cover(urls, video_id, fname):
+    """Albumcover: zuerst das Bild der Album-Playlist (echtes Cover), sonst Vorschaubild des ersten Songs."""
     import io, urllib.request
     from PIL import Image
-    for q in ("maxresdefault", "sddefault", "hqdefault"):
+    cands = list(urls) + [f"https://i.ytimg.com/vi/{video_id}/{q}.jpg" for q in ("maxresdefault", "hqdefault")]
+    for u in cands:
         try:
-            data = urllib.request.urlopen(f"https://i.ytimg.com/vi/{video_id}/{q}.jpg", timeout=20).read()
+            data = urllib.request.urlopen(u, timeout=20).read()
             im = Image.open(io.BytesIO(data)).convert("RGB")
             w, h = im.size
-            if q == "hqdefault" or q == "sddefault":
+            if "hqdefault" in u:
                 # 4:3 mit schwarzen Balken: 16:9-Bereich in der Mitte
                 vh = int(w * 9 / 16); top = (h - vh) // 2
                 im = im.crop((0, top, w, top + vh)); w, h = im.size
-            side = h
+            side = min(w, h)
             left = (w - side) // 2
-            im = im.crop((left, 0, left + side, side)).resize((360, 360), Image.LANCZOS)
+            im = im.crop((left, (h - side) // 2, left + side, (h - side) // 2 + side))
+            w = h = side
+            left = 0
+            im = im.resize((360, 360), Image.LANCZOS)
             os.makedirs(COV, exist_ok=True)
             im.save(os.path.join(COV, fname), quality=88)
             return "covers/" + fname
