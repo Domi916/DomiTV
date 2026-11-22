@@ -49,7 +49,22 @@ public class MediaWatcher extends NotificationListenerService {
         play(c);
     }
 
-    static void stop() { active = false; }
+    static void stop() { if (active) log(null, "Shuffle beendet (zurück in Domi TV)"); active = false; }
+
+    static Context appCtx;
+    /** Eigenes Protokoll in einer Datei, damit nichts verloren geht: adb shell run-as at.domi.tvlauncher cat files/shuffle.log */
+    static synchronized void log(Context c, String msg) {
+        Log.i(TAG, "Shuffle: " + msg);
+        if (c != null) appCtx = c.getApplicationContext();
+        if (appCtx == null) return;
+        try {
+            java.io.File f = new java.io.File(appCtx.getFilesDir(), "shuffle.log");
+            if (f.length() > 200000) f.delete();
+            java.io.FileWriter w = new java.io.FileWriter(f, true);
+            w.write(new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.ROOT).format(new java.util.Date()) + " " + msg + "\n");
+            w.close();
+        } catch (Exception ignored) { }
+    }
 
     /** ⏩-Taste während des Shuffles: nächster Song des Rappers. */
     static void skip(Context c) {
@@ -69,7 +84,7 @@ public class MediaWatcher extends NotificationListenerService {
         v.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             c.startActivity(v);
-            Log.i(TAG, "Shuffle " + rapperName + ": Song " + (pos + 1) + "/" + queue.size() + " " + id);
+            log(c, rapperName + ": Song " + (pos + 1) + "/" + queue.size() + " " + id);
             return true;
         } catch (Exception e) {
             Log.e(TAG, "Shuffle: Start fehlgeschlagen", e);
@@ -95,9 +110,9 @@ public class MediaWatcher extends NotificationListenerService {
             ComponentName me = new ComponentName(this, MediaWatcher.class);
             msm.addOnActiveSessionsChangedListener(sessions, me, h);
             attach(msm.getActiveSessions(me));
-            Log.i(TAG, "MediaWatcher bereit");
+            log(this, "MediaWatcher bereit");
         } catch (Exception e) {
-            Log.e(TAG, "MediaWatcher: keine Berechtigung", e);
+            log(this, "MediaWatcher: keine Berechtigung " + e);
         }
     }
 
@@ -135,7 +150,7 @@ public class MediaWatcher extends NotificationListenerService {
             };
             mc.registerCallback(cb, h);
             watched.put(mc, cb);
-            Log.i(TAG, "MediaWatcher: beobachte " + p);
+            log(this, "beobachte " + p);
             onTrack(mc, mc.getMetadata());
         }
     }
@@ -164,7 +179,7 @@ public class MediaWatcher extends NotificationListenerService {
         long since = SystemClock.elapsedRealtime() - launchedAt;
         if (since < 7000) {
             // Das ist der Song, den wir gerade gestartet haben
-            if (!t.equals(ourTitle)) trackStarted(m);
+            if (!t.equals(ourTitle)) { trackStarted(m); log(this, "unser Song: " + t + " / " + m.getString(MediaMetadata.METADATA_KEY_ARTIST) + " dur=" + curDur); }
             ourTitle = t;
             return;
         }
@@ -176,18 +191,18 @@ public class MediaWatcher extends NotificationListenerService {
         String r = norm(rapperName);
         if (norm(t).contains(r) || (artist != null && norm(artist).contains(r))
                 || (author != null && norm(author).contains(r)) || sameSong(t, ourTitle)) {
-            Log.i(TAG, "Shuffle: gleicher Rapper/Song (" + t + "), bleibt");
+            log(this, "bleibt: " + t + " / " + artist + " / " + author);
             if (!sameSong(t, ourTitle)) trackStarted(m);
             ourTitle = t;
             return;
         }
         if (!endedNaturally()) {
             // Mitten im Song etwas anderes gestartet: das hast du selbst ausgesucht, Shuffle hört auf
-            Log.i(TAG, "Shuffle: selbst gewählt (" + t + "), Shuffle aus");
+            log(this, "selbst gewählt? " + t + " / " + artist + " pos=" + lastPos + " dur=" + curDur + " -> Shuffle aus");
             active = false;
             return;
         }
-        Log.i(TAG, "Shuffle: fremder Song erkannt (" + t + " / " + artist + "), nächster Song von " + rapperName);
+        log(this, "fremd: " + t + " / " + artist + " pos=" + lastPos + " dur=" + curDur + " -> nächster Song");
         next();
     }
 
