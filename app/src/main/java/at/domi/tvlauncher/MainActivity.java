@@ -614,7 +614,7 @@ public class MainActivity extends Activity {
         nl.leftMargin = px(22);
         nl.bottomMargin = px(48);
         f.addView(nm, nl);
-        TextView sub = text("Shuffle auf YouTube", 16, "Medium", Gfx.w(0.72f), 0);
+        TextView sub = text("Zufallsmix auf YouTube", 16, "Medium", Gfx.w(0.72f), 0);
         FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2);
         sl.gravity = Gravity.BOTTOM | Gravity.START;
         sl.leftMargin = px(22);
@@ -1867,9 +1867,11 @@ public class MainActivity extends Activity {
             List<String> ids = new ArrayList<>(java.util.Arrays.asList(r.videos));
             java.util.Collections.shuffle(ids);
             String id = ids.get(0);
-            String shuffled = ShufflePlaylist.create(ids);
+            String shuffled = null; // Kanalseite reicht, Playlist nur als Reserve unten
             String uploads = "UU" + r.channel.substring(2);
             String[] urls = {
+                    // Kanalseite des Rappers: dort ist "Zufallsmix" schon ausgewählt, einmal OK drücken
+                    "https://www.youtube.com/channel/" + r.channel,
                     shuffled != null ? "https://www.youtube.com/watch?v=" + id + "&list=" + shuffled : null,
                     "https://www.youtube.com/watch?v=" + id + "&list=" + uploads,
                     "https://www.youtube.com/playlist?list=" + uploads,
@@ -1886,7 +1888,7 @@ public class MainActivity extends Activity {
                 }
             }
             // Manche YouTube-Versionen melden ihre Links nicht an: trotzdem versuchen
-            Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse(urls[0] != null ? urls[0] : urls[1]));
+            Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse(urls[0]));
             v.setPackage(yt.pkg);
             v.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             if (start(v)) { overridePendingTransition(0, 0); return true; }
