@@ -132,6 +132,15 @@ public class HomeWatcherService extends AccessibilityService {
         super.onDestroy();
     }
 
+    /** Netflix, Prime, Disney+, Spotify … (nicht YouTube): dann hörst du offensichtlich keinen Shuffle mehr. */
+    static boolean isOtherApp(String pkg) {
+        for (AppDef a : AppDef.APPS) {
+            if ("youtube".equals(a.id)) continue;
+            for (String p : a.pakete) if (p.equals(pkg)) return true;
+        }
+        return false;
+    }
+
     private boolean awake() {
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         if (pm != null && !pm.isInteractive()) return false;
@@ -148,9 +157,8 @@ public class HomeWatcherService extends AccessibilityService {
         Log.i(TAG, "Fenster: " + pkg + " / " + cls);
 
         // Notbremse: Shuffle läuft, aber YouTube ist nicht mehr vorne (Home-Taste, andere App) -> Anzeige weg
-        if (MediaWatcher.active && !pkg.contains("youtube") && !pkg.equals("com.android.systemui")
-                && !pkg.equals("com.amazon.tv.notificationcenter") && !pkg.startsWith("com.google.android.packageinstaller")
-                && !pkg.equals(getPackageName())) {
+        if (MediaWatcher.active && SystemClock.elapsedRealtime() - MediaWatcher.launchedAt > 4000
+                && (pkg.equals(AMAZON_LAUNCHER) || isOtherApp(pkg))) {
             MediaWatcher.log(this, "YouTube nicht mehr vorne (" + pkg + "), Shuffle beendet");
             MediaWatcher.stop();
         }
