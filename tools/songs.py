@@ -4,6 +4,7 @@ und schreibt sie nach app/src/main/assets/songs/<name>.txt  (Zeile: videoId|Tite
 Läuft in GitHub Actions (siehe .github/workflows/songs.yml)."""
 import json, os, re, subprocess, sys
 
+RELEASE_ARTISTS = {"Ken Carson", "Bleood", "Protect", "OsamaSon", "Nettspend", "che"}
 ARTISTS = ["Ken Carson", "Bleood", "Protect", "OsamaSon", "Nettspend",
            "Destroy Lonely", "Playboi Carti", "che", "Yeat", "xaviersobased"]
 OUT = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "assets", "songs")
@@ -53,8 +54,10 @@ def songs_of(name):
             except Exception as e:
                 print("  Playlist-Fehler", pl.get("title"), e); continue
             tracks = [t.get("id") for t in (d.get("entries") or []) if t.get("id")]
-            if len(tracks) >= 5:  # Alben/Mixtapes, keine Singles
-                al = {"title": pl.get("title") or d.get("title") or "", "tracks": tracks}
+            # Nur für deine Rapper (+ che) alle Releases mit Cover: Alben, EPs und Singles
+            if tracks and name in RELEASE_ARTISTS:
+                typ = "single" if len(tracks) == 1 else "ep" if len(tracks) <= 6 else "album"
+                al = {"title": pl.get("title") or d.get("title") or "", "tracks": tracks, "type": typ}
                 # Cover: Vorschaubild eines "Official Audio"-Songs zeigt das Albumcover (Musikvideos nicht)
                 ents = [t for t in (d.get("entries") or []) if t.get("id")]
                 def is_audio(t):
@@ -118,9 +121,9 @@ def cover(urls, video_id, fname):
             im = im.crop((left, (h - side) // 2, left + side, (h - side) // 2 + side))
             w = h = side
             left = 0
-            im = im.resize((360, 360), Image.LANCZOS)
+            im = im.resize((280, 280), Image.LANCZOS)
             os.makedirs(COV, exist_ok=True)
-            im.save(os.path.join(COV, fname), quality=88)
+            im.save(os.path.join(COV, fname), quality=86)
             return "covers/" + fname
         except Exception:
             continue

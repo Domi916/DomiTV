@@ -16,14 +16,16 @@ jobs:
       - uses: actions/checkout@v5
       - run: pip install -q -U yt-dlp pillow
       - name: Alle Songs der Rapper holen
-        run: python3 tools/songs.py
+        run: |
+          rm -rf app/src/main/assets/covers app/src/main/assets/albums
+          python3 tools/songs.py
       - name: Speichern und neu bauen
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "Domi TV Bot"
           git config user.email "bot@users.noreply.github.com"
-          git add app/src/main/assets/songs app/src/main/assets/albums app/src/main/assets/covers
+          git add -A app/src/main/assets/songs app/src/main/assets/albums app/src/main/assets/covers
           if git diff --cached --quiet; then echo "keine Änderung"; exit 0; fi
           git commit -m "Songlisten aktualisiert"
           git pull --rebase origin main
