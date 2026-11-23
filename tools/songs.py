@@ -66,8 +66,13 @@ def songs_of(name):
                 audio = [t["id"] for t in ents if is_audio(t)]
                 pick = audio[0] if audio else tracks[0]
                 fix = os.path.join(FIX, f"{slug(name)}_{norm(al['title']).replace(' ', '')}.jpg")
-                urls = ["file://" + os.path.abspath(fix)] if os.path.exists(fix) else itunes_art(name, al["title"])
-                cov = cover(urls, pick, f"{slug(name)}_{len(albums)}.jpg")
+                if os.path.exists(fix):
+                    urls = [("fix", "file://" + os.path.abspath(fix))]
+                else:
+                    urls = [("itunes", u) for u in itunes_art(name, al["title"])] + \
+                           [("deezer", u) for u in deezer_art(name, al["title"])]
+                cov, src = cover(urls, pick, f"{slug(name)}_{len(albums)}.jpg")
+                print(f"  COVER {src:7s} {typ:6s} {al['title']}")
                 if cov: al["cover"] = cov
                 albums.append(al)
             for t in d.get("entries") or []:
@@ -106,12 +111,57 @@ def itunes_art(artist, album):
         print("  iTunes:", e)
     return []
 
+def deezer_art(artist, album):
+    """Zweite offizielle Quelle: Deezer (hat auch viele Underground-Singles)."""
+    import urllib.request, urllib.parse
+    try:
+        q = urllib.parse.urlencode({"q": f'artist:"{artist}" album:"{album}"', "limit": 10})
+        data = json.loads(urllib.request.urlopen("https://api.deezer.com/search/album?" + q, timeout=20).read())
+        na, nb = norm(artist), norm(re.sub(r"\(.*?\)|\[.*?\]", "", album))
+        for r in data.get("data") or []:
+            ra = norm((r.get("artist") or {}).get("name"))
+            rb = norm(re.sub(r"\(.*?\)|\[.*?\]", "", r.get("title") or ""))
+            if ra != na: continue
+            if rb == nb or (nb and (nb in rb or rb in nb)):
+                if r.get("cover_xl"): return [r["cover_xl"]]
+    except Exception as e:
+        print("  Deezer:", e)
+    return []
+
+def official_titles(artist):
+    """Alle offiziellen Releases laut iTunes + Deezer (nur für den Vollständigkeits-Check)."""
+    import urllib.request, urllib.parse
+    out = {}
+    try:
+        d = json.loads(urllib.request.urlopen("https://api.deezer.com/search/artist?" +
+                       urllib.parse.urlencode({"q": artist}), timeout=20).read())
+        a = next((x for x in d.get("data") or [] if norm(x.get("name")) == norm(artist)), None)
+        if a:
+            u = f"https://api.deezer.com/artist/{a['id']}/albums?limit=300"
+            for r in json.loads(urllib.request.urlopen(u, timeout=20).read()).get("data") or []:
+                out[norm(re.sub(r"\(.*?\)|\[.*?\]", "", r.get("title") or ""))] = r.get("title")
+    except Exception as e:
+        print("  Deezer-Check:", e)
+    try:
+        d = json.loads(urllib.request.urlopen("https://itunes.apple.com/search?" + urllib.parse.urlencode(
+            {"term": artist, "entity": "musicArtist", "limit": 5, "country": "US"}), timeout=20).read())
+        a = next((x for x in d.get("results") or [] if norm(x.get("artistName")) == norm(artist)), None)
+        if a:
+            u = f"https://itunes.apple.com/lookup?id={a['artistId']}&entity=album&limit=300&country=US"
+            for r in json.loads(urllib.request.urlopen(u, timeout=20).read()).get("results") or []:
+                if r.get("wrapperType") == "collection":
+                    t = re.sub(r" - (Single|EP)$", "", r.get("collectionName") or "")
+                    out.setdefault(norm(re.sub(r"\(.*?\)|\[.*?\]", "", t)), t)
+    except Exception as e:
+        print("  iTunes-Check:", e)
+    return out
+
 def cover(urls, video_id, fname):
     """Albumcover: zuerst das Bild der Album-Playlist (echtes Cover), sonst Vorschaubild des ersten Songs."""
     import io, urllib.request
     from PIL import Image
-    cands = list(urls) + [f"https://i.ytimg.com/vi/{video_id}/{q}.jpg" for q in ("maxresdefault", "hqdefault")]
-    for u in cands:
+    cands = list(urls) + [("youtube", f"https://i.ytimg.com/vi/{video_id}/{q}.jpg") for q in ("maxresdefault", "hqdefault")]
+    for src, u in cands:
         try:
             data = urllib.request.urlopen(u, timeout=20).read()
             im = Image.open(io.BytesIO(data)).convert("RGB")
@@ -128,10 +178,10 @@ def cover(urls, video_id, fname):
             im = im.resize((280, 280), Image.LANCZOS)
             os.makedirs(COV, exist_ok=True)
             im.save(os.path.join(COV, fname), quality=86)
-            return "covers/" + fname
+            return "covers/" + fname, src
         except Exception:
             continue
-    return None
+    return None, "-"
 
 def main():
     os.makedirs(OUT, exist_ok=True)
@@ -149,7 +199,11 @@ def main():
                 os.makedirs(ALB, exist_ok=True)
                 with open(os.path.join(ALB, slug(name) + ".json"), "w", encoding="utf-8") as f:
                     json.dump(ALBUMS[name], f, ensure_ascii=False)
-                print(f"  {len(ALBUMS[name])} Alben")
+                print(f"  {len(ALBUMS[name])} Releases")
+                have = {norm(re.sub(r"\(.*?\)|\[.*?\]", "", a["title"])) for a in ALBUMS[name]}
+                for k, t in sorted(official_titles(name).items()):
+                    if k and k not in have and not any(k in h or h in k for h in have if len(h) > 3):
+                        print(f"  FEHLT {name}: {t}")
             ok += 1
         else:
             print("  zu wenig Songs, alte Liste bleibt")
