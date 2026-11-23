@@ -60,11 +60,15 @@ def track_info(artist, title):
     t = clean(title, artist)
     if not norm(t):
         return None
-    q = urllib.parse.urlencode({"q": f'artist:"{artist}" track:"{t}"', "limit": 10})
-    res = deezer("https://api.deezer.com/search?" + q)
-    if DEBUG[0] < 4:
+    res = {}
+    # erst einfache Suche (die erweiterte Syntax findet bei Deezer oft nichts), dann die genaue
+    for q in ({"q": f"{artist} {t}", "limit": 15}, {"q": f'artist:"{artist}" track:"{t}"', "limit": 10}):
+        res = deezer("https://api.deezer.com/search?" + urllib.parse.urlencode(q))
+        if res.get("data"):
+            break
+    if DEBUG[0] < 6:
         DEBUG[0] += 1
-        print("  Deezer-Test:", artist, "|", t, "->", str(res)[:300])
+        print("  Deezer-Test:", artist, "|", t, "->", str([(x.get("title"), (x.get("artist") or {}).get("name")) for x in res.get("data") or []][:4]))
     for r in (res.get("data") or []):
         rt = norm(re.sub(r"\(.*?\)|\[.*?\]", "", r.get("title") or ""))
         if norm((r.get("artist") or {}).get("name")) == norm(artist) and (rt == norm(t) or norm(t) in rt or rt in norm(t)):
