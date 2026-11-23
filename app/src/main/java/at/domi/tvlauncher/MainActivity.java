@@ -251,7 +251,9 @@ public class MainActivity extends Activity {
             android.app.ActivityManager am = (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
             android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
             am.getMemoryInfo(mi);
-            HIGH = mi.totalMem >= 1600L * 1024 * 1024 && !am.isLowRamDevice();
+            // Fire TV Stick: immer sparsame Effekte (der Stick muss nebenbei YouTube in 4K abspielen)
+            boolean fire = android.os.Build.MANUFACTURER.toLowerCase(java.util.Locale.ROOT).contains("amazon");
+            HIGH = !fire && mi.totalMem >= 3000L * 1024 * 1024 && !am.isLowRamDevice();
         } catch (Exception ignored) { }
         Log.i(HomeWatcherService.TAG, "Gerät stark: " + HIGH);
         resolveApps();

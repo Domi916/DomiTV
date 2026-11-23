@@ -378,21 +378,12 @@ final class LyricsOverlay {
         label.setTextColor(accent);
         glow.setImageBitmap(Gfx.glow(accent, 0.55f));
         glow2.setImageBitmap(Gfx.glow(accent, 0.35f));
-        breathe = ValueAnimator.ofFloat(0f, 1f);
-        breathe.setDuration(6000);
-        breathe.setRepeatMode(ValueAnimator.REVERSE);
-        breathe.setRepeatCount(ValueAnimator.INFINITE);
-        breathe.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator a) {
-                float e = (Float) a.getAnimatedValue();
-                glow.setAlpha(0.35f + 0.3f * e);
-                glow.setScaleX(0.95f + 0.1f * e);
-                glow.setScaleY(0.95f + 0.1f * e);
-                glow2.setAlpha(0.45f - 0.25f * e);
-            }
-        });
-        breathe.start();
+        // ruhig stehendes Licht statt Dauer-Animation: spart Grafikleistung, während YouTube läuft
+        breathe = null;
+        glow.setAlpha(0.5f);
+        glow.setScaleX(1f);
+        glow.setScaleY(1f);
+        glow2.setAlpha(0.3f);
         if (zoom != null) zoom.cancel();
         zoom = ValueAnimator.ofFloat(1.04f, 1.04f);   // fest statt endlos zoomen: spart Grafikleistung
         zoom.setDuration(1000);
@@ -575,8 +566,6 @@ final class LyricsOverlay {
             t.setLetterSpacing(-0.02f);
             t.setAlpha(0f);
             t.setPivotX(0);
-            t.setScaleX(0.9f);
-            t.setScaleY(0.9f);
             LinearLayout.LayoutParams l = new LinearLayout.LayoutParams(-1, -2);
             l.bottomMargin = (int) px(30);
             lyricBox.addView(t, l);
@@ -597,7 +586,7 @@ final class LyricsOverlay {
         if (cur.getHeight() == 0) { shownLine = -2; return; } // noch nicht ausgelegt: beim nächsten Tick
         float target = px(ANCHOR) - (cur.getTop() + cur.getHeight() / 2f);
         if (idx < 0) target += px(140); // vor der ersten Zeile: erste Zeile wartet etwas tiefer
-        long d = anim ? 760 : 0;
+        long d = anim ? 520 : 0;
         lyricBox.animate().cancel();
         lyricBox.animate().translationY(target).setDuration(d).setInterpolator(SMOOTH).start();
         int c0 = idx < 0 ? -1 : idx;
@@ -607,10 +596,10 @@ final class LyricsOverlay {
             // darüber schnell weg, darunter sanft auslaufend
             float a = dist == 0 ? 1f : dist == -1 ? 0.32f : dist == -2 ? 0.14f : dist < 0 ? 0f
                     : dist == 1 ? 0.45f : dist == 2 ? 0.26f : dist == 3 ? 0.12f : 0f;
-            float sc = dist == 0 ? 1f : 0.9f;
-            if (Math.abs(v.getAlpha() - a) < 0.01f && Math.abs(v.getScaleX() - sc) < 0.01f) continue;
-            v.setPivotY(v.getHeight() / 2f);
-            v.animate().alpha(a).scaleX(sc).scaleY(sc).setDuration(d).setInterpolator(SMOOTH).start();
+            // nur Deckkraft ändern (kein Skalieren: Text neu zeichnen in jedem Bild ist für den Stick zu teuer)
+            if (Math.abs(v.getAlpha() - a) < 0.01f) continue;
+            if (Math.abs(dist) > 4) { v.animate().cancel(); v.setAlpha(a); continue; }
+            v.animate().alpha(a).setDuration(d).setInterpolator(SMOOTH).start();
         }
     }
 
@@ -618,6 +607,10 @@ final class LyricsOverlay {
         if (status == null) return;
         if (!times.isEmpty()) status.setText(approx ? "Songtext (ungefähr)" : "Songtext live");
         else if (request > 0 && !currentTitle.isEmpty()) status.setText(mode == LYRICS ? "Kein Songtext gefunden" : "");
+    }
+
+    static void setIfChanged(TextView v, String s) {
+        if (!s.contentEquals(v.getText())) v.setText(s);
     }
 
     static String fmt(long ms) {
@@ -635,15 +628,15 @@ final class LyricsOverlay {
             // Fortschritt
             if (dur > 0) {
                 barFill.setScaleX(Math.max(0f, Math.min(1f, pos / (float) dur)));
-                timeL.setText(fmt(pos));
-                timeR.setText(fmt(dur));
+                setIfChanged(timeL, fmt(pos));
+                setIfChanged(timeR, fmt(dur));
                 barBg.setVisibility(View.VISIBLE);
                 barFill.setVisibility(View.VISIBLE);
             } else {
                 barBg.setVisibility(View.INVISIBLE);
                 barFill.setVisibility(View.INVISIBLE);
-                timeL.setText(fmt(pos));
-                timeR.setText("");
+                setIfChanged(timeL, fmt(pos));
+                setIfChanged(timeR, "");
             }
             // Pause anzeigen
             boolean pl = MediaWatcher.isPlaying();
@@ -654,7 +647,7 @@ final class LyricsOverlay {
             }
             if (mode != LYRICS || times.isEmpty()) { if (big) setBig(false); return; }
             if (!big && pl && android.os.SystemClock.elapsedRealtime() - lastKey > 20000) setBig(true);
-            long t = pos - offset - shift + 250; // Übergang beginnt minimal vorher, wirkt flüssiger
+            long t = pos - offset - shift + 380; // Übergang beginnt minimal vorher, wirkt flüssiger
             int idx = -1;
             for (int i = 0; i < times.size(); i++) { if (times.get(i) <= t) idx = i; else break; }
             if (idx != shownLine) {
