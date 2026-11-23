@@ -140,7 +140,11 @@ public class MainActivity extends Activity {
     final Rapper[] RAP = Rapper.LIST;
     final RapCard[] rapCards = new RapCard[Rapper.LIST.length];
     final Bitmap[] rapGlows = new Bitmap[Rapper.LIST.length];
-    int rSel = 0, aSel = 0;
+    int rSel = 0, aSel = 0, sSel = 0;
+    List<Album> singles = new ArrayList<>();
+    RapCard[] sngCards = new RapCard[0];
+    FrameLayout sngRow;
+    View head5v;
     List<Album> albums = new ArrayList<>();
     RapCard[] albumCards = new RapCard[0];
     View head2v, head3v, head4v;
@@ -175,6 +179,9 @@ public class MainActivity extends Activity {
     static class RapCard {
         FrameLayout view;
         View ring, play;
+        ImageView cover;     // Albumcover (wird erst geladen, wenn die Karte in die Nähe kommt)
+        String coverPath;
+        boolean coverLoaded;
     }
 
     static class Slot {
@@ -464,7 +471,7 @@ public class MainActivity extends Activity {
         cont.setAlpha(0f);
         cont.setTranslationY(px(260));
         cont.setVisibility(View.INVISIBLE);
-        root.addView(cont, atD(96, 650, 1728, 1400));
+        root.addView(cont, atD(96, 650, 1728, 1700));
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setBaselineAligned(true);
@@ -516,18 +523,38 @@ public class MainActivity extends Activity {
         head4v = head4;
         albumRow = new FrameLayout(this);
         albumRow.setClipChildren(false);
-        cont.addView(albumRow, atD(0, 720, 4000, 260));
-        albums = Album.load(this);
+        cont.addView(albumRow, atD(0, 720, 20000, 260));
+        albums = Album.load(this, true);
         albumCards = new RapCard[albums.size()];
         for (int i = 0; i < albums.size(); i++) {
             albumCards[i] = buildAlbumCard(albums.get(i));
             albumRow.addView(albumCards[i].view, atD(i * 236, 0, 210, 210));
         }
-        cont.addView(head3, atD(0, 950, -2, -2));
+        // --- EPs & Singles ---
+        LinearLayout head5 = new LinearLayout(this);
+        head5.setOrientation(LinearLayout.HORIZONTAL);
+        head5.setBaselineAligned(true);
+        head5.addView(text("EPs & Singles", 34, "Bold", TXT, -0.025f));
+        TextView sub5 = text("Neueste zuerst", 22, "Medium", Gfx.a(TXT, 0.55f), 0);
+        LinearLayout.LayoutParams cl5 = new LinearLayout.LayoutParams(-2, -2);
+        cl5.leftMargin = px(18);
+        head5.addView(sub5, cl5);
+        cont.addView(head5, atD(0, 950, -2, -2));
+        head5v = head5;
+        sngRow = new FrameLayout(this);
+        sngRow.setClipChildren(false);
+        cont.addView(sngRow, atD(0, 1020, 60000, 260));
+        singles = Album.load(this, false);
+        sngCards = new RapCard[singles.size()];
+        for (int i = 0; i < singles.size(); i++) {
+            sngCards[i] = buildAlbumCard(singles.get(i));
+            sngRow.addView(sngCards[i].view, atD(i * 236, 0, 210, 210));
+        }
+        cont.addView(head3, atD(0, 1250, -2, -2));
         head3v = head3;
         rapRow2 = new FrameLayout(this);
         rapRow2.setClipChildren(false);
-        cont.addView(rapRow2, atD(0, 1020, 2000, 260));
+        cont.addView(rapRow2, atD(0, 1320, 2000, 260));
         for (int r = Rapper.OWN; r < RAP.length; r++) {
             rapCards[r] = buildRapCard(RAP[r]);
             rapRow2.addView(rapCards[r].view, atD((r - Rapper.OWN) * 348, 0, 320, 190));
@@ -658,6 +685,35 @@ public class MainActivity extends Activity {
         return f;
     }
 
+    final android.util.LruCache<String, Bitmap> coverCache = new android.util.LruCache<>(48);
+
+    /** Cover nur für Karten in der Nähe der Auswahl laden, entfernte wieder freigeben (spart Speicher). */
+    void updateCovers(RapCard[] cards, int center) {
+        for (int i = 0; i < cards.length; i++) {
+            RapCard rc = cards[i];
+            if (rc.cover == null) continue;
+            boolean near = i >= center - 3 && i <= center + 9;
+            if (near && !rc.coverLoaded) {
+                Bitmap b = coverCache.get(rc.coverPath);
+                if (b == null) {
+                    try {
+                        InputStream in = getAssets().open(rc.coverPath);
+                        BitmapFactory.Options o = new BitmapFactory.Options();
+                        o.inPreferredConfig = Bitmap.Config.RGB_565;
+                        b = BitmapFactory.decodeStream(in, null, o);
+                        in.close();
+                        if (b != null) coverCache.put(rc.coverPath, b);
+                    } catch (Exception ignored) { }
+                }
+                rc.cover.setImageBitmap(b);
+                rc.coverLoaded = true;
+            } else if (!near && rc.coverLoaded) {
+                rc.cover.setImageDrawable(null);
+                rc.coverLoaded = false;
+            }
+        }
+    }
+
     RapCard buildAlbumCard(Album a) {
         Rapper r = RAP[a.rapper];
         RapCard rc = new RapCard();
@@ -671,35 +727,27 @@ public class MainActivity extends Activity {
         GradientDrawable base = Gfx.grad(GradientDrawable.Orientation.BL_TR, new int[]{0xff08080b, r.c2, Gfx.a(r.c1, 0.55f)}, rad);
         GradientDrawable gloss = Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.w(0.12f), Gfx.w(0), Gfx.w(0)}, rad);
         f.setBackground(new LayerDrawable(new Drawable[]{base, gloss}));
-        Bitmap cov = null;
-        if (a.cover != null) {
-            try {
-                InputStream in = getAssets().open(a.cover);
-                BitmapFactory.Options o = new BitmapFactory.Options();
-                o.inPreferredConfig = Bitmap.Config.RGB_565;
-                cov = BitmapFactory.decodeStream(in, null, o);
-                in.close();
-            } catch (Exception ignored) { }
-        }
-        if (cov != null) {
-            // Albumcover füllt die ganze Karte, unten ein dezenter Verlauf für den Rapper-Namen
+        boolean cov = a.cover != null;
+        if (cov) {
+            // Albumcover füllt die ganze Karte (lädt erst, wenn die Karte sichtbar wird), unten Rapper + Typ
             ImageView iv = new ImageView(this);
             iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            iv.setImageBitmap(cov);
             f.addView(iv, new FrameLayout.LayoutParams(-1, -1));
+            rc.cover = iv;
+            rc.coverPath = a.cover;
             View sh = new View(this);
             sh.setBackground(Gfx.grad(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{0xCC000000, 0x00000000}, 0));
             FrameLayout.LayoutParams shl = new FrameLayout.LayoutParams(-1, px(80));
             shl.gravity = Gravity.BOTTOM;
             f.addView(sh, shl);
-            TextView who = text(r.name, 15, "SemiBold", Gfx.w(0.9f), 0);
+            TextView who = text((a.isAlbum() ? "" : a.typeLabel() + " · ") + r.name, 15, "SemiBold", Gfx.w(0.9f), 0);
             FrameLayout.LayoutParams wl = new FrameLayout.LayoutParams(-2, -2);
             wl.gravity = Gravity.BOTTOM | Gravity.START;
             wl.leftMargin = px(16);
             wl.bottomMargin = px(14);
             f.addView(who, wl);
         }
-        if (cov == null) f.addView(text("ALBUM", 14, "Bold", Gfx.w(0.7f), 0.28f), atD(22, 22, -2, -2));
+        if (!cov) f.addView(text(a.typeLabel(), 14, "Bold", Gfx.w(0.7f), 0.28f), atD(22, 22, -2, -2));
         TextView nm = text(a.title, a.title.length() > 12 ? 22 : 28, "Black", Color.WHITE, -0.02f);
         nm.setMaxLines(2);
         nm.setEllipsize(TextUtils.TruncateAt.END);
@@ -712,7 +760,7 @@ public class MainActivity extends Activity {
         sl.gravity = Gravity.BOTTOM | Gravity.START;
         sl.leftMargin = px(22);
         sl.bottomMargin = px(22);
-        if (cov == null) { f.addView(nm, nl); f.addView(sub, sl); }
+        if (!cov) { f.addView(nm, nl); f.addView(sub, sl); }
         FrameLayout play = new FrameLayout(this);
         play.setBackground(Gfx.round(r.c1, px(25)));
         Gfx.Icon pi = new Gfx.Icon(this, Gfx.Icon.PLAY);
@@ -1090,7 +1138,11 @@ public class MainActivity extends Activity {
         for (int i = 0; i < cards.size(); i++) focusCard(cards.get(i), "cont".equals(zone) && i == cSel, anim);
         for (int i = 0; i < rapCards.length; i++) focusRap(rapCards[i], ("rap".equals(zone) || "rap2".equals(zone)) && i == rSel, anim);
         for (int i = 0; i < albumCards.length; i++) focusRap(albumCards[i], "alb".equals(zone) && i == aSel, anim);
-        if ("alb".equals(zone) && aSel < albums.size()) setRapper(albums.get(aSel).rapper, anim);
+        for (int i = 0; i < sngCards.length; i++) focusRap(sngCards[i], "sng".equals(zone) && i == sSel, anim);
+        updateCovers(albumCards, aSel);
+        updateCovers(sngCards, sSel);
+        if ("sng".equals(zone) && sSel < singles.size()) setRapper(singles.get(sSel).rapper, anim);
+        else if ("alb".equals(zone) && aSel < albums.size()) setRapper(albums.get(aSel).rapper, anim);
         else if (isRapZone(zone)) setRapper(rSel, anim);
         float par = isRapZone(zone) ? -2 * 30 : -(sel - (APPS.length - 1) / 2f) * 30;
         mv(bgWrap, anim, 1200).translationX(px(par));
@@ -1118,6 +1170,9 @@ public class MainActivity extends Activity {
         float ax = "alb".equals(zone) ? -Math.max(0, aSel - 5) * 236 : 0;
         mv(albumRow, anim, 500).translationX(px(ax));
         if (!anim) albumRow.setTranslationX(px(ax));
+        float sx = -Math.max(0, sSel - 5) * 236;
+        mv(sngRow, anim, 500).translationX(px(sx));
+        if (!anim) sngRow.setTranslationX(px(sx));
         mv(rapRow, anim, 500).translationX(px(rx));
         if (!anim) rapRow.setTranslationX(px(rx));
         setMode("top".equals(zone) ? "apps" : zone, anim);
@@ -1295,15 +1350,20 @@ public class MainActivity extends Activity {
 
     String shownMode = "";
 
-    static boolean isRapZone(String z) { return "rap".equals(z) || "rap2".equals(z) || "alb".equals(z); }
+    static boolean isRapZone(String z) { return "rap".equals(z) || "rap2".equals(z) || "alb".equals(z) || "sng".equals(z); }
 
-    float contShift(String z) { return "rap2".equals(z) ? -930 : "alb".equals(z) ? -630 : -330; }
+    float contShift(String z) { return "rap2".equals(z) ? -1230 : "sng".equals(z) ? -930 : "alb".equals(z) ? -630 : -330; }
 
     void setMode(String z, boolean anim) {
         if (z.equals(shownMode) && anim) return;
         // Reihen, die oben aus dem Bild rutschen, ausblenden
-        float topA = "rap2".equals(z) || "alb".equals(z) ? 0f : 1f;
-        float midA = "rap2".equals(z) ? 0f : 1f;
+        float topA = "rap2".equals(z) || "alb".equals(z) || "sng".equals(z) ? 0f : 1f;
+        float midA = "rap2".equals(z) || "sng".equals(z) ? 0f : 1f;
+        float albA = "rap2".equals(z) ? 0f : 1f;
+        if (head4v != null) {
+            head4v.animate().alpha(albA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
+            albumRow.animate().alpha(albA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
+        }
         if (contHead != null) {
             contHead.animate().alpha(topA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
             cardsRow.animate().alpha(topA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
@@ -1989,6 +2049,7 @@ public class MainActivity extends Activity {
             else if ("up".equals(k)) zone = "cont";
             else if ("down".equals(k)) {
                 if (!albums.isEmpty()) zone = "alb";
+                else if (!singles.isEmpty()) zone = "sng";
                 else { zone = "rap2"; rSel = Math.min(RAP.length - 1, rSel + Rapper.OWN); }
             }
             else if ("back".equals(k)) zone = "apps";
@@ -1997,15 +2058,26 @@ public class MainActivity extends Activity {
             if ("left".equals(k)) aSel = Math.max(0, aSel - 1);
             else if ("right".equals(k)) aSel = Math.min(albums.size() - 1, aSel + 1);
             else if ("up".equals(k)) zone = "rap";
-            else if ("down".equals(k)) { zone = "rap2"; rSel = Rapper.OWN; }
+            else if ("down".equals(k)) {
+                if (!singles.isEmpty()) zone = "sng";
+                else { zone = "rap2"; rSel = Rapper.OWN; }
+            }
             else if ("back".equals(k)) zone = "apps";
             else if ("ok".equals(k) && aSel < albums.size()) openAlbum(albums.get(aSel), albumCards[aSel].view);
+        } else if ("sng".equals(zone)) {
+            if ("left".equals(k)) sSel = Math.max(0, sSel - 1);
+            else if ("right".equals(k)) sSel = Math.min(singles.size() - 1, sSel + 1);
+            else if ("up".equals(k)) zone = albums.isEmpty() ? "rap" : "alb";
+            else if ("down".equals(k)) { zone = "rap2"; rSel = Rapper.OWN; }
+            else if ("back".equals(k)) zone = "apps";
+            else if ("ok".equals(k) && sSel < singles.size()) openAlbum(singles.get(sSel), sngCards[sSel].view);
         } else if ("rap2".equals(zone)) {
             if (rSel < Rapper.OWN) rSel = Rapper.OWN;
             if ("left".equals(k)) rSel = Math.max(Rapper.OWN, rSel - 1);
             else if ("right".equals(k)) rSel = Math.min(RAP.length - 1, rSel + 1);
             else if ("up".equals(k)) {
-                if (!albums.isEmpty()) zone = "alb";
+                if (!singles.isEmpty()) zone = "sng";
+                else if (!albums.isEmpty()) zone = "alb";
                 else { zone = "rap"; rSel = Math.max(0, rSel - Rapper.OWN); }
             }
             else if ("back".equals(k)) zone = "apps";
@@ -2158,7 +2230,8 @@ public class MainActivity extends Activity {
             public Boolean call() {
                 AppDef yt = AppDef.byId("youtube");
                 if (yt == null || yt.pkg == null) { showToast("YouTube nicht gefunden"); return false; }
-                MediaWatcher.startAlbum(MainActivity.this, yt.pkg, a.rapper, a.tracks, a.title);
+                if ("single".equals(a.type)) MediaWatcher.start(MainActivity.this, yt.pkg, a.rapper, a.tracks.get(0));
+                else MediaWatcher.startAlbum(MainActivity.this, yt.pkg, a.rapper, a.tracks, a.title);
                 overridePendingTransition(0, 0);
                 return true;
             }
