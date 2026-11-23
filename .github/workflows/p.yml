@@ -6,10 +6,10 @@ jobs:
   p:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
       - run: |
-          pip install -q -U yt-dlp
-          mkdir -p app/src/main/assets/songs
-          python3 tools/songs.py
-          wc -l app/src/main/assets/songs/*.txt
-          head -5 app/src/main/assets/songs/*.txt
+          for a in "Ken Carson" "Destroy Lonely" "Playboi Carti" "OsamaSon" "Nettspend" "Yeat"; do
+            u="https://rest.bandsintown.com/artists/$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))" "$a")/events?app_id=domitv&date=upcoming"
+            r=$(curl -s -A "DomiTV/1.0" "$u"); echo "RES $a: $(echo "$r" | head -c 300)"
+            echo "RES2 $a: $(echo "$r" | jq -r 'if type=="array" then (length|tostring)+" events; "+([.[]|.venue.city+","+.venue.country+" "+.datetime]|join(" | "))[0:400] else . end' 2>/dev/null)"
+          done
+          curl -s "https://api.open-meteo.com/v1/forecast?latitude=47.04&longitude=11.48&current=temperature_2m,weather_code&hourly=weather_code&forecast_days=1&timezone=Europe%2FVienna" | head -c 300; echo
