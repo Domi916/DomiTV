@@ -67,11 +67,9 @@ def songs_of(name):
                 pick = audio[0] if audio else tracks[0]
                 fix = os.path.join(FIX, f"{slug(name)}_{norm(al['title']).replace(' ', '')}.jpg")
                 if os.path.exists(fix):
-                    urls = [("fix", "file://" + os.path.abspath(fix))]
+                    urls = [("fix", lambda f=fix: ["file://" + os.path.abspath(f)])]
                 else:
-                    urls = [("itunes", u) for u in itunes_art(name, al["title"])] + \
-                           [("deezer", u) for u in deezer_art(name, al["title"])] + \
-                           [("song", u) for u in song_art(name, al["title"])]
+                    urls = art_sources(name, al["title"])
                 cov, src = cover(urls, pick, f"{slug(name)}_{len(albums)}.jpg")
                 print(f"  COVER {src:7s} {typ:6s} {al['title']}")
                 if cov: al["cover"] = cov
@@ -99,10 +97,7 @@ def songs_of(name):
                 if not hit:
                     print(f"  FEHLT (nicht auf YouTube) {t}"); continue
                 al = {"title": t, "tracks": [hit["id"]], "type": "single"}
-                cov, src = cover([("itunes", u) for u in itunes_art(name, t)] +
-                                 [("deezer", u) for u in deezer_art(name, t)] +
-                                 [("song", u) for u in song_art(name, t)],
-                                 hit["id"], f"{slug(name)}_{len(albums)}.jpg")
+                cov, src = cover(art_sources(name, t), hit["id"], f"{slug(name)}_{len(albums)}.jpg")
                 if cov: al["cover"] = cov
                 albums.append(al); have.add(k)
                 key = norm(re.sub(r"\(.*?\)|\[.*?\]", "", hit.get("title") or ""))
@@ -120,12 +115,33 @@ ALBUMS = {}
 FIX = os.path.join(os.path.dirname(__file__), "cover_fix")
 COV = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "assets", "covers")
 
+_last = [0.0]
+def itunes_get(url):
+    """iTunes erlaubt nur ~20 Anfragen/Minute: langsam abfragen, bei 429 warten und nochmal."""
+    import time, urllib.request
+    for attempt in range(4):
+        wait = 3.2 - (time.time() - _last[0])
+        if wait > 0: time.sleep(wait)
+        _last[0] = time.time()
+        try:
+            return json.loads(urllib.request.urlopen(url, timeout=20).read())
+        except Exception as e:
+            if "429" in str(e) or "403" in str(e):
+                time.sleep(30 * (attempt + 1)); continue
+            raise
+    raise RuntimeError("iTunes blockiert")
+
+def art_sources(artist, title):
+    return [("itunes", lambda: itunes_art(artist, title)),
+            ("deezer", lambda: deezer_art(artist, title)),
+            ("song", lambda: song_art(artist, title))]
+
 def itunes_art(artist, album):
     """Offizielles Albumcover über die öffentliche iTunes-Suche (600x600)."""
     import urllib.request, urllib.parse
     try:
         q = urllib.parse.urlencode({"term": f"{artist} {album}", "entity": "album", "limit": 10, "country": "US"})
-        data = json.loads(urllib.request.urlopen("https://itunes.apple.com/search?" + q, timeout=20).read())
+        data = itunes_get("https://itunes.apple.com/search?" + q)
         na, nb = norm(artist), norm(re.sub(r"\(.*?\)|\[.*?\]", "", album))
         best = None
         for r in data.get("results") or []:
@@ -163,7 +179,7 @@ def song_art(artist, title):
     out = []
     try:
         q = urllib.parse.urlencode({"term": f"{artist} {title}", "entity": "song", "limit": 15, "country": "US"})
-        for r in json.loads(urllib.request.urlopen("https://itunes.apple.com/search?" + q, timeout=20).read()).get("results") or []:
+        for r in itunes_get("https://itunes.apple.com/search?" + q).get("results") or []:
             rt = norm(re.sub(r"\(.*?\)|\[.*?\]", "", r.get("trackName") or ""))
             if na in norm(r.get("artistName")) and nt and (rt == nt or nt in rt) and r.get("artworkUrl100"):
                 out.append(r["artworkUrl100"].replace("100x100bb", "600x600bb")); break
@@ -195,12 +211,12 @@ def official_titles(artist):
     except Exception as e:
         print("  Deezer-Check:", e)
     try:
-        d = json.loads(urllib.request.urlopen("https://itunes.apple.com/search?" + urllib.parse.urlencode(
-            {"term": artist, "entity": "musicArtist", "limit": 5, "country": "US"}), timeout=20).read())
+        d = itunes_get("https://itunes.apple.com/search?" + urllib.parse.urlencode(
+            {"term": artist, "entity": "musicArtist", "limit": 5, "country": "US"}))
         a = next((x for x in d.get("results") or [] if norm(x.get("artistName")) == norm(artist)), None)
         if a:
             u = f"https://itunes.apple.com/lookup?id={a['artistId']}&entity=album&limit=300&country=US"
-            for r in json.loads(urllib.request.urlopen(u, timeout=20).read()).get("results") or []:
+            for r in itunes_get(u).get("results") or []:
                 if r.get("wrapperType") == "collection":
                     t = re.sub(r" - (Single|EP)$", "", r.get("collectionName") or "")
                     out.setdefault(norm(re.sub(r"\(.*?\)|\[.*?\]", "", t)), t)
@@ -212,8 +228,13 @@ def cover(urls, video_id, fname):
     """Albumcover: zuerst das Bild der Album-Playlist (echtes Cover), sonst Vorschaubild des ersten Songs."""
     import io, urllib.request
     from PIL import Image
-    cands = list(urls) + [("youtube", f"https://i.ytimg.com/vi/{video_id}/{q}.jpg") for q in ("maxresdefault", "hqdefault")]
-    for src, u in cands:
+    yt = lambda: [f"https://i.ytimg.com/vi/{video_id}/{q}.jpg" for q in ("maxresdefault", "hqdefault")]
+    def cands():
+        # Quellen erst abfragen, wenn die vorige nichts geliefert hat (schont die APIs)
+        for src, fn in list(urls) + [("youtube", yt)]:
+            for u in fn() or []:
+                yield src, u
+    for src, u in cands():
         try:
             data = urllib.request.urlopen(u, timeout=20).read()
             im = Image.open(io.BytesIO(data)).convert("RGB")
