@@ -63,7 +63,7 @@ final class Quiz {
     Quiz(MainActivity a) {
         this.a = a;
         root = new FrameLayout(a);
-        root.setBackgroundColor(0xf2050507);
+        root.setBackgroundColor(0xff050507);
         root.setClickable(true);
     }
 
@@ -106,6 +106,10 @@ final class Quiz {
 
         line = a.text("", 64, "Black", Color.WHITE, -0.01f);
         line.setGravity(Gravity.CENTER);
+        line.setSingleLine(false);
+        line.setMaxLines(3);
+        line.setHorizontallyScrolling(false);
+        line.setEllipsize(null);
         line.setLineSpacing(0, 1.05f);
         root.addView(line, a.atD(160, 210, 1600, 360));
         line.setGravity(Gravity.CENTER);
@@ -323,6 +327,8 @@ final class Quiz {
         info.setText("OK nochmal   ↩ beenden");
         TextView board = a.text("BESTENLISTE\n\n" + sb, 30, "Bold", 0xccffffff, 0);
         board.setGravity(Gravity.CENTER);
+        board.setSingleLine(false);
+        board.setMaxLines(9);
         board.setTag("board");
         root.addView(board, a.atD(360, 620, 1200, 380));
         if (place == 0) Hype.kick(0.9f);

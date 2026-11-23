@@ -70,6 +70,7 @@ adb shell am start -n at.domi.tvlauncher/.MainActivity --ez fx_test true --ez fx
 sleep 9; shot 40_quiz_a
 adb shell input keyevent 22; sleep 0.6; adb shell input keyevent 23; sleep 0.8; shot 41_quiz_answer
 sleep 2.5; shot 42_quiz_next
+for r in 2 3 4 5 6 7 8 9 10; do adb shell input keyevent 23; sleep 3.2; done; sleep 3; shot 44_quiz_end
 adb shell input keyevent 4; sleep 1.5; shot 43_quiz_closed
 adb shell dumpsys gfxinfo at.domi.tvlauncher > shots/gfxinfo.txt
 adb logcat -d -s AndroidRuntime:E DomiTV:* > shots/logcat.txt

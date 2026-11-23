@@ -1733,7 +1733,10 @@ public class MainActivity extends Activity {
     }
 
     void setRapper(final int r, boolean anim) {
-        if (r == shownRapper) return;
+        if (r == shownRapper) {
+            if (profTop != null && profTop.getText().length() == 0) profile(r);
+            return;
+        }
         shownRapper = r;
         profile(r);
         rapGlow.setImageBitmap(rapGlows[r]);
