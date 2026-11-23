@@ -169,7 +169,7 @@ final class Gfx {
 
     /** Kleine Symbole: Haus, Regler, Pfeil, Play. */
     static class Icon extends View {
-        static final int HOME = 0, SETTINGS = 1, CHEVRON = 2, PLAY = 3, SPEAKER = 4;
+        static final int HOME = 0, SETTINGS = 1, CHEVRON = 2, PLAY = 3, SPEAKER = 4, PARTY = 5;
         final int type;
         final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         final Path path = new Path();
@@ -202,6 +202,15 @@ final class Gfx {
                 c.drawLine(4, 7, 13, 7, p); c.drawLine(17, 7, 20, 7, p);
                 c.drawLine(4, 17, 7, 17, p); c.drawLine(11, 17, 20, 17, p);
                 c.drawCircle(15, 7, 2, p); c.drawCircle(9, 17, 2, p);
+            } else if (type == PARTY) {
+                // Party: großer Funkel-Stern + kleiner Stern
+                path.moveTo(10, 3); path.quadTo(11, 10, 17, 11); path.quadTo(11, 12, 10, 19);
+                path.quadTo(9, 12, 3, 11); path.quadTo(9, 10, 10, 3); path.close();
+                c.drawPath(path, p);
+                path.reset();
+                path.moveTo(18.5f, 14.5f); path.quadTo(19, 17, 21, 17.5f); path.quadTo(19, 18, 18.5f, 20.5f);
+                path.quadTo(18, 18, 16, 17.5f); path.quadTo(18, 17, 18.5f, 14.5f); path.close();
+                c.drawPath(path, p);
             } else if (type == SPEAKER) {
                 // Box: Gehäuse mit zwei Lautsprechern
                 android.graphics.RectF r = new android.graphics.RectF(6, 3.5f, 18, 20.5f);

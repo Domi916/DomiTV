@@ -31,6 +31,8 @@ public class HomeWatcherService extends AccessibilityService {
     static HomeWatcherService instance;
     LyricsOverlay overlay;
 
+    static long lastSkip = 0;
+
     static void overlayShow(final int rapper) {
         final HomeWatcherService s = instance;
         if (s == null) return;
@@ -228,6 +230,13 @@ public class HomeWatcherService extends AccessibilityService {
         // ◀ ▶: vorheriger / nächster Song
         if (overlayOn && (k == android.view.KeyEvent.KEYCODE_DPAD_LEFT || k == android.view.KeyEvent.KEYCODE_DPAD_RIGHT)) {
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) {
+                // Party-Modus: nicht dauernd weiterdrücken – frühestens 20 s nachdem ein Song angefangen hat
+                long since = SystemClock.elapsedRealtime() - Math.max(lastSkip, MediaWatcher.launchedAt);
+                if (LyricsOverlay.party && since < 20000) {
+                    if (overlay != null) overlay.badge("Party-Modus  ·  noch " + ((20000 - since) / 1000 + 1) + " s");
+                    return true;
+                }
+                lastSkip = SystemClock.elapsedRealtime();
                 if (k == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) MediaWatcher.skip(this);
                 else MediaWatcher.previous(this);
             }

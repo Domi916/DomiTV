@@ -258,7 +258,10 @@ final class LyricsOverlay {
         if (root == null) build();
         Rapper r = Rapper.LIST[rapper];
         accent = r.c1;
-        label.setText(MediaWatcher.albumTitle != null
+        int mi = MediaWatcher.mood != null ? Moods.index(MediaWatcher.mood) : -1;
+        if (mi >= 0) accent = Moods.C1[mi];
+        label.setText(mi >= 0 ? "STIMMUNG  ·  " + Moods.LABEL[mi].toUpperCase(Locale.ROOT)
+                : MediaWatcher.albumTitle != null
                 ? r.name.toUpperCase(Locale.ROOT) + "  ·  " + MediaWatcher.albumTitle.toUpperCase(Locale.ROOT)
                 : r.isMix() ? "DEINE RAPPER  ·  MIX" : r.isFav() ? "DEINE FAVORITEN" : r.name.toUpperCase(Locale.ROOT) + "  ·  SHUFFLE");
         label.setTextColor(accent);
@@ -274,8 +277,9 @@ final class LyricsOverlay {
             photo.setImageBitmap(b);
         } catch (Exception e) {
             photo.setImageDrawable(new GradientDrawable(GradientDrawable.Orientation.TR_BL,
-                    new int[]{(r.c1 & 0x00FFFFFF) | 0x88000000, r.c2, 0xFF000000}));
+                    new int[]{(accent & 0x00FFFFFF) | 0x88000000, mi >= 0 ? Moods.C2[mi] : r.c2, 0xFF000000}));
         }
+        photoOf = -1;
         title.setText("");
         clearLyrics("");
         status.setText("Lädt …");
@@ -303,8 +307,76 @@ final class LyricsOverlay {
     }
 
     /** Langsames Atmen des Leuchtens + Zoom aufs Foto. */
+    int photoOf = -1;
+
+    /** Foto eines anderen Rappers weich einblenden. */
+    void photoFor(final int idx) {
+        if (idx < 0 || idx == photoOf) return;
+        try {
+            InputStream in = c.getAssets().open("rap/" + idx + "_0.jpg");
+            final Bitmap b = BitmapFactory.decodeStream(in);
+            in.close();
+            photoOf = idx;
+            photo.animate().alpha(0f).setDuration(350).withEndAction(new Runnable() {
+                public void run() {
+                    photo.setImageBitmap(b);
+                    photo.animate().alpha(big ? photo.getAlpha() : 1f).setDuration(650).start();
+                }
+            }).start();
+        } catch (Exception ignored) { }
+    }
+
+    // ---------------- Party-Modus ----------------
+    static boolean party = false;
+    int partyBpm = 0;
+    int beatN = 0;
+    static final float[] HUES = {0f, 300f, 200f, 130f, 45f, 260f};
+
+    /** Lichter pulsieren im Tempo des Songs (BPM von Deezer, sonst 140), Farbe wechselt alle 4 Schläge. */
+    void startParty() {
+        int bpm = partyBpm > 0 ? partyBpm : 140;
+        if (bpm > 135) bpm /= 2;            // Trap: halbes Tempo fühlt sich wie der Beat an
+        breathe = ValueAnimator.ofFloat(0f, 1f);
+        breathe.setDuration(60000 / Math.max(50, bpm));
+        breathe.setRepeatCount(ValueAnimator.INFINITE);
+        breathe.setInterpolator(new android.view.animation.LinearInterpolator());
+        breathe.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationRepeat(android.animation.Animator a) {
+                if (++beatN % 4 == 0) {
+                    float[] hsv = {HUES[(beatN / 4) % HUES.length], 0.85f, 1f};
+                    int col = Color.HSVToColor(hsv);
+                    glow.setImageBitmap(Gfx.glow(col, 0.75f));
+                    hsv[0] = (hsv[0] + 140f) % 360f;
+                    glow2.setImageBitmap(Gfx.glow(Color.HSVToColor(hsv), 0.55f));
+                    label.setTextColor(col);
+                }
+            }
+        });
+        breathe.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator a) {
+                float t = (Float) a.getAnimatedValue();
+                float hit = (float) Math.pow(1f - t, 2.2f);   // Schlag am Anfang, dann abklingen
+                glow.setAlpha(0.3f + 0.7f * hit);
+                glow.setScaleX(0.95f + 0.25f * hit);
+                glow.setScaleY(0.95f + 0.25f * hit);
+                glow2.setAlpha(0.2f + 0.6f * (1f - hit));
+                glow2.setScaleX(1.1f - 0.15f * hit);
+                glow2.setScaleY(1.1f - 0.15f * hit);
+                if (!big) { photo.setScaleX(1.03f + 0.025f * hit); photo.setScaleY(1.03f + 0.025f * hit); }
+            }
+        });
+        breathe.start();
+    }
+
     void startAmbient() {
         if (breathe != null) breathe.cancel();
+        if (zoom != null) zoom.cancel();
+        if (party) { startParty(); return; }
+        label.setTextColor(accent);
+        glow.setImageBitmap(Gfx.glow(accent, 0.55f));
+        glow2.setImageBitmap(Gfx.glow(accent, 0.35f));
         breathe = ValueAnimator.ofFloat(0f, 1f);
         breathe.setDuration(6000);
         breathe.setRepeatMode(ValueAnimator.REVERSE);
@@ -407,7 +479,12 @@ final class LyricsOverlay {
             if (MediaWatcher.hasWord(ytTitle, n) || MediaWatcher.hasWord(ytArtist, n)) { who = m; break; }
         }
         if (r.isMix()) label.setText(who.toUpperCase(Locale.ROOT) + "  ·  MIX");
-        if (r.isFav()) label.setText(who.toUpperCase(Locale.ROOT) + "  ·  FAVORITEN");
+        if (r.isFav()) label.setText(who.toUpperCase(Locale.ROOT) + "  ·  "
+                + (MediaWatcher.mood != null ? Moods.LABEL[Moods.index(MediaWatcher.mood)].toUpperCase(Locale.ROOT) : "FAVORITEN"));
+        // Mix / Favoriten / Stimmung: Foto des Rappers, der gerade läuft
+        if (r.isSpecial()) photoFor(Library.rapperIndexByName(who));
+        partyBpm = Moods.bpm(c, MediaWatcher.currentId());
+        if (party) startAmbient();
         final String artistName = who;
         final String song = cleanTitle(ytTitle, who);
         currentTitle = song;
@@ -460,7 +537,7 @@ final class LyricsOverlay {
     void buildLines() {
         lyricBox.removeAllViews();
         for (String tx : texts) {
-            TextView t = text(64, "Black", Color.WHITE);
+            TextView t = text(party ? 80 : 64, "Black", Color.WHITE);
             t.setText(tx);
             t.setMaxLines(3);
             t.setLineSpacing(0, 1.04f);

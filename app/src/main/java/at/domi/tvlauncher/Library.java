@@ -167,6 +167,79 @@ final class Library {
         return best;
     }
 
+    // ---------------- Verlauf (für Zeitreise / Song der Woche) ----------------
+    /** Jeder gehörte Song: Zeit, Video-ID, Rapper, Titel (files/history.tsv, ~400 Tage). */
+    static synchronized void history(Context c, String id, String artist, String title) {
+        if (id == null) return;
+        try {
+            java.io.File f = new java.io.File(c.getFilesDir(), "history.tsv");
+            if (f.length() > 600000) trimHistory(f);
+            java.io.FileWriter w = new java.io.FileWriter(f, true);
+            w.write(System.currentTimeMillis() + "\t" + id + "\t" + artist.replace("\t", " ") + "\t"
+                    + title.replace("\t", " ").replace("\n", " ") + "\n");
+            w.close();
+        } catch (Exception ignored) { }
+    }
+
+    static void trimHistory(java.io.File f) {
+        try {
+            long cut = System.currentTimeMillis() - 400L * 86400000L;
+            StringBuilder sb = new StringBuilder();
+            java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(f));
+            String l;
+            while ((l = r.readLine()) != null) {
+                try { if (Long.parseLong(l.substring(0, l.indexOf('\t'))) >= cut) sb.append(l).append('\n'); } catch (Exception ignored) { }
+            }
+            r.close();
+            java.io.FileWriter w = new java.io.FileWriter(f, false);
+            w.write(sb.toString());
+            w.close();
+        } catch (Exception ignored) { }
+    }
+
+    /**
+     * Zeitreise-Karte: {Überschrift, Video-ID, Rapper, Titel}.
+     * Vorrang: heute vor einem Jahr → vor einem Monat → dein Song der Woche (mind. 3× gehört).
+     */
+    static String[] timeTravel(Context c) {
+        try {
+            java.io.File f = new java.io.File(c.getFilesDir(), "history.tsv");
+            if (!f.exists()) return null;
+            long now = System.currentTimeMillis(), day = 86400000L;
+            long[][] win = {{365 * day + day / 2, 365 * day - day / 2 - day}, {31 * day, 29 * day}, {7 * day, 0}};
+            String[] head = {"Heute vor 1 Jahr", "Vor einem Monat", "Dein Song der Woche"};
+            int[] min = {1, 2, 3};
+            java.util.List<String[]> rows = new java.util.ArrayList<>();
+            java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(f));
+            String l;
+            while ((l = r.readLine()) != null) {
+                String[] p = l.split("\t", 4);
+                if (p.length == 4) rows.add(p);
+            }
+            r.close();
+            for (int w = 0; w < 3; w++) {
+                java.util.Map<String, Integer> n = new java.util.HashMap<>();
+                java.util.Map<String, String[]> any = new java.util.HashMap<>();
+                for (String[] p : rows) {
+                    long age = now - Long.parseLong(p[0]);
+                    if (age <= win[w][0] && age >= win[w][1]) {
+                        Integer k = n.get(p[1]);
+                        n.put(p[1], k == null ? 1 : k + 1);
+                        any.put(p[1], p);
+                    }
+                }
+                String best = null;
+                int bn = 0;
+                for (java.util.Map.Entry<String, Integer> e : n.entrySet()) if (e.getValue() > bn) { bn = e.getValue(); best = e.getKey(); }
+                if (best != null && bn >= min[w]) {
+                    String[] p = any.get(best);
+                    return new String[]{head[w], p[1], p[2], p[3]};
+                }
+            }
+        } catch (Exception ignored) { }
+        return null;
+    }
+
     static int rapperIndexByName(String name) {
         for (int i = 0; i < Rapper.LIST.length; i++) if (Rapper.LIST[i].name.equalsIgnoreCase(name)) return i;
         return 0;

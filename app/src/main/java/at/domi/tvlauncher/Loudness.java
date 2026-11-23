@@ -9,6 +9,17 @@ import android.util.Log;
  */
 final class Loudness {
     static DynamicsProcessing dp;
+    /** Party-Modus: etwas mehr Druck (+3 dB nach dem Kompressor, der Begrenzer schützt die Box). */
+    static boolean party = false;
+
+    static void applyParty() {
+        try {
+            if (dp == null) return;
+            DynamicsProcessing.MbcBand b = dp.getMbcBandByChannelIndex(0, 0);
+            b.setPostGain(party ? 10f : 7f);
+            dp.setMbcBandAllChannelsTo(0, b);
+        } catch (Throwable ignored) { }
+    }
 
     static void on() {
         if (dp != null) return;
@@ -24,7 +35,7 @@ final class Loudness {
             b.setRatio(3f);
             b.setThreshold(-26f);
             b.setKneeWidth(8f);
-            b.setPostGain(7f);
+            b.setPostGain(party ? 10f : 7f);
             dp.setMbcBandAllChannelsTo(0, b);
             DynamicsProcessing.Limiter lim = dp.getLimiterByChannelIndex(0);
             lim.setEnabled(true);

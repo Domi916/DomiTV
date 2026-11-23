@@ -140,7 +140,15 @@ public class MainActivity extends Activity {
     final Rapper[] RAP = Rapper.LIST;
     final RapCard[] rapCards = new RapCard[Rapper.LIST.length];
     final Bitmap[] rapGlows = new Bitmap[Rapper.LIST.length];
-    int rSel = 0, aSel = 0, sSel = 0;
+    int rSel = 0, aSel = 0, sSel = 0, mSel = 0;
+    RapCard[] moodCards = new RapCard[0];
+    FrameLayout moodRow;
+    View head6v;
+    FrameLayout btnParty;
+    Gfx.Icon icParty;
+    int hypeIdx = -1;
+    String hypeName, hypeSub;
+    int hypeColor;
     List<Album> singles = new ArrayList<>();
     RapCard[] sngCards = new RapCard[0];
     FrameLayout sngRow;
@@ -194,7 +202,9 @@ public class MainActivity extends Activity {
     static class Card {
         AppDef app;
         int rapper = -1;
-        String kind = "app", songId;
+        String kind = "app", songId, tag;
+        Drops.Drop drop;
+        TextView subView;
         String title, sub, right;
         boolean hint;
         FrameLayout view;
@@ -223,6 +233,7 @@ public class MainActivity extends Activity {
         tf.addAction(Intent.ACTION_TIMEZONE_CHANGED);
         registerReceiver(timeSet, tf);
         prefs = getSharedPreferences("domitv", MODE_PRIVATE);
+        LyricsOverlay.party = Loudness.party = prefs.getBoolean("party", false);
         sel = Math.max(0, Math.min(APPS.length - 1, prefs.getInt("sel", 0)));
 
         Window w = getWindow();
@@ -427,6 +438,11 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams bl0 = new LinearLayout.LayoutParams(px(52), px(52));
         bl0.rightMargin = px(12);
         pill.addView(btnBox, bl0);
+        btnParty = iconButton(Gfx.Icon.PARTY);
+        icParty = (Gfx.Icon) btnParty.getChildAt(0);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(px(52), px(52));
+        blp.rightMargin = px(12);
+        pill.addView(btnParty, blp);
         btnHome = iconButton(Gfx.Icon.HOME);
         icHome = (Gfx.Icon) btnHome.getChildAt(0);
         btnSettings = iconButton(Gfx.Icon.SETTINGS);
@@ -471,7 +487,7 @@ public class MainActivity extends Activity {
         cont.setAlpha(0f);
         cont.setTranslationY(px(260));
         cont.setVisibility(View.INVISIBLE);
-        root.addView(cont, atD(96, 650, 1728, 1700));
+        root.addView(cont, atD(96, 650, 1728, 2000));
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setBaselineAligned(true);
@@ -558,6 +574,25 @@ public class MainActivity extends Activity {
         for (int r = Rapper.OWN; r < RAP.length; r++) {
             rapCards[r] = buildRapCard(RAP[r]);
             rapRow2.addView(rapCards[r].view, atD((r - Rapper.OWN) * 348, 0, 320, 190));
+        }
+        // --- Stimmungs-Shuffle ---
+        LinearLayout head6 = new LinearLayout(this);
+        head6.setOrientation(LinearLayout.HORIZONTAL);
+        head6.setBaselineAligned(true);
+        head6.addView(text("Nach Stimmung", 34, "Bold", TXT, -0.025f));
+        TextView sub6 = text("Alle Rapper, nach Tempo und Energie", 22, "Medium", Gfx.a(TXT, 0.55f), 0);
+        LinearLayout.LayoutParams cl6 = new LinearLayout.LayoutParams(-2, -2);
+        cl6.leftMargin = px(18);
+        head6.addView(sub6, cl6);
+        cont.addView(head6, atD(0, 1550, -2, -2));
+        head6v = head6;
+        moodRow = new FrameLayout(this);
+        moodRow.setClipChildren(false);
+        cont.addView(moodRow, atD(0, 1620, 2000, 260));
+        moodCards = new RapCard[Moods.KEYS.length];
+        for (int i = 0; i < moodCards.length; i++) {
+            moodCards[i] = buildMoodCard(i);
+            moodRow.addView(moodCards[i].view, atD(i * 430, 0, 400, 190));
         }
 
         // --- Pfeil unten ---
@@ -772,6 +807,71 @@ public class MainActivity extends Activity {
         play.addView(pi, pl);
         play.setAlpha(0f);
         f.addView(play, atD(210 - 14 - 44, 14, 44, 44));
+        View ring = new View(this);
+        GradientDrawable rg = Gfx.round(Color.TRANSPARENT, rad);
+        rg.setStroke(Math.max(2, px(3)), Gfx.w(0.95f));
+        ring.setBackground(rg);
+        ring.setAlpha(0f);
+        f.addView(ring, new FrameLayout.LayoutParams(-1, -1));
+        f.setAlpha(0.62f);
+        f.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        rc.view = f;
+        rc.ring = ring;
+        rc.play = play;
+        return rc;
+    }
+
+    RapCard buildMoodCard(int i) {
+        RapCard rc = new RapCard();
+        FrameLayout f = new FrameLayout(this);
+        final float rad = px(28);
+        f.setOutlineProvider(new ViewOutlineProvider() {
+            @Override
+            public void getOutline(View v, Outline o) { o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), rad); }
+        });
+        f.setClipToOutline(true);
+        int c1 = Moods.C1[i];
+        GradientDrawable base = Gfx.grad(GradientDrawable.Orientation.TL_BR, new int[]{Moods.C2[i], 0xff08080b}, rad);
+        GradientDrawable g1 = new GradientDrawable();
+        g1.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+        g1.setColors(new int[]{Gfx.a(c1, 0.85f), 0});
+        g1.setGradientCenter(0.9f, 0.1f);
+        g1.setGradientRadius(px(280));
+        GradientDrawable g2 = new GradientDrawable();
+        g2.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+        g2.setColors(new int[]{Gfx.a(c1, 0.35f), 0});
+        g2.setGradientCenter(0.05f, 1.0f);
+        g2.setGradientRadius(px(220));
+        GradientDrawable gloss = Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Gfx.w(0.14f), Gfx.w(0), Gfx.w(0)}, rad);
+        f.setBackground(new LayerDrawable(new Drawable[]{base, g1, g2, gloss}));
+        f.addView(text("STIMMUNG", 14, "Bold", Gfx.w(0.7f), 0.28f), atD(22, 22, -2, -2));
+        View dot = new View(this);
+        dot.setBackground(Gfx.round(c1, px(5)));
+        f.addView(dot, atD(22 + 118, 26, 10, 10));
+        TextView nm = text(Moods.LABEL[i].toUpperCase(Locale.ROOT), Moods.LABEL[i].length() > 8 ? 36 : 44, "Black", Color.WHITE, -0.02f);
+        nm.setSingleLine(true);
+        FrameLayout.LayoutParams nl = new FrameLayout.LayoutParams(-2, -2);
+        nl.gravity = Gravity.BOTTOM | Gravity.START;
+        nl.leftMargin = px(22);
+        nl.bottomMargin = px(48);
+        f.addView(nm, nl);
+        int n = Moods.songs(this, Moods.KEYS[i]).size();
+        TextView sub = text(Moods.SUB[i] + (n > 0 ? " · " + n + " Songs" : ""), 16, "Medium", Gfx.w(0.72f), 0);
+        FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2);
+        sl.gravity = Gravity.BOTTOM | Gravity.START;
+        sl.leftMargin = px(22);
+        sl.bottomMargin = px(22);
+        f.addView(sub, sl);
+        FrameLayout play = new FrameLayout(this);
+        play.setBackground(Gfx.round(c1, px(25)));
+        Gfx.Icon pi = new Gfx.Icon(this, Gfx.Icon.PLAY);
+        pi.setColor(Color.WHITE);
+        FrameLayout.LayoutParams pl = new FrameLayout.LayoutParams(px(22), px(22));
+        pl.gravity = Gravity.CENTER;
+        pl.leftMargin = px(3);
+        play.addView(pi, pl);
+        play.setAlpha(0f);
+        f.addView(play, atD(400 - 20 - 50, 18, 50, 50));
         View ring = new View(this);
         GradientDrawable rg = Gfx.round(Color.TRANSPARENT, rad);
         rg.setStroke(Math.max(2, px(3)), Gfx.w(0.95f));
@@ -1140,6 +1240,7 @@ public class MainActivity extends Activity {
         for (int i = 0; i < rapCards.length; i++) focusRap(rapCards[i], ("rap".equals(zone) || "rap2".equals(zone)) && i == rSel, anim);
         for (int i = 0; i < albumCards.length; i++) focusRap(albumCards[i], "alb".equals(zone) && i == aSel, anim);
         for (int i = 0; i < sngCards.length; i++) focusRap(sngCards[i], "sng".equals(zone) && i == sSel, anim);
+        for (int i = 0; i < moodCards.length; i++) focusRap(moodCards[i], "mood".equals(zone) && i == mSel, anim);
         updateCovers(albumCards, aSel);
         updateCovers(sngCards, sSel);
         if ("sng".equals(zone) && sSel < singles.size()) setRapper(singles.get(sSel).rapper, anim);
@@ -1154,8 +1255,14 @@ public class MainActivity extends Activity {
             btnBox.setBackground(Gfx.round(f ? 0xff1ed760 : 0x5c1ed760, px(26)));
             icBox.setColor(f ? 0xff04120a : 0xffb8ffd0);
         }
-        focusBtn(btnHome, icHome, "top".equals(zone) && tSel == 1, anim);
-        focusBtn(btnSettings, icSettings, "top".equals(zone) && tSel == 2, anim);
+        focusBtn(btnParty, icParty, "top".equals(zone) && tSel == 1, anim);
+        if (LyricsOverlay.party) {
+            boolean f = "top".equals(zone) && tSel == 1;
+            btnParty.setBackground(Gfx.round(f ? 0xffff3dd2 : 0x66ff3dd2, px(26)));
+            icParty.setColor(f ? 0xff1a0014 : 0xffffd6f6);
+        }
+        focusBtn(btnHome, icHome, "top".equals(zone) && tSel == 2, anim);
+        focusBtn(btnSettings, icSettings, "top".equals(zone) && tSel == 3, anim);
 
         float bx;
         if ("apps".equals(zone)) bx = 96 + 28 + sel * 312 + 140 - 360;
@@ -1331,6 +1438,34 @@ public class MainActivity extends Activity {
     }
 
     /** Box-Knopf oben rechts: JBL-Box verbinden / trennen. */
+    /** Party-Modus: Lichter im Takt, größere Lyrics, mehr Druck, Skippen erst nach 20 s. */
+    void toggleParty() {
+        LyricsOverlay.party = !LyricsOverlay.party;
+        Loudness.party = LyricsOverlay.party;
+        Loudness.applyParty();
+        prefs.edit().putBoolean("party", LyricsOverlay.party).apply();
+        showToast(LyricsOverlay.party ? "Party-Modus an: Lichter im Takt, große Lyrics, Skippen erst nach 20 s"
+                : "Party-Modus aus");
+        if (LyricsOverlay.party) partyFlash();
+    }
+
+    /** Kurzer bunter Blitz über den Home-Screen. */
+    void partyFlash() {
+        final View v = new View(this);
+        v.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{0xccff2fd0, 0xaa6a5cff, 0xcc2fd6ff, 0xaaffb02e}));
+        v.setAlpha(0f);
+        root.addView(v, new FrameLayout.LayoutParams(-1, -1));
+        v.animate().alpha(0.55f).setDuration(120).withEndAction(new Runnable() {
+            public void run() {
+                v.animate().alpha(0f).setDuration(700).withEndAction(new Runnable() {
+                    public void run() { root.removeView(v); }
+                }).start();
+            }
+        }).start();
+        Hype.kick(0.6f);
+    }
+
     void toggleBox() {
         if (JblBox.manual || JblBox.connected) {
             JblBox.manual = false;
@@ -1354,16 +1489,22 @@ public class MainActivity extends Activity {
 
     String shownMode = "";
 
-    static boolean isRapZone(String z) { return "rap".equals(z) || "rap2".equals(z) || "alb".equals(z) || "sng".equals(z); }
+    static boolean isRapZone(String z) { return "rap".equals(z) || "rap2".equals(z) || "alb".equals(z) || "sng".equals(z) || "mood".equals(z); }
 
-    float contShift(String z) { return "rap2".equals(z) ? -1230 : "sng".equals(z) ? -930 : "alb".equals(z) ? -630 : -330; }
+    float contShift(String z) { return "mood".equals(z) ? -1530 : "rap2".equals(z) ? -1230 : "sng".equals(z) ? -930 : "alb".equals(z) ? -630 : -330; }
 
     void setMode(String z, boolean anim) {
         if (z.equals(shownMode) && anim) return;
         // Reihen, die oben aus dem Bild rutschen, ausblenden
-        float topA = "rap2".equals(z) || "alb".equals(z) || "sng".equals(z) ? 0f : 1f;
-        float midA = "rap2".equals(z) || "sng".equals(z) ? 0f : 1f;
-        float albA = "rap2".equals(z) ? 0f : 1f;
+        boolean md = "mood".equals(z);
+        float topA = md || "rap2".equals(z) || "alb".equals(z) || "sng".equals(z) ? 0f : 1f;
+        float midA = md || "rap2".equals(z) || "sng".equals(z) ? 0f : 1f;
+        float albA = md || "rap2".equals(z) ? 0f : 1f;
+        float sngA = md ? 0f : 1f;
+        if (head5v != null) {
+            head5v.animate().alpha(sngA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
+            sngRow.animate().alpha(sngA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
+        }
         if (head4v != null) {
             head4v.animate().alpha(albA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
             albumRow.animate().alpha(albA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
@@ -1577,6 +1718,38 @@ public class MainActivity extends Activity {
                 c.right = ago(Long.parseLong(ns[3]));
                 cards.add(Math.min(cards.size(), lr >= 0 ? 1 : 0), c);
             }
+            // Drops: angekündigte Releases mit Countdown (ganz vorne, wenn bald / gerade raus)
+            int dp = 0;
+            for (Drops.Drop d : Drops.cached(this)) {
+                if (d.at - System.currentTimeMillis() > 60L * 86400000L) continue;   // erst 60 Tage vorher
+                Card c = new Card();
+                c.app = ytApp;
+                c.kind = "drop";
+                c.drop = d;
+                c.rapper = d.rapper;
+                c.tag = d.out() ? (d.tracks.isEmpty() ? "Heute" : "Neu da") : "Drop";
+                c.title = d.title;
+                c.sub = d.artist + " · " + (d.out() && !d.tracks.isEmpty() ? "OK zum Hören" : Drops.countdown(d));
+                c.right = "";
+                cards.add(Math.min(cards.size(), dp++), c);
+            }
+            // Zeitreise: heute vor 1 Jahr / vor einem Monat / Song der Woche
+            String[] tw = Library.timeTravel(this);
+            if (tw != null) {
+                int ri = Library.rapperIndexByName(tw[2]);
+                if (ri >= 0) {
+                    Card c = new Card();
+                    c.app = ytApp;
+                    c.kind = "tw";
+                    c.tag = tw[0];
+                    c.rapper = ri;
+                    c.songId = tw[1];
+                    c.title = tw[3];
+                    c.sub = tw[2] + " · dann " + RAP[ri].name + "-Shuffle";
+                    c.right = "";
+                    cards.add(Math.min(cards.size(), dp + (lr >= 0 ? 1 : 0) + 1), c);
+                }
+            }
             // Wochen-Rückblick
             String[] wk = Library.weekRecap(this);
             if (wk != null) {
@@ -1622,8 +1795,21 @@ public class MainActivity extends Activity {
         GradientDrawable gloss = Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM,
                 new int[]{Gfx.w(0.16f), Gfx.w(0), Gfx.w(0), 0x8c000000}, rad);
         f.setBackground(new LayerDrawable(new Drawable[]{base, glow, gloss}));
+        if (c.drop != null) {
+            Bitmap cov = Drops.cover(this, c.drop);
+            if (cov != null) {
+                ImageView iv = new ImageView(this);
+                iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                iv.setImageBitmap(cov);
+                f.addView(iv, new FrameLayout.LayoutParams(-1, -1));
+                View sc = new View(this);
+                sc.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                        new int[]{0x22000000, 0x55000000, 0xee000000}));
+                f.addView(sc, new FrameLayout.LayoutParams(-1, -1));
+            }
+        }
 
-        String tagText = c.hint ? "Tipp" : "new".equals(c.kind) ? "Neu erschienen" : "week".equals(c.kind) ? "Diese Woche"
+        String tagText = c.tag != null ? c.tag : c.hint ? "Tipp" : "new".equals(c.kind) ? "Neu erschienen" : "week".equals(c.kind) ? "Diese Woche"
                 : c.rapper >= 0 ? "Weiter hören" : c.app.name;
         TextView tag = text(tagText, 16, "SemiBold", Gfx.w(0.92f), 0);
         tag.setGravity(Gravity.CENTER);
@@ -1656,6 +1842,7 @@ public class MainActivity extends Activity {
         FrameLayout row = new FrameLayout(this);
         TextView cs = text(c.sub, 18, "Medium", Gfx.w(0.78f), 0);
         row.addView(cs, new FrameLayout.LayoutParams(-2, -2));
+        c.subView = cs;
         TextView cr = text(c.right, 18, "Medium", Gfx.w(0.78f), 0);
         FrameLayout.LayoutParams rl = new FrameLayout.LayoutParams(-2, -2);
         rl.gravity = Gravity.END;
@@ -1731,7 +1918,15 @@ public class MainActivity extends Activity {
         return false;
     }
 
+    void tickDrops() {
+        for (Card c : cards) {
+            if (c.drop == null || c.subView == null) continue;
+            c.subView.setText(c.drop.artist + " · " + (c.drop.out() && !c.drop.tracks.isEmpty() ? "OK zum Hören" : Drops.countdown(c.drop)));
+        }
+    }
+
     void clockTick() {
+        tickDrops();
         if (!timeOk()) {
             String gr = "Hallo, " + AppDef.NAME;
             greet.setText(gr);
@@ -1975,6 +2170,7 @@ public class MainActivity extends Activity {
     }
 
     void endIntro() {
+        ui.postDelayed(new Runnable() { public void run() { autoDrop(); } }, 1200);
         if (!revealed) reveal(false);
         greet.animate().alpha(1f).setDuration(200).start();
         intro.setVisibility(View.GONE);
@@ -2043,7 +2239,8 @@ public class MainActivity extends Activity {
             else if ("ok".equals(k) && cSel < cards.size()) {
                 Card c = cards.get(cSel);
                 if (c.hint) showToast("Öffne eine App, dann erscheint sie hier");
-                else if (c.rapper >= 0) openRapper(RAP[c.rapper], c.view, "new".equals(c.kind) ? c.songId : null);
+                else if (c.drop != null) openDrop(c.drop, c.view);
+                else if (c.rapper >= 0) openRapper(RAP[c.rapper], c.view, "new".equals(c.kind) || "tw".equals(c.kind) ? c.songId : null);
                 else openAppFx(c.app, c.view);
             }
         } else if ("rap".equals(zone)) {
@@ -2084,15 +2281,23 @@ public class MainActivity extends Activity {
                 else if (!albums.isEmpty()) zone = "alb";
                 else { zone = "rap"; rSel = Math.max(0, rSel - Rapper.OWN); }
             }
+            else if ("down".equals(k)) zone = "mood";
             else if ("back".equals(k)) zone = "apps";
             else if ("ok".equals(k)) openRapper(RAP[rSel], rapCards[rSel].view);
+        } else if ("mood".equals(zone)) {
+            if ("left".equals(k)) mSel = Math.max(0, mSel - 1);
+            else if ("right".equals(k)) mSel = Math.min(moodCards.length - 1, mSel + 1);
+            else if ("up".equals(k)) { zone = "rap2"; if (rSel < Rapper.OWN) rSel = Rapper.OWN; }
+            else if ("back".equals(k)) zone = "apps";
+            else if ("ok".equals(k)) openMood(mSel, moodCards[mSel].view);
         } else if ("top".equals(zone)) {
             if ("left".equals(k)) tSel = Math.max(0, tSel - 1);
-            else if ("right".equals(k)) tSel = Math.min(2, tSel + 1);
+            else if ("right".equals(k)) tSel = Math.min(3, tSel + 1);
             else if ("down".equals(k) || "back".equals(k)) zone = "apps";
             else if ("ok".equals(k)) {
                 if (tSel == 0) { toggleBox(); applyAll(true); return; }
-                if (tSel == 1) openAmazonHome(); else openSettings();
+                if (tSel == 1) { toggleParty(); applyAll(true); return; }
+                if (tSel == 2) openAmazonHome(); else openSettings();
                 zone = "apps";
             }
         }
@@ -2244,12 +2449,77 @@ public class MainActivity extends Activity {
 
     void openRapper(final Rapper r, View src) { openRapper(r, src, null); }
 
+    /** Drop: draußen → abspielen (in Reihenfolge), sonst bis dahin der Shuffle des Rappers. */
+    void openDrop(Drops.Drop d, View src) {
+        if (d.out() && !d.tracks.isEmpty()) {
+            Album a = new Album(d.rapper, d.title);
+            a.type = d.tracks.size() == 1 ? "single" : d.type;
+            a.tracks.addAll(d.tracks);
+            prefs.edit().putBoolean("dropAuto_" + d.key(), true).apply();
+            openAlbum(a, src);
+        } else {
+            showToast(d.out() ? "Ist heute erschienen – sobald es auf YouTube ist, kommt es hier" : "„" + d.title + "“ kommt " + Drops.countdown(d) + " – bis dahin " + RAP[d.rapper].name);
+            openRapper(RAP[d.rapper], src);
+        }
+    }
+
+    /** Am Release-Tag: einmal automatisch abspielen, wenn Domi TV startet. */
+    void autoDrop() {
+        if (launching || zone == null || !"apps".equals(zone)) return;
+        for (Card c : cards) {
+            Drops.Drop d = c.drop;
+            if (d == null || !d.out() || d.tracks.isEmpty()) continue;
+            if (System.currentTimeMillis() - d.at > 36L * 3600000L) continue;
+            if (prefs.getBoolean("dropAuto_" + d.key(), false)) continue;
+            showToast("Heute erschienen: " + d.artist + " – " + d.title);
+            openDrop(d, c.view);
+            return;
+        }
+    }
+
+    void refreshDrops() {
+        new Thread(new Runnable() {
+            public void run() {
+                final boolean changed = Drops.refresh(getApplicationContext());
+                ui.post(new Runnable() {
+                    public void run() {
+                        if (changed && !launching) { buildCards(); applyAll(false); }
+                    }
+                });
+            }
+        }).start();
+    }
+
+    void openMood(final int i, View src) {
+        if (launching) return;
+        final String key = Moods.KEYS[i];
+        final int n = Moods.songs(this, key).size();
+        if (n < 5) { showToast("Stimmungen werden noch berechnet – kommt mit dem nächsten Update"); return; }
+        hypeIdx = -2;
+        hypeName = Moods.LABEL[i];
+        hypeSub = "STIMMUNG  ·  " + n + " SONGS";
+        hypeColor = Moods.C1[i];
+        launchFx(src, Moods.C1[i], Moods.C2[i], Moods.LABEL[i], new Callable<Boolean>() {
+            public Boolean call() {
+                AppDef yt = AppDef.byId("youtube");
+                if (yt == null || yt.pkg == null) { showToast("YouTube nicht gefunden"); return false; }
+                MediaWatcher.startMood(MainActivity.this, yt.pkg, key);
+                overridePendingTransition(0, 0);
+                return true;
+            }
+        });
+    }
+
     void openRapper(final Rapper r, View src, final String firstId) {
         if (launching) return;
         if (r.isFav() && Library.favorites(this).isEmpty()) {
             showToast("Noch keine Favoriten: drück ▼ während ein Song läuft");
             return;
         }
+        hypeIdx = Math.max(0, java.util.Arrays.asList(Rapper.LIST).indexOf(r));
+        hypeName = r.isFav() ? "Favoriten" : r.name;
+        hypeSub = (r.isMix() ? "MIX" : "SHUFFLE") + "  ·  " + r.songs(this).size() + " SONGS";
+        hypeColor = r.c1;
         launchFx(src, r.c1, r.c2, r.name, new Callable<Boolean>() {
             public Boolean call() { return playRapper(r, firstId); }
         });
@@ -2322,6 +2592,21 @@ public class MainActivity extends Activity {
         launchAnim.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator an) {
+                if (launchFx != fx) return;
+                final int h = hypeIdx;
+                hypeIdx = -1;
+                if (h != -1) {
+                    // Hype-Intro (Rapper / Stimmung), danach erst YouTube starten
+                    Hype.play(MainActivity.this, fx, h, hypeName, hypeSub, hypeColor, new Runnable() {
+                        public void run() {
+                            if (launchFx != fx) return;
+                            boolean ok = false;
+                            try { ok = go.call(); } catch (Exception e) { Log.e(HomeWatcherService.TAG, "Start", e); }
+                            if (!ok) clearLaunchFx(true);
+                        }
+                    });
+                    return;
+                }
                 boolean ok = false;
                 try { ok = go.call(); } catch (Exception e) { Log.e(HomeWatcherService.TAG, "Start", e); }
                 if (!ok) clearLaunchFx(true);
@@ -2511,6 +2796,7 @@ public class MainActivity extends Activity {
         hideSystemUi();
         HomeWatcherService.allowAmazonHome = false;
         resetIdle();
+        refreshDrops();
         if (first) { first = false; return; }
         long away = pausedAt == 0 ? 0 : SystemClock.elapsedRealtime() - pausedAt;
         boolean woke = wokeUp;

@@ -53,7 +53,17 @@ public class MediaWatcher extends NotificationListenerService {
     /** Album / Mixtape in der richtigen Reihenfolge. */
     static String albumTitle = null;
 
+    /** Stimmungs-Shuffle (Rage / Chill / …): Songs aller Rapper, Schlüssel aus Moods.KEYS. */
+    static String mood = null;
+
+    static void startMood(Context c, String pkg, String key) {
+        albumTitle = null;
+        mood = key;
+        startQueue(c, pkg, Rapper.FAV, Moods.songs(c, key), true, null);
+    }
+
     static void startAlbum(Context c, String pkg, int index, List<String> tracks, String title) {
+        mood = null;
         albumTitle = title;
         startQueue(c, pkg, index, new ArrayList<>(tracks), false, null);
     }
@@ -61,6 +71,7 @@ public class MediaWatcher extends NotificationListenerService {
     /** firstId: dieser Song zuerst (z. B. "Neu erschienen"), danach gemischt. */
     static void start(Context c, String pkg, int index, String firstId) {
         albumTitle = null;
+        mood = null;
         startQueue(c, pkg, index, Rapper.LIST[index].songs(c), true, firstId);
     }
 
@@ -79,7 +90,7 @@ public class MediaWatcher extends NotificationListenerService {
         foreignInRow = 0;
         appCtx = c.getApplicationContext();
         unmuteHard(c);
-        log(c, "Shuffle gestartet: " + r.name + " (" + queue.size() + " Songs)");
+        log(c, "Shuffle gestartet: " + (mood != null ? "Stimmung " + mood : r.name) + " (" + queue.size() + " Songs)");
         HomeWatcherService.overlayShow(index);
         Loudness.on();
         JblBox.wanted = true;
@@ -362,6 +373,7 @@ public class MediaWatcher extends NotificationListenerService {
                 foreignInRow = 0;
                 log(this, "unser Song: " + t + " / " + artist + " dur=" + curDur);
                 Library.record(this, whoSings(t, artist), LyricsOverlay.cleanTitle(t, whoSings(t, artist)));
+                Library.history(this, currentId(), whoSings(t, artist), LyricsOverlay.cleanTitle(t, whoSings(t, artist)));
                 unmute();
                 HomeWatcherService.overlayTrack(t, artist, curDur);
             }
