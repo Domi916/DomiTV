@@ -132,6 +132,8 @@ public class MainActivity extends Activity {
     boolean wokeUp = false;
 
     // ---------- Ansichten ----------
+    Quiz quiz;
+    TextView profTop, profSub, statV;
     FrameLayout root, bgWrap, kbWrap, ringWrap, lift, heroWrap, dock, cont, cardsRow, intro, header, rapStage, rapRow, rapRow2, albumRow;
     View contHead;
     final FrameLayout[] fxw = new FrameLayout[AppDef.APPS.length];
@@ -372,6 +374,12 @@ public class MainActivity extends Activity {
         rapName.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         rapName.setVisibility(View.GONE);
         rapStage.addView(rapName, atD(60, 120, 4200, 420));
+        // Rapper-Steckbrief (oben links, wenn ein Rapper gewählt ist)
+        profTop = text("", 17, "Bold", 0xffff3d6e, 0.22f);
+        profSub = text("", 24, "SemiBold", Gfx.w(0.86f), 0);
+        profSub.setSingleLine(true);
+        rapStage.addView(profTop, atD(96, 178, 1500, 30));
+        rapStage.addView(profSub, atD(96, 210, 1500, 40));
         rapPulse = ValueAnimator.ofFloat(0f, 1f);
         rapPulse.setDuration(5200);           // langsames Atmen
         rapPulse.setRepeatCount(ValueAnimator.INFINITE);
@@ -415,7 +423,11 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams dl = new LinearLayout.LayoutParams(-2, -2);
         dl.topMargin = px(5);
         who.addView(date, dl);
-        header.addView(who, atD(172, 66, 900, 70));
+        statV = text("", 18, "SemiBold", Gfx.a(TXT, 0.75f), 0);
+        LinearLayout.LayoutParams stl = new LinearLayout.LayoutParams(-2, -2);
+        stl.topMargin = px(6);
+        who.addView(statV, stl);
+        header.addView(who, atD(172, 66, 1100, 110));
 
         LinearLayout pill = new LinearLayout(this);
         pill.setOrientation(LinearLayout.HORIZONTAL);
@@ -591,7 +603,7 @@ public class MainActivity extends Activity {
         moodRow = new FrameLayout(this);
         moodRow.setClipChildren(false);
         cont.addView(moodRow, atD(0, 1620, 2000, 260));
-        moodCards = new RapCard[Moods.KEYS.length];
+        moodCards = new RapCard[Moods.ROW];
         for (int i = 0; i < moodCards.length; i++) {
             moodCards[i] = buildMoodCard(i);
             moodRow.addView(moodCards[i].view, atD(i * 430, 0, 400, 190));
@@ -1670,9 +1682,60 @@ public class MainActivity extends Activity {
         });
     }
 
+    final java.util.Map<Integer, String> newest = new java.util.HashMap<>();
+
+    /** Neuestes Release eines Rappers ("Titel (EP)") aus assets/albums. */
+    String newestRelease(int r) {
+        if (newest.containsKey(r)) return newest.get(r);
+        String out = null;
+        try {
+            InputStream in = getAssets().open("albums/" + Rapper.slug(Rapper.LIST[r].name) + ".json");
+            org.json.JSONArray a = new org.json.JSONArray(Drops.read(in));
+            if (a.length() > 0) {
+                org.json.JSONObject o = a.getJSONObject(0);
+                String t = o.optString("type", "album");
+                out = o.optString("title") + " (" + ("single".equals(t) ? "Single" : "ep".equals(t) ? "EP" : "Album") + ")";
+            }
+        } catch (Exception ignored) { }
+        newest.put(r, out);
+        return out;
+    }
+
+    /** Steckbrief: diese Woche / insgesamt gehört, Top-Song, neuestes Release. */
+    void profile(int r) {
+        if (profTop == null) return;
+        Rapper rp = Rapper.LIST[r];
+        if (rp.isSpecial()) { profTop.animate().alpha(0f).setDuration(200).start(); profSub.animate().alpha(0f).setDuration(200).start(); return; }
+        Stats st = Stats.last;
+        int wk = st == null ? 0 : st.plays(st.weekBy, rp.name), all = st == null ? 0 : st.plays(st.allBy, rp.name);
+        String top = st == null ? null : st.topSong.get(rp.name);
+        String nw = newestRelease(r);
+        profTop.setTextColor(rp.c1);
+        profTop.setText((wk > 0 ? "DIESE WOCHE " + wk + "×" : "DIESE WOCHE NOCH NICHT GEHÖRT") + (all > 0 ? "   ·   INSGESAMT " + all + "×" : ""));
+        StringBuilder sb = new StringBuilder();
+        if (top != null) sb.append("Dein Top-Song: ").append(top);
+        if (nw != null) sb.append(sb.length() > 0 ? "     ·     " : "").append("Neu: ").append(nw);
+        profSub.setText(sb.toString());
+        for (View v : new View[]{profTop, profSub}) {
+            v.animate().cancel();
+            v.setAlpha(0f);
+            v.setTranslationY(px(8));
+            v.animate().alpha(1f).translationY(0).setDuration(380).setStartDelay(120).start();
+        }
+    }
+
+    /** Hör-Statistik unter dem Datum. */
+    void showStats() {
+        Stats st = Stats.last;
+        if (statV == null || st == null) return;
+        statV.setText(st.weekPlays == 0 ? "Diese Woche noch nichts gehört"
+                : "♪  Diese Woche ca. " + st.weekTime() + (st.weekTop != null ? "   ·   Top: " + st.weekTop : ""));
+    }
+
     void setRapper(final int r, boolean anim) {
         if (r == shownRapper) return;
         shownRapper = r;
+        profile(r);
         rapGlow.setImageBitmap(rapGlows[r]);
         showRapperPics(r, anim);
     }
@@ -1794,6 +1857,19 @@ public class MainActivity extends Activity {
                     c.right = "";
                     cards.add(Math.min(cards.size(), dp + (lr >= 0 ? 1 : 0) + 1), c);
                 }
+            }
+            // Song-Quiz
+            {
+                Card c = new Card();
+                c.app = ytApp;
+                c.kind = "quiz";
+                c.tag = "Spiel";
+                c.title = "Song-Quiz";
+                int rec = 0;
+                try { org.json.JSONArray qb = new org.json.JSONArray(prefs.getString("quizBest", "[]")); if (qb.length() > 0) rec = qb.getJSONObject(0).getInt("s"); } catch (Exception ignored) { }
+                c.sub = "Welcher Song ist das?" + (rec > 0 ? " · Rekord " + rec : "");
+                c.right = "";
+                cards.add(c);
             }
             // Wochen-Rückblick
             String[] wk = Library.weekRecap(this);
@@ -2266,6 +2342,7 @@ public class MainActivity extends Activity {
     void key(String k) {
         resetIdle();
         if (saverOn) { hideSaver(true); return; }
+        if (quiz != null) { quiz.key(k); return; }
         if (launching) return;
         if (introRunning()) { skipIntro(); return; }
         int n = APPS.length;
@@ -2285,6 +2362,7 @@ public class MainActivity extends Activity {
                 Card c = cards.get(cSel);
                 if (c.hint) showToast("Öffne eine App, dann erscheint sie hier");
                 else if (c.drop != null) openDrop(c.drop, c.view);
+                else if ("quiz".equals(c.kind)) { quiz = new Quiz(this); quiz.open(root); }
                 else if (c.rapper >= 0) openRapper(RAP[c.rapper], c.view, "new".equals(c.kind) || "tw".equals(c.kind) ? c.songId : null);
                 else openAppFx(c.app, c.view);
             }
@@ -2538,6 +2616,8 @@ public class MainActivity extends Activity {
         new Thread(new Runnable() {
             public void run() {
                 boolean yt = YtmSync.run(getApplicationContext());
+                Stats.compute(getApplicationContext());
+                ui.post(new Runnable() { public void run() { showStats(); if (shownRapper >= 0) profile(shownRapper); } });
                 final boolean changed = Drops.refresh(getApplicationContext()) | yt;
                 ui.post(new Runnable() {
                     public void run() {
@@ -2885,6 +2965,8 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        // Test: Quiz direkt öffnen (nur Vorschau)
+        if (intent.getBooleanExtra("fx_quiz", false) && quiz == null) { quiz = new Quiz(this); quiz.open(root); }
     }
 
     @Override

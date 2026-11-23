@@ -12,11 +12,13 @@ import java.util.Set;
 
 /** Stimmungs-Shuffle: alle Songs deiner Rapper nach Tempo/Energie sortiert (Daten: assets/moods.json, von GitHub). */
 final class Moods {
-    static final String[] KEYS = {"rage", "chill", "nacht", "auto"};
-    static final String[] LABEL = {"Rage", "Chill", "Nachts", "Auto fahren"};
-    static final String[] SUB = {"Hart, laut, schnell", "Runterkommen", "Dunkel und ruhig", "Mitnicken, Fenster runter"};
-    static final int[] C1 = {0xffff3d1f, 0xff2fd6c3, 0xff6a5cff, 0xffffb02e};
-    static final int[] C2 = {0xff2a0500, 0xff021a18, 0xff0a0626, 0xff241500};
+    static final String[] KEYS = {"rage", "chill", "nacht", "auto", "like"};
+    static final String[] LABEL = {"Rage", "Chill", "Nachts", "Auto fahren", "Mehr wie das"};
+    static final String[] SUB = {"Hart, laut, schnell", "Runterkommen", "Dunkel und ruhig", "Mitnicken, Fenster runter", "Ähnliche Songs"};
+    static final int[] C1 = {0xffff3d1f, 0xff2fd6c3, 0xff6a5cff, 0xffffb02e, 0xffff5c8a};
+    static final int[] C2 = {0xff2a0500, 0xff021a18, 0xff0a0626, 0xff241500, 0xff22040f};
+    /** Karten in der Stimmungs-Reihe (ohne "Mehr wie das"). */
+    static final int ROW = 4;
 
     static JSONObject data;
 
@@ -48,6 +50,42 @@ final class Moods {
             String id = a.optString(i);
             if (id.length() == 11 && !blocked.contains(id) && !out.contains(id)) out.add(id);
         }
+        return out;
+    }
+
+    /** Songs, die ähnlich klingen wie {@code id}: gleiche Stimmungen + ähnliches Tempo, von allen deinen Rappern. */
+    static List<String> similar(Context c, String id, int n) {
+        JSONObject d = load(c);
+        java.util.Map<String, Integer> mask = new java.util.HashMap<>();
+        for (int k = 0; k < ROW; k++) {
+            JSONArray a = d.optJSONArray(KEYS[k]);
+            if (a == null) continue;
+            for (int i = 0; i < a.length(); i++) {
+                String x = a.optString(i);
+                Integer m = mask.get(x);
+                mask.put(x, (m == null ? 0 : m) | (1 << k));
+            }
+        }
+        Integer mine = id == null ? null : mask.get(id);
+        int me = mine == null ? (1 << 3) : mine;
+        int bpm = bpm(c, id);
+        Set<String> blocked = Library.blocked(c);
+        final java.util.Map<String, Float> score = new java.util.HashMap<>();
+        for (java.util.Map.Entry<String, Integer> e : mask.entrySet()) {
+            if (e.getKey().equals(id) || blocked.contains(e.getKey())) continue;
+            int both = Integer.bitCount(e.getValue() & me), diff = Integer.bitCount(e.getValue() ^ me);
+            float sc = both * 2f - diff;
+            int b2 = bpm(c, e.getKey());
+            if (bpm > 0 && b2 > 0) sc -= Math.abs(bpm - b2) / 20f;
+            sc += (float) Math.random() * 0.8f;   // jedes Mal etwas anders
+            score.put(e.getKey(), sc);
+        }
+        List<String> out = new ArrayList<>(score.keySet());
+        java.util.Collections.sort(out, new java.util.Comparator<String>() {
+            public int compare(String a, String b) { return Float.compare(score.get(b), score.get(a)); }
+        });
+        if (out.size() > n) out = new ArrayList<>(out.subList(0, n));
+        java.util.Collections.shuffle(out);
         return out;
     }
 

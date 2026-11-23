@@ -65,6 +65,12 @@ adb shell input keyevent 82; sleep 1.5; shot 24_mode_video
 adb shell input keyevent 82; sleep 1
 adb shell am broadcast -a at.domi.tvlauncher.TEST_OVERLAY --es title hide
 sleep 1
+# Song-Quiz
+adb shell am start -n at.domi.tvlauncher/.MainActivity --ez fx_test true --ez fx_quiz true
+sleep 9; shot 40_quiz_a
+adb shell input keyevent 22; sleep 0.6; adb shell input keyevent 23; sleep 0.8; shot 41_quiz_answer
+sleep 2.5; shot 42_quiz_next
+adb shell input keyevent 4; sleep 1.5; shot 43_quiz_closed
 adb shell dumpsys gfxinfo at.domi.tvlauncher > shots/gfxinfo.txt
 adb logcat -d -s AndroidRuntime:E DomiTV:* > shots/logcat.txt
 adb logcat -d | grep -iE "FATAL|Exception|DomiTV" | head -100 > shots/errors.txt

@@ -32,6 +32,8 @@ public class HomeWatcherService extends AccessibilityService {
     LyricsOverlay overlay;
 
     static long lastSkip = 0;
+    long downAt = 0;
+    boolean likeDone = false;
 
     static void overlayShow(final int rapper) {
         final HomeWatcherService s = instance;
@@ -244,7 +246,17 @@ public class HomeWatcherService extends AccessibilityService {
         }
         // ▼ Favorit ♥   ▲ Song nie wieder
         if (overlayOn && k == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
+            // ▼ gedrückt halten (~0,8 s): "Mehr wie das"
+            if (e.getAction() == android.view.KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) downAt = SystemClock.elapsedRealtime();
+            if (e.getAction() == android.view.KeyEvent.ACTION_DOWN && !likeDone
+                    && SystemClock.elapsedRealtime() - downAt > 800) {
+                likeDone = true;
+                int n = MediaWatcher.moreLikeThis(this);
+                overlay.badge(n > 0 ? "Mehr wie das  ·  danach " + n + " ähnliche Songs" : "Keine ähnlichen Songs gefunden");
+                return true;
+            }
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) {
+                if (likeDone) { likeDone = false; return true; }
                 boolean fav = MediaWatcher.toggleFavorite(this);
                 overlay.badge(fav ? "♥  Zu Favoriten hinzugefügt" : "Aus Favoriten entfernt");
                 overlay.updateFav();

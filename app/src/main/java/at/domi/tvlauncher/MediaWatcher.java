@@ -63,6 +63,20 @@ public class MediaWatcher extends NotificationListenerService {
         startQueue(c, pkg, Rapper.FAV, Moods.songs(c, key), true, null);
     }
 
+    /** "Mehr wie das": der aktuelle Song läuft weiter, danach kommen ähnliche Songs aller Rapper. */
+    static int moreLikeThis(Context c) {
+        if (!active) return 0;
+        List<String> sim = Moods.similar(c, currentId(), 30);
+        if (sim.isEmpty()) return 0;
+        while (queue.size() > pos + 1) queue.remove(queue.size() - 1);
+        queue.addAll(sim);
+        mood = "like";
+        albumTitle = null;
+        members = Rapper.LIST[Rapper.FAV].members();
+        log(c, "Mehr wie das: " + sim.size() + " ähnliche Songs");
+        return sim.size();
+    }
+
     static void startAlbum(Context c, String pkg, int index, List<String> tracks, String title) {
         mood = null;
         albumTitle = title;

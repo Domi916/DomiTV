@@ -283,7 +283,7 @@ final class LyricsOverlay {
         title.setText("");
         clearLyrics("");
         status.setText("Lädt …");
-        hint.setText("◀ ▶ Song   OK Pause   ▼ ♥ Favorit   ▲ nie wieder   ☰ Anzeige   ↩ Ende");
+        hint.setText("◀ ▶ Song   OK Pause   ▼ ♥ Favorit (halten: mehr wie das)   ▲ nie wieder   ☰ Anzeige   ↩ Ende");
         if (!added) {
             try {
                 wm.addView(root, params());
@@ -481,8 +481,10 @@ final class LyricsOverlay {
         if (r.isMix()) label.setText(who.toUpperCase(Locale.ROOT) + "  ·  MIX");
         if (r.isFav()) label.setText(who.toUpperCase(Locale.ROOT) + "  ·  "
                 + (MediaWatcher.mood != null ? Moods.LABEL[Moods.index(MediaWatcher.mood)].toUpperCase(Locale.ROOT) : "FAVORITEN"));
+        if (MediaWatcher.mood != null)
+            label.setText(who.toUpperCase(Locale.ROOT) + "  ·  " + Moods.LABEL[Moods.index(MediaWatcher.mood)].toUpperCase(Locale.ROOT));
         // Mix / Favoriten / Stimmung: Foto des Rappers, der gerade läuft
-        if (r.isSpecial()) photoFor(Library.rapperIndexByName(who));
+        if (r.isSpecial() || MediaWatcher.mood != null) photoFor(Library.rapperIndexByName(who));
         partyBpm = Moods.bpm(c, MediaWatcher.currentId());
         if (party) startAmbient();
         final String artistName = who;
