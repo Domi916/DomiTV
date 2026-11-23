@@ -2,7 +2,7 @@ name: Songlisten aktualisieren
 
 on:
   schedule:
-    - cron: '17 4 * * 1'   # jeden Montag früh
+    - cron: '17 4 * * *'   # jeden Tag früh (neue Songs + Drops am selben Tag)
   workflow_dispatch:
 
 permissions:
@@ -19,15 +19,20 @@ jobs:
         run: |
           rm -rf app/src/main/assets/covers app/src/main/assets/albums
           python3 tools/songs.py
+      - name: Stimmungen und Drops
+        run: python3 tools/extras.py
       - name: Speichern und neu bauen
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "Domi TV Bot"
           git config user.email "bot@users.noreply.github.com"
-          git add -A app/src/main/assets/songs app/src/main/assets/albums app/src/main/assets/covers
+          git add -A app/src/main/assets/songs app/src/main/assets/albums app/src/main/assets/covers \
+                     app/src/main/assets/moods.json app/src/main/assets/drops.json tools/mood_cache.json
           if git diff --cached --quiet; then echo "keine Änderung"; exit 0; fi
+          BUILD=1
+          if git diff --cached --quiet -- app/src/main/assets; then BUILD=0; fi
           git commit -m "Songlisten aktualisiert"
           git pull --rebase origin main
           git push
-          gh workflow run build.yml --ref main
+          if [ "$BUILD" = 1 ]; then gh workflow run build.yml --ref main; fi
