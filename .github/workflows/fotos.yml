@@ -8,8 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: pip install -q "opencv-python-headless<5" pillow numpy
-      - run: python3 tools/fotos.py
+      - run: pip install -q pillow
+      - run: python3 tools/pins.py
       - uses: actions/upload-artifact@v4
         with:
           name: kandidaten
