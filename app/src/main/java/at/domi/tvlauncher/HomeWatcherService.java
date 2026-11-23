@@ -267,10 +267,22 @@ public class HomeWatcherService extends AccessibilityService {
             return true;
         }
         // Zurück während des Shuffles: Musik aus, zurück zu Domi TV
+        // Notausgang: Songtext-Anzeige hängt, obwohl kein Shuffle mehr läuft -> ↩ macht sie zu
+        if (!MediaWatcher.active && overlay != null && overlay.added && k == android.view.KeyEvent.KEYCODE_BACK) {
+            if (e.getAction() == android.view.KeyEvent.ACTION_UP) {
+                overlay.hide();
+                MediaWatcher.pauseYouTube();
+                Intent i = new Intent(this, MainActivity.class);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                try { startActivity(i); } catch (Exception ignored) { }
+            }
+            return true;
+        }
         if (MediaWatcher.active && k == android.view.KeyEvent.KEYCODE_BACK) {
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) {
                 MediaWatcher.pauseYouTube();
                 MediaWatcher.stop();
+                if (overlay != null) overlay.hide();
                 Intent i = new Intent(this, MainActivity.class);
                 i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                 try { startActivity(i); } catch (Exception ignored) { }

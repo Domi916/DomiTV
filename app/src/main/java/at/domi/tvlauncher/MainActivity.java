@@ -561,6 +561,8 @@ public class MainActivity extends Activity {
         sngRow.setClipChildren(false);
         cont.addView(sngRow, atD(0, 1020, 60000, 260));
         singles = Album.load(this, false);
+        // nur die neuesten 90 – mehr Karten machen die Startseite träge
+        if (singles.size() > 90) singles = new ArrayList<>(singles.subList(0, 90));
         sngCards = new RapCard[singles.size()];
         for (int i = 0; i < singles.size(); i++) {
             sngCards[i] = buildAlbumCard(singles.get(i));
@@ -730,19 +732,32 @@ public class MainActivity extends Activity {
             int first = Math.max(0, center - 5);   // erste sichtbare Karte (Reihe scrollt ab Karte 6)
             boolean near = i >= first - 2 && i <= first + 10;
             if (near && !rc.coverLoaded) {
-                Bitmap b = coverCache.get(rc.coverPath);
-                if (b == null) {
-                    try {
-                        InputStream in = getAssets().open(rc.coverPath);
-                        BitmapFactory.Options o = new BitmapFactory.Options();
-                        o.inPreferredConfig = Bitmap.Config.RGB_565;
-                        b = BitmapFactory.decodeStream(in, null, o);
-                        in.close();
-                        if (b != null) coverCache.put(rc.coverPath, b);
-                    } catch (Exception ignored) { }
-                }
-                rc.cover.setImageBitmap(b);
                 rc.coverLoaded = true;
+                Bitmap b = coverCache.get(rc.coverPath);
+                if (b != null) { rc.cover.setImageBitmap(b); continue; }
+                final RapCard card = rc;
+                bg.execute(new Runnable() {
+                    public void run() {
+                        Bitmap x = null;
+                        try {
+                            InputStream in = getAssets().open(card.coverPath);
+                            BitmapFactory.Options o = new BitmapFactory.Options();
+                            o.inPreferredConfig = Bitmap.Config.RGB_565;
+                            x = BitmapFactory.decodeStream(in, null, o);
+                            in.close();
+                            if (x != null) coverCache.put(card.coverPath, x);
+                        } catch (Exception ignored) { }
+                        final Bitmap fx = x;
+                        ui.post(new Runnable() {
+                            public void run() {
+                                if (!card.coverLoaded) return;
+                                card.cover.setAlpha(0f);
+                                card.cover.setImageBitmap(fx);
+                                card.cover.animate().alpha(1f).setDuration(220).start();
+                            }
+                        });
+                    }
+                });
             } else if (!near && rc.coverLoaded) {
                 rc.cover.setImageDrawable(null);
                 rc.coverLoaded = false;
@@ -814,7 +829,7 @@ public class MainActivity extends Activity {
         ring.setAlpha(0f);
         f.addView(ring, new FrameLayout.LayoutParams(-1, -1));
         f.setAlpha(0.62f);
-        f.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        // kein eigener Grafik-Layer pro Karte: bei 300 Karten kostet das zu viel Grafikspeicher
         rc.view = f;
         rc.ring = ring;
         rc.play = play;
@@ -1594,7 +1609,7 @@ public class MainActivity extends Activity {
         if (pl.isEmpty()) { showRapPic(null, anim, fadeMs); return; }
         rapPlayPos = (rapPlayPos + 1) % pl.size();
         int[] e = pl.get(rapPlayPos);
-        showRapPic(loadRapPic(e[0], e[1]), anim, fadeMs);
+        showRapPicAsync(e[0], e[1], anim, fadeMs);
     }
 
     final Runnable rapCycle = new Runnable() {
@@ -1603,7 +1618,7 @@ public class MainActivity extends Activity {
             int n = rapPicCount(shownRapper);
             if (n > 1) {
                 rapPicIdx = (rapPicIdx + 1) % n;
-                showRapPic(loadRapPic(shownRapper, rapPicIdx), true, 900);
+                showRapPicAsync(shownRapper, rapPicIdx, true, 900);
             }
             ui.postDelayed(this, 7000);
         }
@@ -1611,18 +1626,48 @@ public class MainActivity extends Activity {
 
     void showRapperPics(int r, boolean anim) {
         rapPicIdx = 0;
-        showRapPic(rapPicCount(r) > 0 ? loadRapPic(r, 0) : null, anim, 550);
+        if (rapPicCount(r) > 0) showRapPicAsync(r, 0, anim, 550);
+        else showRapPic(null, anim, 550);
         ui.removeCallbacks(rapCycle);
         ui.postDelayed(rapCycle, 7000);
     }
 
+    final java.util.concurrent.ExecutorService bg = java.util.concurrent.Executors.newSingleThreadExecutor();
+    final android.util.LruCache<String, Bitmap> picCache = new android.util.LruCache<String, Bitmap>(28 * 1024 * 1024) {
+        @Override
+        protected int sizeOf(String k, Bitmap b) { return b.getByteCount(); }
+    };
+
+    /** Rapper-Foto laden (gemerkt, RGB_565 = halber Speicher). Nur im Hintergrund aufrufen. */
     Bitmap loadRapPic(int r, int k) {
+        String key = "rap/" + r + "_" + k + ".jpg";
+        Bitmap b = picCache.get(key);
+        if (b != null) return b;
         try {
-            InputStream in = getAssets().open("rap/" + r + "_" + k + ".jpg");
-            Bitmap b = BitmapFactory.decodeStream(in);
+            InputStream in = getAssets().open(key);
+            BitmapFactory.Options o = new BitmapFactory.Options();
+            o.inPreferredConfig = Bitmap.Config.RGB_565;
+            b = BitmapFactory.decodeStream(in, null, o);
             in.close();
+            if (b != null) picCache.put(key, b);
             return b;
         } catch (Exception e) { return null; }
+    }
+
+    /** Foto im Hintergrund laden und dann weich einblenden – die Fernbedienung bleibt flüssig. */
+    void showRapPicAsync(final int r, final int k, final boolean anim, final long fadeMs) {
+        final String key = "rap/" + r + "_" + k + ".jpg";
+        Bitmap c = picCache.get(key);
+        if (c != null) { showRapPic(c, anim, fadeMs); return; }
+        final int want = shownRapper;
+        bg.execute(new Runnable() {
+            public void run() {
+                final Bitmap b = loadRapPic(r, k);
+                ui.post(new Runnable() {
+                    public void run() { if (shownRapper == want) showRapPic(b, anim, fadeMs); }
+                });
+            }
+        });
     }
 
     void setRapper(final int r, boolean anim) {
@@ -2349,12 +2394,24 @@ public class MainActivity extends Activity {
         }
         if (saverFiles.length == 0) return;
         svPos = (svPos + 1) % saverFiles.length;
-        Bitmap pic = null;
-        try {
-            InputStream in = getAssets().open("saver/" + saverFiles[svPos]);
-            pic = BitmapFactory.decodeStream(in);
-            in.close();
-        } catch (Exception ignored) { }
+        final String f = saverFiles[svPos];
+        bg.execute(new Runnable() {
+            public void run() {
+                Bitmap pic = null;
+                try {
+                    InputStream in = getAssets().open("saver/" + f);
+                    BitmapFactory.Options o = new BitmapFactory.Options();
+                    o.inPreferredConfig = Bitmap.Config.RGB_565;
+                    pic = BitmapFactory.decodeStream(in, null, o);
+                    in.close();
+                } catch (Exception ignored) { }
+                final Bitmap p = pic;
+                ui.post(new Runnable() { public void run() { if (saverOn) showSaverPic(p); } });
+            }
+        });
+    }
+
+    void showSaverPic(Bitmap pic) {
         final ImageView next = svUseA ? svB : svA, old = svUseA ? svA : svB;
         svUseA = !svUseA;
         next.setImageBitmap(pic);

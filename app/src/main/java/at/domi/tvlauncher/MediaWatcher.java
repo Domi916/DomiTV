@@ -42,6 +42,7 @@ public class MediaWatcher extends NotificationListenerService {
     /** Nach dem Starten eines Songs: der erste neue Titel, den YouTube meldet, ist unserer (egal wie lange das Laden dauert). */
     static boolean awaitingOurs = false;
     static int stuck = 0;
+    int scan = 0;
     static String prevTitle = null;
     static String rapperName = "";
     static String[] members = new String[0];
@@ -92,7 +93,8 @@ public class MediaWatcher extends NotificationListenerService {
         unmuteHard(c);
         log(c, "Shuffle gestartet: " + (mood != null ? "Stimmung " + mood : r.name) + " (" + queue.size() + " Songs)");
         HomeWatcherService.overlayShow(index);
-        Loudness.on();
+        // Lautstärke-Angleichung aus: sie hat die Lautstärke hörbar pumpen lassen
+        Loudness.off();
         JblBox.wanted = true;
         final Context app = c.getApplicationContext();
         // erst die Box verbinden, dann YouTube starten (sonst bleibt YouTube beim Ton-Wechsel hängen)
@@ -278,6 +280,22 @@ public class MediaWatcher extends NotificationListenerService {
             h.postDelayed(this, 400);
             // manche Apps melden die Position nur auf Nachfrage
             try { if (active && current != null) applyState(current.getPlaybackState()); } catch (Exception ignored) { }
+            long since = SystemClock.elapsedRealtime() - launchedAt;
+            // alle 3 s: neue YouTube-Sitzungen suchen (YouTube baut seine Sitzung manchmal neu auf)
+            if (active && msm != null && ++scan % 8 == 0) {
+                try { attach(msm.getActiveSessions(new ComponentName(MediaWatcher.this, MediaWatcher.class))); } catch (Exception ignored) { }
+            }
+            // Song läuft schon, wurde aber nicht erkannt (z. B. gleicher Titel wie vorher): nochmal prüfen
+            if (active && awaitingOurs && since > 4000 && current != null) {
+                try {
+                    PlaybackState ps = current.getPlaybackState();
+                    MediaMetadata md = current.getMetadata();
+                    if (ps != null && ps.getState() == PlaybackState.STATE_PLAYING && md != null) {
+                        if (since > 15000) prevTitle = null;   // "gleicher Titel wie vorher" gilt nicht mehr
+                        onTrack(md);
+                    }
+                } catch (Exception ignored) { }
+            }
             // Notbremse: Song lädt seit 30 Sekunden nicht -> nächster Song, nach 3 Fehlversuchen Schluss
             if (active && awaitingOurs && SystemClock.elapsedRealtime() - launchedAt > 30000) {
                 stuck++;
