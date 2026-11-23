@@ -170,12 +170,16 @@ final class Library {
     // ---------------- Verlauf (für Zeitreise / Song der Woche) ----------------
     /** Jeder gehörte Song: Zeit, Video-ID, Rapper, Titel (files/history.tsv, ~400 Tage). */
     static synchronized void history(Context c, String id, String artist, String title) {
+        history(c, System.currentTimeMillis(), id, artist, title);
+    }
+
+    static synchronized void history(Context c, long ts, String id, String artist, String title) {
         if (id == null) return;
         try {
             java.io.File f = new java.io.File(c.getFilesDir(), "history.tsv");
             if (f.length() > 600000) trimHistory(f);
             java.io.FileWriter w = new java.io.FileWriter(f, true);
-            w.write(System.currentTimeMillis() + "\t" + id + "\t" + artist.replace("\t", " ") + "\t"
+            w.write(ts + "\t" + id + "\t" + artist.replace("\t", " ") + "\t"
                     + title.replace("\t", " ").replace("\n", " ") + "\n");
             w.close();
         } catch (Exception ignored) { }

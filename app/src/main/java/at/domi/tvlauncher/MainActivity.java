@@ -2480,7 +2480,8 @@ public class MainActivity extends Activity {
     void refreshDrops() {
         new Thread(new Runnable() {
             public void run() {
-                final boolean changed = Drops.refresh(getApplicationContext());
+                boolean yt = YtmSync.run(getApplicationContext());
+                final boolean changed = Drops.refresh(getApplicationContext()) | yt;
                 ui.post(new Runnable() {
                     public void run() {
                         if (changed && !launching) { buildCards(); applyAll(false); }
