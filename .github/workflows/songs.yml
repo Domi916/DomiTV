@@ -4,6 +4,10 @@ on:
   schedule:
     - cron: '17 4 * * *'   # jeden Tag früh (neue Songs + Drops am selben Tag)
   workflow_dispatch:
+    inputs:
+      nur_extras:
+        description: 'Nur Stimmungen/Drops (ohne Songlisten)'
+        default: 'nein'
 
 permissions:
   contents: write
@@ -17,6 +21,7 @@ jobs:
       - run: pip install -q -U yt-dlp pillow
       - name: Alle Songs der Rapper holen
         run: |
+          if [ "${{ github.event.inputs.nur_extras }}" = "ja" ]; then exit 0; fi
           rm -rf app/src/main/assets/covers app/src/main/assets/albums
           python3 tools/songs.py
       - name: Stimmungen und Drops

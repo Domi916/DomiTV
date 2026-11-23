@@ -17,6 +17,7 @@ final class Rapper {
                     "8Zuh44rji24", "aE-9hFktH40", "4DIQDnu3mr4", "Fy7WIdkxwDw", "lTQ8k9uysXo", "5EJ5Ci5UGgk", "6kTjJwPv5V0", "sXYXT70ICnw"),
             new Rapper("Nettspend", "UC6CvS47L6uTuPSPhinE5jKA", 0xffff4fd8, 0xff1c0420,
                     "BRfZe0mLcpw", "9SrWNGvrtVc", "fekiI4Vkt9Y", "wC1ho-3CZcg", "x8gEkJAVd-I", "aUtDhHNTJUE", "PvPGEBaXMRs", "KoH6Fpju-Y4"),
+            new Rapper("slattuhs", "", 0xffff2d6f, 0xff1f0410),
             // ---- Mix aus allen deinen Rappern ----
             new Rapper("Alle Rapper", "", 0xffffb52e, 0xff1f1302),
             // ---- deine Favoriten (♥ mit ▼ während eines Songs) ----
@@ -36,9 +37,9 @@ final class Rapper {
     };
 
     /** Die ersten OWN Einträge sind "Deine Rapper" (inkl. Mix), der Rest "Rapper, die dir gefallen könnten". */
-    static final int OWN = 7;
+    static final int OWN = 8;
     /** Index der Mix-Karte "Alle Rapper" (mischt die ersten MIX_OF Rapper). */
-    static final int MIX = 5, MIX_OF = 5, FAV = 6;
+    static final int MIX = 6, MIX_OF = 6, FAV = 7;
 
     boolean isMix() { return this == LIST[MIX]; }
 

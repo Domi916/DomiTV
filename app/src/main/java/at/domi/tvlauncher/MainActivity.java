@@ -916,7 +916,7 @@ public class MainActivity extends Activity {
         nl.leftMargin = px(22);
         nl.bottomMargin = px(48);
         f.addView(nm, nl);
-        TextView sub = text(r.isMix() ? "Alle 5 gemischt" : r.isFav() ? "Deine Lieblingssongs" : "Shuffle auf YouTube", 16, "Medium", Gfx.w(0.72f), 0);
+        TextView sub = text(r.isMix() ? "Alle " + Rapper.MIX_OF + " gemischt" : r.isFav() ? "Deine Lieblingssongs" : "Shuffle auf YouTube", 16, "Medium", Gfx.w(0.72f), 0);
         FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-2, -2);
         sl.gravity = Gravity.BOTTOM | Gravity.START;
         sl.leftMargin = px(22);

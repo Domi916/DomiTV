@@ -19,7 +19,7 @@ CACHE = os.path.join(os.path.dirname(__file__), "mood_cache.json")
 MANUAL = os.path.join(os.path.dirname(__file__), "drops_manual.json")
 
 # Grundstimmung pro Rapper (+ = eher Rage, - = eher ruhig)
-BASE = {"Ken Carson": .5, "Bleood": .6, "Protect": -.5, "OsamaSon": .7, "Nettspend": 0,
+BASE = {"Ken Carson": .5, "Bleood": .6, "Protect": -.5, "OsamaSon": .7, "Nettspend": 0, "slattuhs": .6,
         "Destroy Lonely": .1, "Playboi Carti": .5, "che": .7, "Yeat": .4, "xaviersobased": .3, "Prettifun": -.2}
 CALM = ("slowed", "reverb", "sad", "love", "alone", "night", "cry", "miss", "dream", "lonely", "rain", "sleep", "heart")
 HARD = ("rage", "kill", "war", "blood", "mosh", "fight", "die", "stomp", "demon", "evil", "riot", "turn up", "chaos")
@@ -38,7 +38,8 @@ def deezer(url):
             if isinstance(d, dict) and d.get("error") and "Quota" in str(d["error"]):
                 time.sleep(5); continue
             return d
-        except Exception:
+        except Exception as e:
+            if DEBUG[0] < 4: print("  Deezer-Fehler:", url[:80], e)
             time.sleep(2)
     return {}
 
@@ -52,12 +53,19 @@ def clean(title, artist):
     return t.strip(" -|\"'")
 
 
+DEBUG = [0]
+
+
 def track_info(artist, title):
     t = clean(title, artist)
     if not norm(t):
         return None
     q = urllib.parse.urlencode({"q": f'artist:"{artist}" track:"{t}"', "limit": 10})
-    for r in (deezer("https://api.deezer.com/search?" + q).get("data") or []):
+    res = deezer("https://api.deezer.com/search?" + q)
+    if DEBUG[0] < 4:
+        DEBUG[0] += 1
+        print("  Deezer-Test:", artist, "|", t, "->", str(res)[:300])
+    for r in (res.get("data") or []):
         rt = norm(re.sub(r"\(.*?\)|\[.*?\]", "", r.get("title") or ""))
         if norm((r.get("artist") or {}).get("name")) == norm(artist) and (rt == norm(t) or norm(t) in rt or rt in norm(t)):
             d = deezer(f"https://api.deezer.com/track/{r['id']}")

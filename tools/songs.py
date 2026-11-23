@@ -4,8 +4,8 @@ und schreibt sie nach app/src/main/assets/songs/<name>.txt  (Zeile: videoId|Tite
 Läuft in GitHub Actions (siehe .github/workflows/songs.yml)."""
 import json, os, re, subprocess, sys
 
-RELEASE_ARTISTS = {"Ken Carson", "Bleood", "Protect", "OsamaSon", "Nettspend", "che", "Prettifun"}
-ARTISTS = ["Ken Carson", "Bleood", "Protect", "OsamaSon", "Nettspend",
+RELEASE_ARTISTS = {"Ken Carson", "Bleood", "Protect", "OsamaSon", "Nettspend", "slattuhs", "che", "Prettifun"}
+ARTISTS = ["Ken Carson", "Bleood", "Protect", "OsamaSon", "Nettspend", "slattuhs",
            "Destroy Lonely", "Playboi Carti", "che", "Yeat", "xaviersobased", "Prettifun"]
 OUT = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "assets", "songs")
 ALB = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "assets", "albums")
