@@ -37,10 +37,23 @@ def main():
     h = headers_from(raw)
     if "cookie" not in h:
         print("YouTube Music: im Secret fehlt das Cookie"); return
-    from ytmusicapi import YTMusic, setup
-    keep = ("cookie", "x-goog-authuser", "user-agent", "accept-language", "x-goog-visitor-id", "origin")
+    from ytmusicapi import YTMusic
+    import ytmusicapi
+    print("ytmusicapi", getattr(ytmusicapi, "__version__", "?"))
+    auth = {
+        "accept": "*/*",
+        "accept-language": h.get("accept-language", "en-US,en;q=0.9"),
+        "content-type": "application/json",
+        "cookie": h["cookie"],
+        "origin": "https://music.youtube.com",
+        "x-origin": "https://music.youtube.com",
+        "user-agent": h.get("user-agent", "Mozilla/5.0"),
+        "x-goog-authuser": h.get("x-goog-authuser", "0"),
+        # wird von ytmusicapi aus dem SAPISID-Cookie neu berechnet, muss aber vorhanden sein
+        "authorization": h.get("authorization", "SAPISIDHASH 0_0"),
+    }
     path = "/tmp/ytm_browser.json"
-    setup(filepath=path, headers_raw="\n".join(f"{k}: {h[k]}" for k in keep if k in h))
+    json.dump(auth, open(path, "w"))
     yt = YTMusic(path)
     hist = yt.get_history()
     print("YouTube Music: Verlauf", len(hist), "Einträge")
