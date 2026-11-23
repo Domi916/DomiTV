@@ -24,15 +24,18 @@ final class Weather {
     static String now = "", hint = "";
     static long fetchedAt = 0;
 
+    static volatile boolean loading = false;
+
     static void load(final Listener l) {
-        if (System.currentTimeMillis() - fetchedAt < 30 * 60 * 1000L && !now.isEmpty()) { l.onWeather(now, hint); return; }
+        if (loading || System.currentTimeMillis() - fetchedAt < 30 * 60 * 1000L) { l.onWeather(now, hint); return; }
+        loading = true;
         final Handler ui = new Handler(Looper.getMainLooper());
         new Thread(new Runnable() {
             public void run() {
                 try {
                     HttpURLConnection c = (HttpURLConnection) new URL(URL_).openConnection();
-                    c.setConnectTimeout(6000);
-                    c.setReadTimeout(8000);
+                    c.setConnectTimeout(15000);
+                    c.setReadTimeout(15000);
                     BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), "UTF-8"));
                     StringBuilder sb = new StringBuilder();
                     String line;
@@ -53,8 +56,12 @@ final class Weather {
                         if (!k.isEmpty() && !k.equals(curKind)) { hint = k + " ab " + i + " Uhr"; break; }
                     }
                     fetchedAt = System.currentTimeMillis();
+                    Log.i("DomiTV", "Wetter: " + now + " " + hint);
                 } catch (Exception e) {
-                    Log.e("DomiTV", "Wetter", e);
+                    Log.e("DomiTV", "Wetter: " + e);
+                    fetchedAt = System.currentTimeMillis() - 28 * 60 * 1000L; // in 2 Minuten nochmal
+                } finally {
+                    loading = false;
                 }
                 ui.post(new Runnable() { public void run() { l.onWeather(now, hint); } });
             }
