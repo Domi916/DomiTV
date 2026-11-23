@@ -70,7 +70,8 @@ def songs_of(name):
                     urls = [("fix", "file://" + os.path.abspath(fix))]
                 else:
                     urls = [("itunes", u) for u in itunes_art(name, al["title"])] + \
-                           [("deezer", u) for u in deezer_art(name, al["title"])]
+                           [("deezer", u) for u in deezer_art(name, al["title"])] + \
+                           [("song", u) for u in song_art(name, al["title"])]
                 cov, src = cover(urls, pick, f"{slug(name)}_{len(albums)}.jpg")
                 print(f"  COVER {src:7s} {typ:6s} {al['title']}")
                 if cov: al["cover"] = cov
@@ -81,6 +82,33 @@ def songs_of(name):
                 if not vid or key in seen: continue
                 seen.add(key)
                 songs.append((vid, title))
+        if name in RELEASE_ARTISTS and albums:
+            have = {norm(re.sub(r"\(.*?\)|\[.*?\]", "", a["title"])) for a in albums}
+            for k, t in sorted(official_titles(name).items()):
+                if not k or "feat" in t.lower() or " w/ " in t.lower(): continue
+                if k in have or any(k in h or h in k for h in have if len(h) > 3): continue
+                # fehlt im Releases-Tab: auf YouTube suchen, nur Treffer vom selben Kanal
+                hit = None
+                try:
+                    for e in ytdlp(f"ytsearch10:{name} {t}").get("entries") or []:
+                        et = norm(re.sub(r"\(.*?\)|\[.*?\]", "", e.get("title") or ""))
+                        if e.get("channel_id") == cid and (et == k or k in et.split(" - ")[-1] or et.endswith(k)):
+                            hit = e; break
+                except Exception as ex:
+                    print("  Suche:", ex)
+                if not hit:
+                    print(f"  FEHLT (nicht auf YouTube) {t}"); continue
+                al = {"title": t, "tracks": [hit["id"]], "type": "single"}
+                cov, src = cover([("itunes", u) for u in itunes_art(name, t)] +
+                                 [("deezer", u) for u in deezer_art(name, t)] +
+                                 [("song", u) for u in song_art(name, t)],
+                                 hit["id"], f"{slug(name)}_{len(albums)}.jpg")
+                if cov: al["cover"] = cov
+                albums.append(al); have.add(k)
+                key = norm(re.sub(r"\(.*?\)|\[.*?\]", "", hit.get("title") or ""))
+                if key not in seen:
+                    seen.add(key); songs.append((hit["id"], (hit.get("title") or t).replace("|", "/")))
+                print(f"  ERGÄNZT {src:7s} {t}")
         print(f"  {name}: Kanal {cid}, {len(rel.get('entries') or [])} Releases, {len(songs)} Songs")
         if songs:
             ALBUMS[name] = albums
@@ -127,6 +155,30 @@ def deezer_art(artist, album):
     except Exception as e:
         print("  Deezer:", e)
     return []
+
+def song_art(artist, title):
+    """Cover über den Song selbst (iTunes/Deezer-Track), falls das Release dort anders heißt."""
+    import urllib.request, urllib.parse
+    na, nt = norm(artist), norm(re.sub(r"\(.*?\)|\[.*?\]", "", title))
+    out = []
+    try:
+        q = urllib.parse.urlencode({"term": f"{artist} {title}", "entity": "song", "limit": 15, "country": "US"})
+        for r in json.loads(urllib.request.urlopen("https://itunes.apple.com/search?" + q, timeout=20).read()).get("results") or []:
+            rt = norm(re.sub(r"\(.*?\)|\[.*?\]", "", r.get("trackName") or ""))
+            if na in norm(r.get("artistName")) and nt and (rt == nt or nt in rt) and r.get("artworkUrl100"):
+                out.append(r["artworkUrl100"].replace("100x100bb", "600x600bb")); break
+    except Exception as e:
+        print("  iTunes-Song:", e)
+    try:
+        q = urllib.parse.urlencode({"q": f'artist:"{artist}" track:"{title}"', "limit": 15})
+        for r in json.loads(urllib.request.urlopen("https://api.deezer.com/search?" + q, timeout=20).read()).get("data") or []:
+            rt = norm(re.sub(r"\(.*?\)|\[.*?\]", "", r.get("title") or ""))
+            if norm((r.get("artist") or {}).get("name")) == na and nt and (rt == nt or nt in rt):
+                c = (r.get("album") or {}).get("cover_xl")
+                if c: out.append(c); break
+    except Exception as e:
+        print("  Deezer-Song:", e)
+    return out
 
 def official_titles(artist):
     """Alle offiziellen Releases laut iTunes + Deezer (nur für den Vollständigkeits-Check)."""
@@ -200,10 +252,7 @@ def main():
                 with open(os.path.join(ALB, slug(name) + ".json"), "w", encoding="utf-8") as f:
                     json.dump(ALBUMS[name], f, ensure_ascii=False)
                 print(f"  {len(ALBUMS[name])} Releases")
-                have = {norm(re.sub(r"\(.*?\)|\[.*?\]", "", a["title"])) for a in ALBUMS[name]}
-                for k, t in sorted(official_titles(name).items()):
-                    if k and k not in have and not any(k in h or h in k for h in have if len(h) > 3):
-                        print(f"  FEHLT {name}: {t}")
+
             ok += 1
         else:
             print("  zu wenig Songs, alte Liste bleibt")
