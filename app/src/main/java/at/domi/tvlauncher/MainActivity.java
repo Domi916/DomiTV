@@ -1170,6 +1170,9 @@ public class MainActivity extends Activity {
         float ax = "alb".equals(zone) ? -Math.max(0, aSel - 5) * 236 : 0;
         mv(albumRow, anim, 500).translationX(px(ax));
         if (!anim) albumRow.setTranslationX(px(ax));
+        float r2x = "rap2".equals(zone) ? -Math.max(0, rSel - Rapper.OWN - 4) * 348 : 0;
+        mv(rapRow2, anim, 500).translationX(px(r2x));
+        if (!anim) rapRow2.setTranslationX(px(r2x));
         float sx = -Math.max(0, sSel - 5) * 236;
         mv(sngRow, anim, 500).translationX(px(sx));
         if (!anim) sngRow.setTranslationX(px(sx));
