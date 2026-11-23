@@ -412,6 +412,7 @@ public class MediaWatcher extends NotificationListenerService {
                 Library.history(this, currentId(), whoSings(t, artist), LyricsOverlay.cleanTitle(t, whoSings(t, artist)));
                 unmute();
                 HomeWatcherService.overlayTrack(t, artist, curDur);
+                prefetchNext(this);
             }
             ourTitle = t;
             return;
@@ -446,6 +447,29 @@ public class MediaWatcher extends NotificationListenerService {
         if (since < 3000) return;
         pos++;
         play(this);
+    }
+
+    static java.util.Map<String, String> titles;
+
+    /** Songtext des nächsten Songs vorladen, damit er sofort da ist. */
+    static void prefetchNext(final Context c) {
+        if (queue.size() <= pos + 1) return;
+        final String id = queue.get(pos + 1);
+        new Thread(new Runnable() {
+            public void run() {
+                synchronized (MediaWatcher.class) {
+                    if (titles == null) {
+                        titles = new java.util.HashMap<>();
+                        for (Rapper r : Rapper.LIST)
+                            if (!r.isSpecial()) for (String[] s : r.songsWithTitles(c)) titles.put(s[0], s[1] + "\u0000" + r.name);
+                    }
+                }
+                String v = titles.get(id);
+                if (v == null) return;
+                String[] p = v.split("\u0000");
+                LyricsOverlay.prefetch(p[1], LyricsOverlay.cleanTitle(p[0], p[1]));
+            }
+        }).start();
     }
 
     /** Welcher Rapper singt? (für Mix/Favoriten und den Wochen-Rückblick) */

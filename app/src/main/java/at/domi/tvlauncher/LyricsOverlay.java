@@ -108,6 +108,8 @@ final class LyricsOverlay {
 
     LyricsOverlay(Context c) {
         this.c = c;
+        lyDir = new java.io.File(c.getCacheDir(), "lyrics");
+        lyDir.mkdirs();
         wm = (WindowManager) c.getSystemService(Context.WINDOW_SERVICE);
         prefs = c.getSharedPreferences("domitv", Context.MODE_PRIVATE);
         mode = prefs.getInt("anzeige", LYRICS);
@@ -271,10 +273,7 @@ final class LyricsOverlay {
         glow.setImageBitmap(Gfx.glow(accent, 0.55f));
         glow2.setImageBitmap(Gfx.glow(accent, 0.35f));
         try {
-            InputStream in = c.getAssets().open("rap/" + rapper + "_0.jpg");
-            Bitmap b = BitmapFactory.decodeStream(in);
-            in.close();
-            photo.setImageBitmap(b);
+            photo.setImageBitmap(decodeLight("rap/" + rapper + "_0.jpg"));
         } catch (Exception e) {
             photo.setImageDrawable(new GradientDrawable(GradientDrawable.Orientation.TR_BL,
                     new int[]{(accent & 0x00FFFFFF) | 0x88000000, mi >= 0 ? Moods.C2[mi] : r.c2, 0xFF000000}));
@@ -314,7 +313,9 @@ final class LyricsOverlay {
         if (idx < 0 || idx == photoOf) return;
         try {
             InputStream in = c.getAssets().open("rap/" + idx + "_0.jpg");
-            final Bitmap b = BitmapFactory.decodeStream(in);
+            in.close();
+            final Bitmap b = decodeLight("rap/" + idx + "_0.jpg");
+            if (b == null) return;
             in.close();
             photoOf = idx;
             photo.animate().alpha(0f).setDuration(350).withEndAction(new Runnable() {
@@ -393,10 +394,10 @@ final class LyricsOverlay {
         });
         breathe.start();
         if (zoom != null) zoom.cancel();
-        zoom = ValueAnimator.ofFloat(1.0f, 1.08f);
-        zoom.setDuration(24000);
+        zoom = ValueAnimator.ofFloat(1.04f, 1.04f);   // fest statt endlos zoomen: spart Grafikleistung
+        zoom.setDuration(1000);
         zoom.setRepeatMode(ValueAnimator.REVERSE);
-        zoom.setRepeatCount(ValueAnimator.INFINITE);
+        zoom.setRepeatCount(0);
         zoom.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator a) {
@@ -627,7 +628,7 @@ final class LyricsOverlay {
     final Runnable tick = new Runnable() {
         @Override
         public void run() {
-            ui.postDelayed(this, 60);
+            ui.postDelayed(this, 90);
             if (mode == VIDEO) return;
             long pos = MediaWatcher.position();
             long dur = MediaWatcher.curDur;
@@ -688,8 +689,8 @@ final class LyricsOverlay {
 
     static String get(String url) throws Exception {
         HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
-        con.setConnectTimeout(5000);
-        con.setReadTimeout(7000);
+        con.setConnectTimeout(4000);
+        con.setReadTimeout(6000);
         con.setRequestProperty("User-Agent", "DomiTV/1.0 (Fire TV launcher)");
         BufferedReader r = new BufferedReader(new InputStreamReader(con.getInputStream(), "UTF-8"));
         StringBuilder sb = new StringBuilder();
@@ -700,14 +701,67 @@ final class LyricsOverlay {
         return sb.toString();
     }
 
+    /** Bild sparsam laden: halbe Auflösung reicht hinter dem Songtext, RGB_565 = halber Speicher. */
+    Bitmap decodeLight(String asset) {
+        try {
+            InputStream in = c.getAssets().open(asset);
+            BitmapFactory.Options o = new BitmapFactory.Options();
+            o.inPreferredConfig = Bitmap.Config.RGB_565;
+            o.inSampleSize = 2;
+            Bitmap b = BitmapFactory.decodeStream(in, null, o);
+            in.close();
+            return b;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // Songtext-Suchergebnisse merken: im Speicher und als Datei -> beim zweiten Mal sofort da
+    static final android.util.LruCache<String, String> lyCache = new android.util.LruCache<>(80);
+    static java.io.File lyDir;
+
+    static String search(String artist, String song) throws Exception {
+        String key = MediaWatcher.norm(artist + " " + song);
+        String hit = lyCache.get(key);
+        if (hit != null) return hit;
+        java.io.File f = lyDir == null ? null : new java.io.File(lyDir, Integer.toHexString(key.hashCode()) + ".json");
+        if (f != null && f.exists()) {
+            hit = Drops.read(new java.io.FileInputStream(f));
+            lyCache.put(key, hit);
+            return hit;
+        }
+        String res = null;
+        for (int attempt = 0; attempt < 2 && res == null; attempt++) {
+            try {
+                res = get("https://lrclib.net/api/search?artist_name=" + URLEncoder.encode(artist, "UTF-8")
+                        + "&track_name=" + URLEncoder.encode(song, "UTF-8"));
+                if (new JSONArray(res).length() == 0)
+                    res = get("https://lrclib.net/api/search?q=" + URLEncoder.encode(artist + " " + song, "UTF-8"));
+            } catch (Exception e) {
+                res = null;
+            }
+        }
+        if (res == null) throw new Exception("LRCLIB nicht erreichbar");
+        lyCache.put(key, res);
+        if (f != null) try {
+            java.io.FileOutputStream o = new java.io.FileOutputStream(f);
+            o.write(res.getBytes("UTF-8"));
+            o.close();
+        } catch (Exception ignored) { }
+        return res;
+    }
+
+    /** Songtext für den nächsten Song schon mal holen (im Hintergrund). */
+    static void prefetch(final String artist, final String song) {
+        if (artist == null || song == null) return;
+        new Thread(new Runnable() {
+            public void run() { try { search(artist, song); } catch (Exception ignored) { } }
+        }).start();
+    }
+
     static Lyrics fetch(String artist, String song, long videoDur) {
         try {
-            String url = "https://lrclib.net/api/search?artist_name=" + URLEncoder.encode(artist, "UTF-8")
-                    + "&track_name=" + URLEncoder.encode(song, "UTF-8");
-            JSONArray arr = new JSONArray(get(url));
-            if (arr.length() == 0) {
-                arr = new JSONArray(get("https://lrclib.net/api/search?q=" + URLEncoder.encode(artist + " " + song, "UTF-8")));
-            }
+            JSONArray arr = new JSONArray(search(artist, song));
             JSONObject best = null;
             double bestScore = -1e9;
             String na = MediaWatcher.norm(artist), ns = MediaWatcher.norm(song);

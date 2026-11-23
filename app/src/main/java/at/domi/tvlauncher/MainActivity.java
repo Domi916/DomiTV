@@ -2961,6 +2961,27 @@ public class MainActivity extends Activity {
         else { kenBurns.resume(); resumeFx(); }
     }
 
+    /** Im Hintergrund (YouTube läuft): große Bilder freigeben, damit der Stick genug Speicher hat. */
+    @Override
+    protected void onStop() {
+        super.onStop();
+        picCache.evictAll();
+        coverCache.evictAll();
+        for (ImageView v : new ImageView[]{rapPicA, rapPicB, svA, svB}) if (v != null) v.setImageDrawable(null);
+        for (RapCard[] row : new RapCard[][]{albumCards, sngCards})
+            for (RapCard rc : row) if (rc != null && rc.cover != null) { rc.cover.setImageDrawable(null); rc.coverLoaded = false; }
+        if (rapPulse != null) rapPulse.pause();
+        System.gc();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (shownRapper >= 0 && rapPicCount(shownRapper) > 0) showRapPicAsync(shownRapper, 0, false, 0);
+        updateCovers(albumCards, aSel);
+        updateCovers(sngCards, sSel);
+    }
+
     @Override
     protected void onPause() {
         super.onPause();
