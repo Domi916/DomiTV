@@ -1,0 +1,31 @@
+name: Rapper-Bild bauen
+
+on:
+  workflow_dispatch:
+    inputs:
+      eingabe: {description: 'Bild im Repo', default: 'tools/raw/slattuhs.png'}
+      ausgabe: {description: 'Ziel', default: 'app/src/main/assets/rap/5_0.jpg'}
+      farbe: {description: 'Glow-Farbe (hex ohne #)', default: 'ff2d6f'}
+      text: {description: 'Textbereich in Prozent x0,y0,x1,y1 (leer = keiner)', default: '0.24,0.80,0.94,0.995'}
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  bild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: pip install -q "rembg[cpu]" opencv-contrib-python-headless pillow numpy
+      - run: python3 tools/bild.py "${{ inputs.eingabe }}" "${{ inputs.ausgabe }}" "${{ inputs.farbe }}" "${{ inputs.text }}"
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "Domi TV Bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add "${{ inputs.ausgabe }}"
+          git commit -m "Rapper-Bild neu: ${{ inputs.ausgabe }}" || exit 0
+          git pull --rebase origin main
+          git push
+          gh workflow run build.yml --ref main
