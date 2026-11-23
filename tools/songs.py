@@ -65,7 +65,9 @@ def songs_of(name):
                     return "video" not in ti and "visualizer" not in ti and "live" not in ti
                 audio = [t["id"] for t in ents if is_audio(t)]
                 pick = audio[0] if audio else tracks[0]
-                cov = cover(itunes_art(name, al["title"]), pick, f"{slug(name)}_{len(albums)}.jpg")
+                fix = os.path.join(FIX, f"{slug(name)}_{norm(al['title']).replace(' ', '')}.jpg")
+                urls = ["file://" + os.path.abspath(fix)] if os.path.exists(fix) else itunes_art(name, al["title"])
+                cov = cover(urls, pick, f"{slug(name)}_{len(albums)}.jpg")
                 if cov: al["cover"] = cov
                 albums.append(al)
             for t in d.get("entries") or []:
@@ -81,6 +83,8 @@ def songs_of(name):
     return []
 
 ALBUMS = {}
+# Von Domi geschickte Cover: tools/cover_fix/<rapper>_<albumtitel ohne Leer-/Sonderzeichen>.jpg
+FIX = os.path.join(os.path.dirname(__file__), "cover_fix")
 COV = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "assets", "covers")
 
 def itunes_art(artist, album):
