@@ -36,7 +36,7 @@ final class Quiz {
     static final long TIME = 15000;
 
     static final class Round {
-        String line, answer, rapper;
+        String line, answer, rapper, preview;   // preview = 30-s-Hörprobe (Deezer)
         int rapperIdx;
         String[] options = new String[4];
         int correct;
@@ -194,12 +194,84 @@ final class Quiz {
             if (!dup) opts.add(o[1]);
         }
         if (opts.size() < 4) return null;
+        r.preview = preview(s[0], s[1]);
         Collections.shuffle(opts, rnd);
         for (int i = 0; i < 4; i++) {
             r.options[i] = opts.get(i);
             if (opts.get(i).equals(s[1])) r.correct = i;
         }
         return r;
+    }
+
+    /** 30-Sekunden-Hörprobe des Songs von Deezer (null, wenn es keine gibt). */
+    static String preview(String artist, String title) {
+        try {
+            String q = java.net.URLEncoder.encode("artist:\"" + artist + "\" track:\"" + title + "\"", "UTF-8");
+            JSONArray d = new JSONObject(LyricsOverlay.get("https://api.deezer.com/search?limit=10&q=" + q)).optJSONArray("data");
+            if (d == null || d.length() == 0)
+                d = new JSONObject(LyricsOverlay.get("https://api.deezer.com/search?limit=10&q="
+                        + java.net.URLEncoder.encode(artist + " " + title, "UTF-8"))).optJSONArray("data");
+            if (d == null) return null;
+            String na = MediaWatcher.norm(artist), nt = MediaWatcher.norm(title);
+            for (int i = 0; i < d.length(); i++) {
+                JSONObject o = d.getJSONObject(i);
+                String ra = MediaWatcher.norm(o.optJSONObject("artist") == null ? "" : o.optJSONObject("artist").optString("name"));
+                String rt = MediaWatcher.norm(o.optString("title"));
+                if (ra.equals(na) && (rt.equals(nt) || rt.contains(nt) || nt.contains(rt)) && o.optString("preview").startsWith("http"))
+                    return o.optString("preview");
+            }
+        } catch (Exception ignored) { }
+        return null;
+    }
+
+    android.media.MediaPlayer player;
+    ValueAnimator fade;
+
+    void playPreview(String url) {
+        stopPreview(false);
+        if (url == null) return;
+        try {
+            final android.media.MediaPlayer mp = new android.media.MediaPlayer();
+            mp.setAudioAttributes(new android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).build());
+            mp.setDataSource(url);
+            mp.setVolume(0f, 0f);
+            mp.setOnPreparedListener(new android.media.MediaPlayer.OnPreparedListener() {
+                public void onPrepared(android.media.MediaPlayer m) {
+                    if (player != m || closed) { m.release(); return; }
+                    m.start();
+                    volumeTo(m, 0f, 1f, 600, false);
+                }
+            });
+            mp.prepareAsync();
+            player = mp;
+        } catch (Exception e) { player = null; }
+    }
+
+    void volumeTo(final android.media.MediaPlayer m, float from, float to, long ms, final boolean release) {
+        if (fade != null) fade.cancel();
+        fade = ValueAnimator.ofFloat(from, to);
+        fade.setDuration(ms);
+        fade.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            public void onAnimationUpdate(ValueAnimator v) {
+                float f = (Float) v.getAnimatedValue();
+                try { m.setVolume(f, f); } catch (Exception ignored) { }
+                if (release && v.getAnimatedFraction() >= 1f) { try { m.release(); } catch (Exception ignored) { } }
+            }
+        });
+        fade.start();
+    }
+
+    void stopPreview(boolean soft) {
+        final android.media.MediaPlayer m = player;
+        player = null;
+        if (m == null) return;
+        if (soft) {
+            try { if (m.isPlaying()) { volumeTo(m, 1f, 0f, 700, true); return; } } catch (Exception ignored) { }
+        }
+        if (fade != null) fade.cancel();
+        try { m.release(); } catch (Exception ignored) { }
     }
 
     void next() {
@@ -231,6 +303,7 @@ final class Quiz {
             opt[i].animate().alpha(1f).setStartDelay(150 + i * 70).setDuration(300).start();
         }
         paint();
+        playPreview(r.preview);
         shownAt = System.currentTimeMillis();
         if (timeAnim != null) timeAnim.cancel();
         timeAnim = ValueAnimator.ofFloat(1f, 0f);
@@ -282,6 +355,7 @@ final class Quiz {
         center.setScaleY(0.6f);
         center.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(260).setInterpolator(new OvershootInterpolator()).start();
         info.setText(cur.rapper + " – " + cur.answer + (streak >= 3 ? "   ·   " + streak + "er-Serie 🔥" : ""));
+        ui.postDelayed(new Runnable() { public void run() { stopPreview(true); } }, 900);
         ui.postDelayed(new Runnable() {
             public void run() {
                 center.animate().alpha(0f).setDuration(200).start();
@@ -293,6 +367,7 @@ final class Quiz {
 
     void finish() {
         if (timeAnim != null) timeAnim.cancel();
+        stopPreview(true);
         SharedPreferences p = a.prefs;
         List<int[]> best = new ArrayList<>();
         try {
@@ -364,6 +439,7 @@ final class Quiz {
 
     void close() {
         closed = true;
+        stopPreview(false);
         if (timeAnim != null) timeAnim.cancel();
         ui.removeCallbacksAndMessages(null);
         bg.shutdownNow();

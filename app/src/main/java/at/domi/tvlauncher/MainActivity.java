@@ -134,6 +134,7 @@ public class MainActivity extends Activity {
     // ---------- Ansichten ----------
     Quiz quiz;
     TextView profTop, profSub, statV;
+    FrameLayout profBox;
     FrameLayout root, bgWrap, kbWrap, ringWrap, lift, heroWrap, dock, cont, cardsRow, intro, header, rapStage, rapRow, rapRow2, albumRow;
     View contHead;
     final FrameLayout[] fxw = new FrameLayout[AppDef.APPS.length];
@@ -374,12 +375,7 @@ public class MainActivity extends Activity {
         rapName.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         rapName.setVisibility(View.GONE);
         rapStage.addView(rapName, atD(60, 120, 4200, 420));
-        // Rapper-Steckbrief (oben links, wenn ein Rapper gewählt ist)
-        profTop = text("", 17, "Bold", 0xffff3d6e, 0.22f);
-        profSub = text("", 24, "SemiBold", Gfx.w(0.86f), 0);
-        profSub.setSingleLine(true);
-        rapStage.addView(profTop, atD(96, 178, 1500, 30));
-        rapStage.addView(profSub, atD(96, 210, 1500, 40));
+
         rapPulse = ValueAnimator.ofFloat(0f, 1f);
         rapPulse.setDuration(5200);           // langsames Atmen
         rapPulse.setRepeatCount(ValueAnimator.INFINITE);
@@ -408,6 +404,14 @@ public class MainActivity extends Activity {
         // --- Kopfzeile ---
         header = new FrameLayout(this);
         root.addView(header, new FrameLayout.LayoutParams(-1, -1));
+        // Rapper-Steckbrief (über allem, nur in den Rapper-Reihen sichtbar)
+        profBox = new FrameLayout(this);
+        profBox.setAlpha(0f);
+        profTop = text("", 17, "Bold", 0xffff3d6e, 0.22f);
+        profSub = text("", 24, "SemiBold", Gfx.w(0.86f), 0);
+        profBox.addView(profTop, atD(96, 196, 1500, 30));
+        profBox.addView(profSub, atD(96, 228, 1500, 40));
+        root.addView(profBox, new FrameLayout.LayoutParams(-1, -1));
         TextView avatar = text(AppDef.NAME.substring(0, 1).toUpperCase(Locale.ROOT), 25, "ExtraBold", 0xff1c1c1e, 0);
         avatar.setGravity(Gravity.CENTER);
         GradientDrawable av = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xfff2f2f7, 0xff636366});
@@ -1563,11 +1567,13 @@ public class MainActivity extends Activity {
         if (isRap) {
             ui.removeCallbacks(rapCycle);
             ui.postDelayed(rapCycle, 7000);
+            if (profBox != null) profBox.animate().alpha(1f).setDuration(anim ? 500 : 0).start();
             rapStage.setVisibility(View.VISIBLE);
             rapStage.animate().alpha(1f).setDuration(anim ? 600 : 0).setStartDelay(0).withEndAction(null).start();
             if (!rapPulse.isStarted()) rapPulse.start(); else rapPulse.resume();
             if (!rapDrift.isStarted()) rapDrift.start(); else rapDrift.resume();
         } else {
+            if (profBox != null) profBox.animate().alpha(0f).setDuration(anim ? 300 : 0).start();
             rapStage.animate().alpha(0f).setDuration(anim ? 450 : 0).setStartDelay(0).withEndAction(new Runnable() {
                 public void run() {
                     if (isRapZone(shownMode)) return;
