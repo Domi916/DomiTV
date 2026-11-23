@@ -1,0 +1,16 @@
+name: Community-Fotos sammeln
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fotos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: pip install -q "opencv-python-headless<5" pillow numpy
+      - run: python3 tools/fotos.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kandidaten
+          path: /tmp/kandidaten
