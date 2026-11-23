@@ -166,6 +166,8 @@ public class MainActivity extends Activity {
     TextView greet, date, time, toast, contSub, iSub;
     Gfx.Icon chev;
     FrameLayout btnHome, btnSettings, btnBox;
+    TextView weather;
+    View mood;
     Gfx.Icon icHome, icSettings, icBox;
     ObjectAnimator kenBurns;
     final List<ObjectAnimator> ringAnims = new ArrayList<>();
@@ -298,6 +300,9 @@ public class MainActivity extends Activity {
             }
         }
         for (int i = 0; i < APPS.length; i++) buildSceneFx(i);
+        // Tageszeit-Stimmung: Farbschleier über dem Hintergrund
+        mood = new View(this);
+        bgWrap.addView(mood, new FrameLayout.LayoutParams(-1, -1));
         if (HIGH) buildAmbient();
         kbWrap.setPivotX(px(1150));
         kbWrap.setPivotY(px(380));
@@ -401,6 +406,10 @@ public class MainActivity extends Activity {
         GradientDrawable pb = Gfx.grad(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xdb28282e, 0xdb16161a}, px(37));
         pb.setStroke(Math.max(1, px(1)), Gfx.w(0.14f));
         pill.setBackground(pb);
+        weather = text("", 26, "SemiBold", Gfx.a(TXT, 0.85f), 0);
+        LinearLayout.LayoutParams wl0 = new LinearLayout.LayoutParams(-2, -2);
+        wl0.rightMargin = px(22);
+        pill.addView(weather, wl0);
         time = text("", 31, "SemiBold", TXT, -0.02f);
         time.setFontFeatureSettings("tnum");
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(-2, -2);
@@ -1679,14 +1688,35 @@ public class MainActivity extends Activity {
         String d = TAGE[c.get(Calendar.DAY_OF_WEEK) - 1] + ", " + c.get(Calendar.DAY_OF_MONTH) + ". " + MON[c.get(Calendar.MONTH)];
         String t = String.format(Locale.ROOT, "%02d:%02d", h, c.get(Calendar.MINUTE));
         greet.setText(gr);
-        date.setText(d);
+        date.setText(Weather.hint.isEmpty() ? d : d + "  ·  " + Weather.hint);
         time.setText(t);
         if (svTime != null) { svTime.setText(t); svDate.setText(d); }
+        weather.setText(Weather.now);
+        Weather.load(new Weather.Listener() {
+            public void onWeather(String now, String hint) { weather.setText(now); }
+        });
+        applyMood(h);
         pendingWords = gr;
         if (!introRunning()) setWords(gr);
         iSub.setText(t + " · " + d);
         ui.removeCallbacks(clockRun);
         ui.postDelayed(clockRun, 10000);
+    }
+
+    int moodHour = -1;
+
+    /** Morgens warm und hell, tagsüber neutral, abends rötlich, nachts dunkel. */
+    void applyMood(int h) {
+        if (mood == null || h == moodHour) return;
+        moodHour = h;
+        int[] cols;
+        if (h >= 5 && h < 11) cols = new int[]{0x26FFB060, 0x0DFFD9A0, 0x00000000};        // Morgen
+        else if (h >= 11 && h < 17) cols = new int[]{0x00000000, 0x00000000, 0x00000000};    // Tag
+        else if (h >= 17 && h < 22) cols = new int[]{0x2EFF3020, 0x14801030, 0x00000000};    // Abend
+        else cols = new int[]{0x8C000000, 0x66000010, 0x40000000};                           // Nacht
+        mood.setBackground(new GradientDrawable(GradientDrawable.Orientation.TR_BL, cols));
+        mood.setAlpha(0f);
+        mood.animate().alpha(1f).setDuration(2000).start();
     }
 
     // =====================================================================
