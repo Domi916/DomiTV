@@ -1697,11 +1697,12 @@ public class MainActivity extends Activity {
         try {
             InputStream in = getAssets().open("albums/" + Rapper.slug(Rapper.LIST[r].name) + ".json");
             org.json.JSONArray a = new org.json.JSONArray(Drops.read(in));
-            if (a.length() > 0) {
-                org.json.JSONObject o = a.getJSONObject(0);
-                String t = o.optString("type", "album");
-                out = o.optString("title") + " (" + ("single".equals(t) ? "Single" : "ep".equals(t) ? "EP" : "Album") + ")";
+            int al = 0, ep = 0, sg = 0;
+            for (int i = 0; i < a.length(); i++) {
+                String t = a.getJSONObject(i).optString("type", "album");
+                if ("single".equals(t)) sg++; else if ("ep".equals(t)) ep++; else al++;
             }
+            if (a.length() > 0) out = al + " Alben, " + ep + " EPs, " + sg + " Singles";
         } catch (Exception ignored) { }
         newest.put(r, out);
         return out;
@@ -1720,7 +1721,7 @@ public class MainActivity extends Activity {
         profTop.setText((wk > 0 ? "DIESE WOCHE " + wk + "×" : "DIESE WOCHE NOCH NICHT GEHÖRT") + (all > 0 ? "   ·   INSGESAMT " + all + "×" : ""));
         StringBuilder sb = new StringBuilder();
         if (top != null) sb.append("Dein Top-Song: ").append(top);
-        if (nw != null) sb.append(sb.length() > 0 ? "     ·     " : "").append("Neu: ").append(nw);
+        if (nw != null) sb.append(sb.length() > 0 ? "     ·     " : "").append(nw);
         profSub.setText(sb.toString());
         for (View v : new View[]{profTop, profSub}) {
             v.animate().cancel();

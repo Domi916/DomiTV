@@ -136,10 +136,10 @@ final class Quiz {
         il.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
         il.bottomMargin = (int) px(60);
         root.addView(info, il);
-        center = a.text("", 120, "Black", Color.WHITE, -0.02f);
+        center = a.text("", 86, "Black", Color.WHITE, -0.02f);
         center.setGravity(Gravity.CENTER);
         center.setAlpha(0f);
-        root.addView(center, new FrameLayout.LayoutParams(-1, -1));
+        root.addView(center, a.atD(0, 560, 1920, 110));
     }
 
     GradientDrawable roundBg(int col, float r) {
@@ -396,7 +396,7 @@ final class Quiz {
                     .append(f.format(new java.util.Date(best.get(i)[1] * 86400000L))).append(i == place ? "   ← du" : "").append("\n");
         }
         head.setText("SONG-QUIZ  ·  FERTIG");
-        line.setText(score + " Punkte" + (place == 0 ? "\nNeuer Rekord!" : ""));
+        line.setText(score + " Punkte" + (place == 0 && score > 0 ? "\nNeuer Rekord!" : ""));
         for (TextView t : opt) { t.setText(""); t.setBackground(null); }
         center.setAlpha(0f);
         info.setText("OK nochmal   ↩ beenden");
@@ -406,7 +406,7 @@ final class Quiz {
         board.setMaxLines(9);
         board.setTag("board");
         root.addView(board, a.atD(360, 620, 1200, 380));
-        if (place == 0) Hype.kick(0.9f);
+        if (place == 0 && score > 0) Hype.kick(0.9f);
         round = ROUNDS + 1;
     }
 
