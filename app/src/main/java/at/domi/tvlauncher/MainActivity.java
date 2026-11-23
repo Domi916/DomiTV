@@ -692,7 +692,8 @@ public class MainActivity extends Activity {
         for (int i = 0; i < cards.length; i++) {
             RapCard rc = cards[i];
             if (rc.cover == null) continue;
-            boolean near = i >= center - 3 && i <= center + 9;
+            int first = Math.max(0, center - 5);   // erste sichtbare Karte (Reihe scrollt ab Karte 6)
+            boolean near = i >= first - 2 && i <= first + 10;
             if (near && !rc.coverLoaded) {
                 Bitmap b = coverCache.get(rc.coverPath);
                 if (b == null) {
