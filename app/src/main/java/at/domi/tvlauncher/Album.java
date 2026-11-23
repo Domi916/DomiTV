@@ -36,7 +36,8 @@ final class Album {
     static List<Integer> artists() {
         List<Integer> out = new ArrayList<>();
         for (int r = 0; r < Rapper.MIX_OF; r++) out.add(r);
-        for (int r = 0; r < Rapper.LIST.length; r++) if ("che".equals(Rapper.LIST[r].name)) out.add(r);
+        for (int r = 0; r < Rapper.LIST.length; r++)
+            if ("che".equals(Rapper.LIST[r].name) || "Prettifun".equals(Rapper.LIST[r].name)) out.add(r);
         return out;
     }
 

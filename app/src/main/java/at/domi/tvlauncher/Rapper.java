@@ -32,6 +32,7 @@ final class Rapper {
                     "_f0ftiBSvRs", "qAAifLfNnKQ", "mbbq2gnOcQo", "jMB38Jb3b0Q", "oDvMcJZqYrY", "bHDWrnlIqfQ", "URCH1W1yiug"),
             new Rapper("xaviersobased", "UC000000000000000000000", 0xff7dff9a, 0xff031a08,
                     "i1XqpO6TYkk", "KxF2Ok4zRIw", "Dr3mGAT5JLU", "ZjOPBoFe358"),
+            new Rapper("Prettifun", "", 0xffff8fd0, 0xff1e0718),
     };
 
     /** Die ersten OWN Einträge sind "Deine Rapper" (inkl. Mix), der Rest "Rapper, die dir gefallen könnten". */
