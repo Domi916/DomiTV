@@ -2345,7 +2345,7 @@ public class MainActivity extends Activity {
         if (saverFiles == null) {
             try { saverFiles = getAssets().list("saver"); } catch (Exception e) { saverFiles = new String[0]; }
             if (saverFiles == null) saverFiles = new String[0];
-            java.util.Arrays.sort(saverFiles);
+            java.util.Collections.shuffle(java.util.Arrays.asList(saverFiles));   // jedes Mal andere Reihenfolge
         }
         if (saverFiles.length == 0) return;
         svPos = (svPos + 1) % saverFiles.length;
