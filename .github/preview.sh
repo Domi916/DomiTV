@@ -26,10 +26,21 @@ adb shell input keyevent 20; sleep 1.5; shot 08j_sng
 for i in 1 2 3 4 5 6 7 8; do adb shell input keyevent 22; done; sleep 1.6; shot 08k_sng8
 adb shell input keyevent 20; sleep 1.5; shot 08e_rap2
 adb shell input keyevent 21; sleep 1.0; shot 08f_rap2b
+adb shell input keyevent 20; sleep 1.5; shot 08m_mood
+adb shell input keyevent 22; sleep 1.0; shot 08n_mood2
+adb shell input keyevent 19; sleep 1.2
 adb shell input keyevent 19; sleep 1.2; shot 08g_back_sng
 adb shell input keyevent 4; sleep 1.5
 adb shell input keyevent 19; sleep 0.8; adb shell input keyevent 19; sleep 1.0; shot 09_top
+adb shell input keyevent 22; sleep 0.6; adb shell input keyevent 23; sleep 0.5; shot 09b_party
+adb shell input keyevent 23; sleep 1.0; adb shell input keyevent 21; sleep 0.5
 adb shell input keyevent 20; sleep 1.0
+# Hype-Intro (Ken Carson): Startanimation + Schläge abfotografieren
+adb shell input keyevent 20; sleep 1.2; adb shell input keyevent 20; sleep 1.5
+adb shell input keyevent 23; sleep 1.05; shot 30_hype1
+sleep 0.35; shot 31_hype2
+sleep 0.45; shot 32_hype3
+sleep 3; adb shell input keyevent 4; sleep 2
 sleep 1; adb pull /sdcard/intro.mp4 shots/intro.mp4
 # Aufzieh-Effekt beim Öffnen einer App
 adb shell input keyevent 21; adb shell input keyevent 21; adb shell input keyevent 21; adb shell input keyevent 21; sleep 1.5
