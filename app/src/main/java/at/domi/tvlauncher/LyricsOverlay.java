@@ -454,6 +454,34 @@ final class LyricsOverlay {
         badge(String.format(Locale.ROOT, "Songtext %+.1f s", sec));
     }
 
+    // ---------------- YouTube wartet (Profil-Auswahl, Werbung, Fehler) ----------------
+    boolean waiting = false;
+    TextView waitHint;
+
+    /** Song lädt zu lange: Anzeige fast durchsichtig machen, damit man YouTube sieht und bedienen kann. */
+    void setWaiting(boolean on) {
+        if (root == null || !added || waiting == on) return;
+        waiting = on;
+        if (waitHint == null) {
+            waitHint = text(30, "Bold", Color.WHITE);
+            waitHint.setGravity(android.view.Gravity.CENTER);
+            waitHint.setBackground(Gfx.round(0xcc000000, 30));
+            waitHint.setPadding(40, 22, 40, 22);
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2);
+            lp.gravity = android.view.Gravity.BOTTOM | android.view.Gravity.CENTER_HORIZONTAL;
+            lp.bottomMargin = 70;
+            root.addView(waitHint, lp);
+        }
+        waitHint.setText("YouTube braucht dich kurz (z. B. Profil wählen)  ·  OK/Pfeile gehen an YouTube  ·  ▶▶ nächster Song  ·  ↩ raus");
+        for (int i = 0; i < root.getChildCount(); i++) {
+            View v = root.getChildAt(i);
+            if (v == waitHint) continue;
+            v.animate().alpha(on ? 0f : 1f).setDuration(on ? 500 : 300).start();
+        }
+        waitHint.animate().alpha(on ? 1f : 0f).setDuration(300).start();
+        root.setBackgroundColor(on ? 0x00000000 : Color.BLACK);
+    }
+
     void switching() {
         if (root == null || !added) return;
         status.setText("Nächster Song …");

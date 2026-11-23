@@ -43,6 +43,7 @@ public class MediaWatcher extends NotificationListenerService {
     static boolean awaitingOurs = false;
     static int stuck = 0;
     int scan = 0;
+    boolean waitShown = false;
     static String prevTitle = null;
     static String rapperName = "";
     static String[] members = new String[0];
@@ -299,6 +300,9 @@ public class MediaWatcher extends NotificationListenerService {
             if (active && msm != null && ++scan % 8 == 0) {
                 try { attach(msm.getActiveSessions(new ComponentName(MediaWatcher.this, MediaWatcher.class))); } catch (Exception ignored) { }
             }
+            // lädt zu lange -> YouTube sichtbar und bedienbar machen (Profil-Auswahl, Werbung …)
+            if (active && awaitingOurs && since > 5000 && !waitShown) { waitShown = true; HomeWatcherService.overlayWaiting(true); }
+            if (waitShown && (!active || !awaitingOurs)) { waitShown = false; HomeWatcherService.overlayWaiting(false); }
             // Song läuft schon, wurde aber nicht erkannt (z. B. gleicher Titel wie vorher): nochmal prüfen
             if (active && awaitingOurs && since > 4000 && current != null) {
                 try {

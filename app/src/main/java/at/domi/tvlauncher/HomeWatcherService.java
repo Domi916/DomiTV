@@ -56,6 +56,12 @@ public class HomeWatcherService extends AccessibilityService {
         s.h.post(new Runnable() { public void run() { if (s.overlay != null) s.overlay.track(title, artist, dur); } });
     }
 
+    static void overlayWaiting(final boolean on) {
+        final HomeWatcherService s = instance;
+        if (s == null) return;
+        s.h.post(new Runnable() { public void run() { if (s.overlay != null) s.overlay.setWaiting(on); } });
+    }
+
     static void overlaySwitching() {
         final HomeWatcherService s = instance;
         if (s == null) return;
@@ -221,6 +227,9 @@ public class HomeWatcherService extends AccessibilityService {
             return true;
         }
         boolean overlayOn = MediaWatcher.active && overlay != null && overlay.mode != LyricsOverlay.VIDEO;
+        // YouTube wartet auf eine Eingabe (Profil-Auswahl o. ä.): Tasten an YouTube durchlassen, nur ↩ und ⏩ bleiben bei uns
+        if (overlayOn && overlay.waiting && k != android.view.KeyEvent.KEYCODE_BACK
+                && k != android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD && k != android.view.KeyEvent.KEYCODE_MEDIA_NEXT) return false;
         if (overlayOn && e.getAction() == android.view.KeyEvent.ACTION_DOWN) overlay.poke();
         // OK / ⏯: Pause bzw. weiter (in der Songtext-/Audio-Anzeige)
         if (overlayOn && (k == android.view.KeyEvent.KEYCODE_DPAD_CENTER || k == android.view.KeyEvent.KEYCODE_ENTER
