@@ -37,6 +37,7 @@ adb shell input keyevent 23; sleep 1.0; adb shell input keyevent 21; sleep 0.5
 adb shell input keyevent 20; sleep 1.0
 # Hype-Intro (Ken Carson): Startanimation + Schläge abfotografieren
 adb shell input keyevent 20; sleep 1.2; adb shell input keyevent 20; sleep 1.5
+for i in 1 2 3 4 5 6 7 8; do adb shell input keyevent 21; done; sleep 1.5
 adb shell input keyevent 23; sleep 1.05; shot 30_hype1
 sleep 0.35; shot 31_hype2
 sleep 0.45; shot 32_hype3
