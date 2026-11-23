@@ -65,7 +65,14 @@ bb = cut.getbbox()
 cut = cut.crop(bb)
 sc = H * 1.02 / cut.height
 cut = cut.resize((int(cut.width * sc), int(cut.height * sc)), Image.LANCZOS)
-x = 1380 - cut.width // 2
+# Bildränder (wo das Foto abgeschnitten ist) weich ins Schwarz auslaufen lassen
+al = np.asarray(cut.split()[-1]).astype(np.float32)
+cw, ch = cut.size
+ramp_x = np.clip(np.arange(cw) / (cw * 0.30), 0, 1) ** 1.4
+ramp_y = np.clip((ch - np.arange(ch)) / (ch * 0.22), 0, 1) ** 1.2
+al = al * ramp_x[None, :] * ramp_y[:, None]
+cut.putalpha(Image.fromarray(al.astype(np.uint8)))
+x = W - cut.width + 40
 bgi.paste(cut, (x, H - cut.height + 10), cut)
 bgi.save(out, quality=93)
 print("fertig:", out, cut.size)
