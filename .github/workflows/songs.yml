@@ -2,7 +2,10 @@ name: Songlisten aktualisieren
 
 on:
   schedule:
-    - cron: '17 4 * * *'   # jeden Tag früh (neue Songs + Drops am selben Tag)
+    # GitHub lässt geplante Läufe bei neuen Repos manchmal ausfallen -> 3 Zeitpunkte am Tag
+    - cron: '17 4 * * *'
+    - cron: '41 11 * * *'
+    - cron: '53 17 * * *'
   workflow_dispatch:
     inputs:
       nur_extras:
@@ -40,7 +43,8 @@ jobs:
                      app/src/main/assets/moods.json app/src/main/assets/drops.json app/src/main/assets/ytm.json tools/mood_cache.json
           if git diff --cached --quiet; then echo "keine Änderung"; exit 0; fi
           BUILD=1
-          if git diff --cached --quiet -- app/src/main/assets; then BUILD=0; fi
+          # ytm.json und drops.json holt die App selbst aus dem Netz -> dafür kein neues Update bauen
+          if git diff --cached --quiet -- app/src/main/assets/songs app/src/main/assets/albums app/src/main/assets/covers app/src/main/assets/moods.json; then BUILD=0; fi
           git commit -m "Songlisten aktualisiert"
           git pull --rebase origin main
           git push
