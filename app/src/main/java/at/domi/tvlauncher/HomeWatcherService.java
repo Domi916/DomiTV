@@ -109,6 +109,8 @@ public class HomeWatcherService extends AccessibilityService {
             String t = i.getStringExtra("title");
             if (overlay == null) overlay = new LyricsOverlay(HomeWatcherService.this);
             if ("hide".equals(t)) { overlay.hide(); return; }
+            if ("wait".equals(t)) { overlay.setWaiting(true); return; }
+            if ("nowait".equals(t)) { overlay.setWaiting(false); return; }
             MediaWatcher.appCtx = getApplicationContext();
             MediaWatcher.active = true;
             MediaWatcher.rapperIndex = r;

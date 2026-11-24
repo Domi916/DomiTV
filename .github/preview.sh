@@ -60,6 +60,8 @@ adb shell am broadcast -a at.domi.tvlauncher.TEST_OVERLAY --ei rapper 1 --es tit
 sleep 8; shot 21_lyrics_bleood
 adb shell am broadcast -a at.domi.tvlauncher.TEST_OVERLAY --ei rapper 4 --es title "'Nettspend - stressed [Official Video]'" --ei at 20000
 sleep 8; shot 22_lyrics_plain
+adb shell am broadcast -a at.domi.tvlauncher.TEST_OVERLAY --es title wait; sleep 1.2; shot 25_wait
+adb shell am broadcast -a at.domi.tvlauncher.TEST_OVERLAY --es title nowait; sleep 1.2; shot 26_nowait
 adb shell input keyevent 82; sleep 1; shot 23_mode_audio
 adb shell input keyevent 82; sleep 1.5; shot 24_mode_video
 adb shell input keyevent 82; sleep 1

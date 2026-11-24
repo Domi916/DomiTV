@@ -78,6 +78,11 @@ final class Quiz {
         for (int r = 0; r < Rapper.MIX_OF; r++) {
             for (String[] s : Rapper.LIST[r].songsWithTitles(a)) {
                 String t = LyricsOverlay.cleanTitle(s[1], Rapper.LIST[r].name);
+                // "Ken Carson, Destroy Lonely - Singapore" -> "Singapore"
+                int dash = t.indexOf(" - ");
+                if (dash > 0 && MediaWatcher.norm(t.substring(0, dash)).contains(MediaWatcher.norm(Rapper.LIST[r].name)))
+                    t = t.substring(dash + 3).trim();
+                if (t.toLowerCase(Locale.ROOT).contains("snippet") || t.toLowerCase(Locale.ROOT).contains("unreleased")) continue;
                 if (t.length() >= 2 && t.length() <= 40) pool.add(new String[]{Rapper.LIST[r].name, t, String.valueOf(r)});
             }
         }

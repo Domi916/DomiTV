@@ -401,6 +401,7 @@ final class LyricsOverlay {
     }
 
     void hide() {
+        if (waiting) setWaiting(false);
         ui.removeCallbacks(tick);
         if (big) { big = false; lyricClip.setScaleX(1f); lyricClip.setScaleY(1f); photo.setAlpha(1f);
             for (View v : new View[]{label, title, status, hint, barBg, barFill, timeL, timeR}) v.setAlpha(1f); }
@@ -448,6 +449,7 @@ final class LyricsOverlay {
 
     // ---------------- YouTube wartet (Profil-Auswahl, Werbung, Fehler) ----------------
     boolean waiting = false;
+    final java.util.Map<View, Float> savedAlpha = new java.util.HashMap<>();
     TextView waitHint;
 
     /** Song lädt zu lange: Anzeige fast durchsichtig machen, damit man YouTube sieht und bedienen kann. */
@@ -468,7 +470,14 @@ final class LyricsOverlay {
         for (int i = 0; i < root.getChildCount(); i++) {
             View v = root.getChildAt(i);
             if (v == waitHint) continue;
-            v.animate().alpha(on ? 0f : 1f).setDuration(on ? 500 : 300).start();
+            if (on) {
+                // eigene Deckkraft merken (Pause-Symbol, Lichter … sind nicht voll sichtbar)
+                savedAlpha.put(v, v.getAlpha());
+                v.animate().alpha(0f).setDuration(500).start();
+            } else {
+                Float a = savedAlpha.get(v);
+                v.animate().alpha(a != null ? a : 1f).setDuration(300).start();
+            }
         }
         waitHint.animate().alpha(on ? 1f : 0f).setDuration(300).start();
         root.setBackgroundColor(on ? 0x00000000 : Color.BLACK);
