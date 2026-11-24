@@ -149,6 +149,38 @@ public class MediaWatcher extends NotificationListenerService {
         } catch (Exception ignored) { }
     }
 
+    /** Letzte Zeilen des Protokolls (für die Anzeige, wenn etwas hängt). */
+    static String tail(int n) {
+        if (appCtx == null) return "";
+        try {
+            java.io.File f = new java.io.File(appCtx.getFilesDir(), "shuffle.log");
+            if (!f.exists()) return "";
+            java.util.List<String> all = new java.util.ArrayList<>();
+            java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(f));
+            for (String l; (l = r.readLine()) != null; ) all.add(l);
+            r.close();
+            return android.text.TextUtils.join("\n", all.subList(Math.max(0, all.size() - n), all.size()));
+        } catch (Throwable e) { return ""; }
+    }
+
+    /** Profil gewählt o. ä. (OK im Warte-Modus): kurz danach unseren Song nochmal öffnen,
+     *  weil YouTube nach der Profil-Auswahl oft auf seiner Startseite landet statt beim Song. */
+    static void userPickedInYouTube(final Context c) {
+        mh.removeCallbacks(reopen);
+        reopenCtx = c.getApplicationContext();
+        mh.postDelayed(reopen, 3500);
+    }
+    static Context reopenCtx;
+    static final Runnable reopen = new Runnable() {
+        public void run() {
+            if (active && awaitingOurs && reopenCtx != null) {
+                log(reopenCtx, "nach Eingabe in YouTube: Song nochmal öffnen");
+                play(reopenCtx, 0, true);
+            }
+        }
+    };
+    static boolean retryTried = false;
+
     /** ◀: vorheriger Song (oder dieser Song von vorne, wenn es der erste ist). */
     static void previous(Context c) {
         if (!active) return;
@@ -192,7 +224,7 @@ public class MediaWatcher extends NotificationListenerService {
         prevTitle = sameSongAgain ? null : ourTitle;
         ourTitle = null;
         awaitingOurs = true;
-        if (!sameSongAgain) fixTried = false;
+        if (!sameSongAgain) { fixTried = false; retryTried = false; }
         curDur = 0;
         lastPos = -1;
         String url = "https://www.youtube.com/watch?v=" + id + (startMs >= 1000 ? "&t=" + startMs / 1000 + "s" : "");
@@ -341,6 +373,13 @@ public class MediaWatcher extends NotificationListenerService {
                         onTrack(md);
                     }
                 } catch (Exception ignored) { }
+            }
+            // hängt nach 12 s immer noch (z. B. YouTube hat das Video nach dem Profil verworfen): einmal neu öffnen
+            if (active && awaitingOurs && !retryTried && since > 12000) {
+                retryTried = true;
+                log(MediaWatcher.this, "Song lädt nach 12 s nicht, öffne nochmal");
+                play(MediaWatcher.this, 0, true);
+                return;
             }
             // Notbremse: Song lädt seit 30 Sekunden nicht -> nächster Song, nach 3 Fehlversuchen Schluss
             if (active && awaitingOurs && SystemClock.elapsedRealtime() - launchedAt > 30000) {

@@ -517,7 +517,18 @@ final class LyricsOverlay {
             lp.bottomMargin = 70;
             root.addView(waitHint, lp);
         }
-        waitHint.setText("YouTube braucht dich kurz (z. B. Profil wählen)  ·  OK/Pfeile gehen an YouTube  ·  ▶▶ nächster Song  ·  ↩ raus");
+        String log = MediaWatcher.tail(4);
+        android.text.SpannableStringBuilder sb = new android.text.SpannableStringBuilder(
+                "YouTube braucht dich kurz (z. B. Profil wählen)  ·  OK/Pfeile gehen an YouTube  ·  ▶▶ nächster Song  ·  ↩ raus");
+        if (!log.isEmpty()) {
+            int st = sb.length();
+            sb.append("\n").append(log);
+            sb.setSpan(new android.text.style.RelativeSizeSpan(0.6f), st, sb.length(), 0);
+            sb.setSpan(new android.text.style.ForegroundColorSpan(0x99ffffff), st, sb.length(), 0);
+        }
+        waitHint.setSingleLine(false);
+        waitHint.setMaxLines(6);
+        waitHint.setText(sb);
         for (int i = 0; i < root.getChildCount(); i++) {
             View v = root.getChildAt(i);
             if (v == waitHint) continue;

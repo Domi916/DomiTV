@@ -256,7 +256,11 @@ public class HomeWatcherService extends AccessibilityService {
         boolean overlayOn = MediaWatcher.active && overlay != null && overlay.mode != LyricsOverlay.VIDEO;
         // YouTube wartet auf eine Eingabe (Profil-Auswahl o. ä.): Tasten an YouTube durchlassen, nur ↩ und ⏩ bleiben bei uns
         if (overlayOn && overlay.waiting && k != android.view.KeyEvent.KEYCODE_BACK
-                && k != android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD && k != android.view.KeyEvent.KEYCODE_MEDIA_NEXT) return false;
+                && k != android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD && k != android.view.KeyEvent.KEYCODE_MEDIA_NEXT) {
+            if ((k == android.view.KeyEvent.KEYCODE_DPAD_CENTER || k == android.view.KeyEvent.KEYCODE_ENTER)
+                    && e.getAction() == android.view.KeyEvent.ACTION_UP) MediaWatcher.userPickedInYouTube(this);
+            return false;
+        }
         if (overlayOn && e.getAction() == android.view.KeyEvent.ACTION_DOWN) overlay.poke();
         // OK / ⏯: Pause bzw. weiter (in der Songtext-/Audio-Anzeige)
         if (overlayOn && (k == android.view.KeyEvent.KEYCODE_DPAD_CENTER || k == android.view.KeyEvent.KEYCODE_ENTER
