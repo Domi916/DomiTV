@@ -29,6 +29,32 @@ def headers_from(raw):
     return h
 
 
+def own_history(yt):
+    from ytmusicapi.navigation import nav, SINGLE_COLUMN_TAB, SECTION_LIST
+    from ytmusicapi.parsers.playlists import parse_playlist_items
+    resp = yt._send_request("browse", {"browseId": "FEmusic_history"})
+    sections = nav(resp, SINGLE_COLUMN_TAB + SECTION_LIST, True) or []
+    out = []
+    for sec in sections:
+        shelf = sec.get("musicShelfRenderer")
+        if not shelf:
+            print("   Abschnitt übersprungen:", list(sec.keys())[:3])
+            continue
+        title = ""
+        try:
+            title = shelf["title"]["runs"][0]["text"]
+        except Exception:
+            pass
+        try:
+            items = parse_playlist_items(shelf.get("contents") or [])
+        except Exception as e:
+            print("   Abschnitt nicht lesbar:", title, repr(e)[:80]); continue
+        for it in items:
+            it["played"] = title
+            out.append(it)
+    return out
+
+
 def main():
     raw = os.environ.get("YTM_HEADERS", "")
     if not raw.strip():
@@ -55,7 +81,12 @@ def main():
     path = "/tmp/ytm_browser.json"
     json.dump(auth, open(path, "w"))
     yt = YTMusic(path)
-    hist = yt.get_history()
+    try:
+        hist = yt.get_history()
+    except Exception as e:
+        # ytmusicapi bricht ab, wenn YouTube Music einen unbekannten Abschnitt im Verlauf zeigt -> selbst auslesen
+        print("YouTube Music: get_history fehlgeschlagen (", repr(e)[:80], ") – lese Verlauf selbst")
+        hist = own_history(yt)
     print("YouTube Music: Verlauf", len(hist), "Einträge")
 
     today = datetime.date.today()
