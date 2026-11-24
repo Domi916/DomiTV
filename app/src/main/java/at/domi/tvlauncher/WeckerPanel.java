@@ -12,9 +12,9 @@ import java.util.Locale;
 final class WeckerPanel {
     final MainActivity a;
     final FrameLayout root;
-    int h, m, sel = 0;     // 0 Stunde, 1 Minute, 2 An/Aus
+    int h, m, sel = 0;     // 0 Stunde, 1 Minute, 2 An/Aus, 3 Test
     boolean on;
-    TextView hv, mv, sw, info;
+    TextView hv, mv, sw, test, info;
 
     WeckerPanel(MainActivity a) {
         this.a = a;
@@ -42,7 +42,16 @@ final class WeckerPanel {
         root.addView(mv, a.atD(1000, 360, 360, 260));
         sw = a.text("", 34, "Bold", Color.WHITE, 0);
         sw.setGravity(Gravity.CENTER);
-        root.addView(sw, a.atD(760, 690, 400, 100));
+        root.addView(sw, a.atD(620, 690, 330, 100));
+        test = a.text("Test in 1 Min", 30, "Bold", Color.WHITE, 0);
+        test.setGravity(Gravity.CENTER);
+        root.addView(test, a.atD(970, 690, 330, 100));
+        String diag = Wecker.p(a).getString("weckerDiag", null);
+        if (diag != null) {
+            TextView d = a.text("Letzter Wecker: " + diag, 20, "Medium", 0x77ffffff, 0);
+            d.setGravity(Gravity.CENTER);
+            root.addView(d, a.atD(0, 920, 1920, -2));
+        }
         info = a.text("◀ ▶ wählen    ▲ ▼ ändern    OK speichern    ↩ zurück", 22, "Medium", 0x88ffffff, 0);
         info.setGravity(Gravity.CENTER);
         root.addView(info, a.atD(0, 860, 1920, -2));
@@ -73,18 +82,24 @@ final class WeckerPanel {
         sw.setText(on ? "● AN" : "○ AUS");
         sw.setTextColor(on ? 0xff111111 : Color.WHITE);
         sw.setBackground(bg(on ? (sel == 2 ? 0xff7fd8ff : 0xff4fc3ff) : (sel == 2 ? 0x55ffffff : 0x22ffffff)));
+        test.setBackground(bg(sel == 3 ? 0x55ffffff : 0x22ffffff));
     }
 
     void key(String k) {
         if ("back".equals(k)) { close(); return; }
         if ("left".equals(k)) sel = Math.max(0, sel - 1);
-        else if ("right".equals(k)) sel = Math.min(2, sel + 1);
+        else if ("right".equals(k)) sel = Math.min(3, sel + 1);
         else if ("up".equals(k) || "down".equals(k)) {
             int d = "up".equals(k) ? 1 : -1;
             if (sel == 0) h = (h + d + 24) % 24;
             else if (sel == 1) m = (m + d * 5 + 60) % 60;
             else on = !on;
             if (sel < 2) on = true;          // Zeit ändern = Wecker an
+        } else if ("ok".equals(k) && sel == 3) {
+            Wecker.testIn(a, 60);
+            a.showToast("Test-Wecker in 1 Minute – schalt jetzt den Fernseher mit der Fire-TV-Fernbedienung aus");
+            close();
+            return;
         } else if ("ok".equals(k)) {
             Wecker.set(a, on, h, m);
             a.showToast(on ? "Wecker an: " + Wecker.text(a) + " – dein Tagesmix weckt dich" : "Wecker aus");

@@ -52,35 +52,67 @@ public class Wecker extends BroadcastReceiver {
         return String.format(java.util.Locale.ROOT, "%02d:%02d", hour(c), minute(c));
     }
 
+    /** Probe-Wecker in {@code sec} Sekunden (zum Testen, ob der Fernseher angeht). */
+    static void testIn(Context c, int sec) {
+        AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+        Intent i = new Intent(c, Wecker.class).putExtra("test", true);
+        PendingIntent p = PendingIntent.getBroadcast(c, 4712, i, PendingIntent.FLAG_UPDATE_CURRENT);
+        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + sec * 1000L, p);
+    }
+
     @Override
-    public void onReceive(Context c, Intent intent) {
-        schedule(c);   // gleich für morgen planen
-        if (!on(c)) return;
-        try {
-            // Bildschirm einschalten -> per HDMI-CEC geht meist auch der Fernseher an
-            PowerManager pm = (PowerManager) c.getSystemService(Context.POWER_SERVICE);
-            @SuppressWarnings("deprecation")
-            PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK
-                    | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, "domitv:wecker");
-            wl.acquire(60000);
-        } catch (Exception ignored) { }
-        final AudioManager a = (AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
-        final int target = a.getStreamVolume(AudioManager.STREAM_MUSIC);
-        try { a.setStreamVolume(AudioManager.STREAM_MUSIC, Math.max(1, target / 5), 0); } catch (Exception ignored) { }
-        Intent i = new Intent(c, MainActivity.class);
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-        i.putExtra("wecker", true);
-        c.startActivity(i);
-        // in 60 s langsam auf die alte Lautstärke
+    public void onReceive(final Context c, Intent intent) {
+        final boolean test = intent.getBooleanExtra("test", false);
+        if (!test) schedule(c);   // gleich für morgen planen
+        if (!test && !on(c)) return;
+        final Context app = c.getApplicationContext();
         final Handler h = new Handler(Looper.getMainLooper());
+        final PowerManager pm = (PowerManager) app.getSystemService(Context.POWER_SERVICE);
+        // Der Fernseher geht nur an, wenn der Stick AUFWACHT (dann schickt er per HDMI-CEC "einschalten").
+        // Ist der Stick noch wach (Fernseher nur ausgeschaltet), legen wir ihn kurz schlafen und wecken ihn wieder.
+        boolean awake = pm != null && pm.isInteractive();
+        boolean slept = awake && HomeWatcherService.sleepNow();
+        final String diag = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.ROOT).format(new java.util.Date())
+                + " · Stick war " + (awake ? "wach" : "im Schlaf") + (awake ? (slept ? ", kurz schlafen gelegt" : ", Schlafen ging nicht") : "");
+        MediaWatcher.log(app, "Wecker: " + diag);
+        long wakeAt = slept ? 6000 : 0;
+        h.postDelayed(new Runnable() {
+            public void run() {
+                try {
+                    @SuppressWarnings("deprecation")
+                    PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK
+                            | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, "domitv:wecker");
+                    wl.acquire(90000);
+                } catch (Exception ignored) { }
+                h.postDelayed(new Runnable() {
+                    public void run() {
+                        boolean on = pm.isInteractive();
+                        p(app).edit().putString("weckerDiag", diag + " · danach " + (on ? "wach" : "noch im Schlaf")).apply();
+                    }
+                }, 1500);
+            }
+        }, wakeAt);
+        final AudioManager a = (AudioManager) app.getSystemService(Context.AUDIO_SERVICE);
+        final int target = a.getStreamVolume(AudioManager.STREAM_MUSIC);
         final int start = Math.max(1, target / 5);
+        h.postDelayed(new Runnable() {
+            public void run() {
+                try { a.setStreamVolume(AudioManager.STREAM_MUSIC, start, 0); } catch (Exception ignored) { }
+                Intent i = new Intent(app, MainActivity.class);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                i.putExtra("wecker", true);
+                app.startActivity(i);
+            }
+        }, wakeAt + 2500);
+        // in 60 s langsam auf die alte Lautstärke
         for (int s = 1; s <= 12; s++) {
             final int step = s;
             h.postDelayed(new Runnable() {
                 public void run() {
                     try { a.setStreamVolume(AudioManager.STREAM_MUSIC, start + (Math.max(target, 4) - start) * step / 12, 0); } catch (Exception ignored) { }
                 }
-            }, 8000L + s * 5000L);
+            }, wakeAt + 10000L + s * 5000L);
         }
     }
 }

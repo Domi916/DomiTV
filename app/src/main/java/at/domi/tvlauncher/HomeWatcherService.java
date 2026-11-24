@@ -56,6 +56,13 @@ public class HomeWatcherService extends AccessibilityService {
         s.h.post(new Runnable() { public void run() { if (s.overlay != null) s.overlay.track(title, artist, dur); } });
     }
 
+    /** Stick schlafen legen (wie Ausschalten mit der Fernbedienung). true = hat geklappt. */
+    static boolean sleepNow() {
+        HomeWatcherService s = instance;
+        if (s == null || android.os.Build.VERSION.SDK_INT < 28) return false;
+        try { return s.performGlobalAction(8 /* GLOBAL_ACTION_LOCK_SCREEN */); } catch (Exception e) { return false; }
+    }
+
     static void overlayWaiting(final boolean on) {
         final HomeWatcherService s = instance;
         if (s == null) return;
