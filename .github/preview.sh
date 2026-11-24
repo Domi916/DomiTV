@@ -28,6 +28,9 @@ adb shell input keyevent 20; sleep 1.5; shot 08e_rap2
 adb shell input keyevent 21; sleep 1.0; shot 08f_rap2b
 adb shell input keyevent 20; sleep 1.5; shot 08m_mood
 adb shell input keyevent 22; sleep 1.0; shot 08n_mood2
+adb shell input keyevent 20; sleep 1.5; shot 08o_vid
+adb shell input keyevent 22; sleep 1.0; shot 08p_vid2
+adb shell input keyevent 19; sleep 1.0
 adb shell input keyevent 19; sleep 1.2
 adb shell input keyevent 19; sleep 1.2; shot 08g_back_sng
 adb shell input keyevent 4; sleep 1.5
@@ -65,8 +68,15 @@ adb shell am broadcast -a at.domi.tvlauncher.TEST_OVERLAY --es title nowait; sle
 adb shell input keyevent 82; sleep 1; shot 23_mode_audio
 adb shell input keyevent 82; sleep 1.5; shot 24_mode_video
 adb shell input keyevent 82; sleep 1
+adb shell am broadcast -a at.domi.tvlauncher.TEST_OVERLAY --ei rapper 0 --es title "'Ken Carson - Lose It (Official Audio)'" --ei at 30000 --ez album true
+sleep 6; shot 27_album_tracklist
 adb shell am broadcast -a at.domi.tvlauncher.TEST_OVERLAY --es title hide
 sleep 1
+# Wecker
+adb shell am start -n at.domi.tvlauncher/.MainActivity --ez fx_test true --ez fx_wecker true
+sleep 3; shot 45_wecker
+adb shell input keyevent 19; sleep 0.5; adb shell input keyevent 22; sleep 0.5; adb shell input keyevent 19; sleep 0.5; shot 46_wecker_set
+adb shell input keyevent 4; sleep 1
 # Song-Quiz
 adb shell am start -n at.domi.tvlauncher/.MainActivity --ez fx_test true --ez fx_quiz true
 sleep 9; shot 40_quiz_a

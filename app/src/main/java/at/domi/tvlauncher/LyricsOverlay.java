@@ -308,6 +308,57 @@ final class LyricsOverlay {
     /** Langsames Atmen des Leuchtens + Zoom aufs Foto. */
     int photoOf = -1;
 
+    // ---------------- Trackliste beim Album ----------------
+    android.widget.LinearLayout trackList;
+
+    /** Beim Album rechts die Trackliste, der aktuelle Song hervorgehoben. */
+    void updateTracklist() {
+        if (root == null) return;
+        final String album = MediaWatcher.albumTitle;
+        final java.util.List<String> q = new java.util.ArrayList<>(MediaWatcher.queue);
+        final int cur = MediaWatcher.pos;
+        if (album == null || q.size() < 2) {
+            if (trackList != null) { root.removeView(trackList); trackList = null; }
+            return;
+        }
+        new Thread(new Runnable() {
+            public void run() {
+                final java.util.Map<String, String> t = MediaWatcher.titles(c);
+                ui.post(new Runnable() {
+                    public void run() {
+                        if (root == null) return;
+                        if (trackList == null) {
+                            trackList = new android.widget.LinearLayout(c);
+                            trackList.setOrientation(android.widget.LinearLayout.VERTICAL);
+                            trackList.setBackground(Gfx.round(0xb3000000, (int) px(28)));
+                            trackList.setPadding((int) px(26), (int) px(22), (int) px(26), (int) px(22));
+                            root.addView(trackList, at(1470, 190, 360, -2));
+                        }
+                        trackList.removeAllViews();
+                        TextView h = text(15, "Bold", accent);
+                        h.setLetterSpacing(0.2f);
+                        h.setText(album.toUpperCase(Locale.ROOT));
+                        h.setSingleLine(true);
+                        h.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                        trackList.addView(h);
+                        int from = Math.max(0, Math.min(cur - 3, q.size() - 12)), to = Math.min(q.size(), from + 12);
+                        for (int i = from; i < to; i++) {
+                            String v = t.get(q.get(i));
+                            String name = v == null ? "Track " + (i + 1) : cleanTitle(v.split("\u0000")[0], v.split("\u0000").length > 1 ? v.split("\u0000")[1] : "");
+                            TextView row = text(i == cur ? 21 : 18, i == cur ? "Bold" : "Medium", i == cur ? Color.WHITE : 0x99ffffff);
+                            row.setText((i + 1) + "   " + name);
+                            row.setSingleLine(true);
+                            row.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                            android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(-1, -2);
+                            lp.topMargin = (int) px(i == from ? 16 : 9);
+                            trackList.addView(row, lp);
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
     /** Foto eines anderen Rappers weich einblenden. */
     void photoFor(final int idx) {
         if (idx < 0 || idx == photoOf) return;
@@ -514,6 +565,7 @@ final class LyricsOverlay {
             label.setText(who.toUpperCase(Locale.ROOT) + "  ·  " + Moods.LABEL[Moods.index(MediaWatcher.mood)].toUpperCase(Locale.ROOT));
         // Mix / Favoriten / Stimmung: Foto des Rappers, der gerade läuft
         if (r.isSpecial() || MediaWatcher.mood != null) photoFor(Library.rapperIndexByName(who));
+        updateTracklist();
         partyBpm = Moods.bpm(c, MediaWatcher.currentId());
         if (party) startAmbient();
         final String artistName = who;

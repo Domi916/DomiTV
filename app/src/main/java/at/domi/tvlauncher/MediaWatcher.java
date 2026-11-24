@@ -58,6 +58,13 @@ public class MediaWatcher extends NotificationListenerService {
     /** Stimmungs-Shuffle (Rage / Chill / …): Songs aller Rapper, Schlüssel aus Moods.KEYS. */
     static String mood = null;
 
+    /** Eigene Songliste (z. B. Tagesmix) mit Namen aus Moods.KEYS spielen. */
+    static void startList(Context c, String pkg, String key, List<String> list) {
+        albumTitle = null;
+        mood = key;
+        startQueue(c, pkg, Rapper.FAV, list, false, null);
+    }
+
     static void startMood(Context c, String pkg, String key) {
         albumTitle = null;
         mood = key;
@@ -451,20 +458,24 @@ public class MediaWatcher extends NotificationListenerService {
 
     static java.util.Map<String, String> titles;
 
+    /** Titel aller bekannten Songs (Video-ID -> "Titel\0Rapper"). */
+    static synchronized java.util.Map<String, String> titles(Context c) {
+        if (titles == null) {
+            java.util.Map<String, String> t = new java.util.HashMap<>();
+            for (Rapper r : Rapper.LIST)
+                if (!r.isSpecial()) for (String[] s : r.songsWithTitles(c)) t.put(s[0], s[1] + "\u0000" + r.name);
+            titles = t;
+        }
+        return titles;
+    }
+
     /** Songtext des nächsten Songs vorladen, damit er sofort da ist. */
     static void prefetchNext(final Context c) {
         if (queue.size() <= pos + 1) return;
         final String id = queue.get(pos + 1);
         new Thread(new Runnable() {
             public void run() {
-                synchronized (MediaWatcher.class) {
-                    if (titles == null) {
-                        titles = new java.util.HashMap<>();
-                        for (Rapper r : Rapper.LIST)
-                            if (!r.isSpecial()) for (String[] s : r.songsWithTitles(c)) titles.put(s[0], s[1] + "\u0000" + r.name);
-                    }
-                }
-                String v = titles.get(id);
+                String v = titles(c).get(id);
                 if (v == null) return;
                 String[] p = v.split("\u0000");
                 LyricsOverlay.prefetch(p[1], LyricsOverlay.cleanTitle(p[0], p[1]));

@@ -119,6 +119,19 @@ public class HomeWatcherService extends AccessibilityService {
             MediaWatcher.wallBase = i.getIntExtra("at", 0);
             MediaWatcher.wallStart = SystemClock.elapsedRealtime();
             MediaWatcher.curDur = 170000;
+            MediaWatcher.albumTitle = null;
+            MediaWatcher.mood = null;
+            if (i.getBooleanExtra("album", false)) {
+                for (Album a : Album.load(getApplicationContext(), true)) {
+                    if (a.rapper == r && a.tracks.size() > 3) {
+                        MediaWatcher.albumTitle = a.title;
+                        MediaWatcher.queue.clear();
+                        MediaWatcher.queue.addAll(a.tracks);
+                        MediaWatcher.pos = 2;
+                        break;
+                    }
+                }
+            }
             overlay.show(r);
             overlay.track(t, i.getStringExtra("artist"), i.getLongExtra("dur", 0));
         }

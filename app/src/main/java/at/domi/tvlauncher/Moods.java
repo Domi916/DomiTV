@@ -12,11 +12,11 @@ import java.util.Set;
 
 /** Stimmungs-Shuffle: alle Songs deiner Rapper nach Tempo/Energie sortiert (Daten: assets/moods.json, von GitHub). */
 final class Moods {
-    static final String[] KEYS = {"rage", "chill", "nacht", "auto", "like"};
-    static final String[] LABEL = {"Rage", "Chill", "Nachts", "Auto fahren", "Mehr wie das"};
-    static final String[] SUB = {"Hart, laut, schnell", "Runterkommen", "Dunkel und ruhig", "Mitnicken, Fenster runter", "Ähnliche Songs"};
-    static final int[] C1 = {0xffff3d1f, 0xff2fd6c3, 0xff6a5cff, 0xffffb02e, 0xffff5c8a};
-    static final int[] C2 = {0xff2a0500, 0xff021a18, 0xff0a0626, 0xff241500, 0xff22040f};
+    static final String[] KEYS = {"rage", "chill", "nacht", "auto", "like", "daily"};
+    static final String[] LABEL = {"Rage", "Chill", "Nachts", "Auto fahren", "Mehr wie das", "Tagesmix"};
+    static final String[] SUB = {"Hart, laut, schnell", "Runterkommen", "Dunkel und ruhig", "Mitnicken, Fenster runter", "Ähnliche Songs", "Jeden Tag neu"};
+    static final int[] C1 = {0xffff3d1f, 0xff2fd6c3, 0xff6a5cff, 0xffffb02e, 0xffff5c8a, 0xff4fc3ff};
+    static final int[] C2 = {0xff2a0500, 0xff021a18, 0xff0a0626, 0xff241500, 0xff22040f, 0xff031826};
     /** Karten in der Stimmungs-Reihe (ohne "Mehr wie das"). */
     static final int ROW = 4;
 
