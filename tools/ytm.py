@@ -89,4 +89,6 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:   # Login abgelaufen o. ä. – nicht den ganzen Lauf abbrechen
-        print("YouTube Music: Fehler –", type(e).__name__, str(e)[:200])
+        import traceback
+        print("YouTube Music: Fehler –", type(e).__name__, repr(e)[:300])
+        traceback.print_exc(limit=3)
