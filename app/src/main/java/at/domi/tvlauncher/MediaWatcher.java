@@ -165,22 +165,43 @@ public class MediaWatcher extends NotificationListenerService {
         play(c);
     }
 
-    static boolean play(Context c) {
+    static boolean play(Context c) { return play(c, 0, false); }
+
+    /** Box kam erst nach dem Start dazu: YouTube bleibt beim Ton-Wechsel gern hängen
+     *  (oder die Box startet irgendein altes Video). Darum: denselben Song kurz danach neu öffnen. */
+    static void boxJoined(final Context c) {
+        if (!active || JblBox.waiting) return;
+        long now = SystemClock.elapsedRealtime();
+        if (JblBox.boxAtGo && now - JblBox.goAt < 6000) return;   // war schon beim Start verbunden
+        final long at = awaitingOurs ? 0 : position();
+        log(c, "Box kam dazu (" + (awaitingOurs ? "Song lud noch" : "bei " + at / 1000 + " s") + ") -> Song neu öffnen");
+        HomeWatcherService.overlayStatus("JBL-Box verbunden …");
+        mh.postDelayed(new Runnable() {
+            public void run() { if (active) play(c, at > 8000 ? at - 3000 : 0, true); }
+        }, 2200);
+    }
+
+    /** Wurde für diesen Start schon einmal "falsches Video" korrigiert? */
+    static boolean fixTried = false;
+
+    static boolean play(Context c, long startMs, boolean sameSongAgain) {
         if (queue.isEmpty() || ytPkg == null) return false;
         if (pos >= queue.size()) { if (albumTitle == null) Collections.shuffle(queue); pos = 0; }
         String id = queue.get(pos);
         launchedAt = SystemClock.elapsedRealtime();
-        prevTitle = ourTitle;
+        prevTitle = sameSongAgain ? null : ourTitle;
         ourTitle = null;
         awaitingOurs = true;
+        if (!sameSongAgain) fixTried = false;
         curDur = 0;
         lastPos = -1;
-        Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=" + id));
+        String url = "https://www.youtube.com/watch?v=" + id + (startMs >= 1000 ? "&t=" + startMs / 1000 + "s" : "");
+        Intent v = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         v.setPackage(ytPkg);
         v.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             c.startActivity(v);
-            log(c, rapperName + ": Song " + (pos + 1) + "/" + queue.size() + " " + id);
+            log(c, rapperName + ": Song " + (pos + 1) + "/" + queue.size() + " " + id + (sameSongAgain ? " (neu geöffnet)" : ""));
             return true;
         } catch (Exception e) {
             Log.e(TAG, "Shuffle: Start fehlgeschlagen", e);
@@ -385,8 +406,9 @@ public class MediaWatcher extends NotificationListenerService {
 
                 @Override
                 public void onPlaybackStateChanged(PlaybackState s) {
-                    current = mc;
-                    applyState(s);
+                    // nur die Sitzung, die wirklich spielt, ist "die aktuelle" (YouTube hat manchmal alte Sitzungen offen)
+                    boolean live = s != null && (s.getState() == PlaybackState.STATE_PLAYING || s.getState() == PlaybackState.STATE_BUFFERING);
+                    if (current == null || current == mc || live) { current = mc; applyState(s); }
                 }
 
                 @Override
@@ -394,9 +416,11 @@ public class MediaWatcher extends NotificationListenerService {
             };
             mc.registerCallback(cb, h);
             watched.put(mc, cb);
-            current = mc;
-            log(this, "beobachte " + p);
-            onTrack(mc.getMetadata());
+            PlaybackState ps = mc.getPlaybackState();
+            boolean live = ps != null && ps.getState() == PlaybackState.STATE_PLAYING;
+            log(this, "beobachte " + p + (live ? " (spielt)" : ""));
+            if (current == null || live) current = mc;
+            if (live || current == mc) onTrack(mc.getMetadata());
         }
     }
 
@@ -407,6 +431,19 @@ public class MediaWatcher extends NotificationListenerService {
         String artist = m.getString(MediaMetadata.METADATA_KEY_ARTIST);
         long since = SystemClock.elapsedRealtime() - launchedAt;
         boolean stale = prevTitle != null && t.equals(prevTitle) && since < 15000;
+        String expected = expectedTitle(this);
+        boolean wrong = !sameSong(t, expected) && otherRapper(t, artist, m.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST));
+        if (wrong && (awaitingOurs || since < 7000)) {
+            // z. B. die Box schickt beim Verbinden "Play" an ein altes Video: das ist nicht unser Song
+            log(this, "falsches Video: " + t + " / " + artist + " (erwartet: " + expected + ")");
+            if (!fixTried && since > 2500) {
+                fixTried = true;
+                mute();
+                HomeWatcherService.overlaySwitching();
+                play(this, 0, true);
+            }
+            return;
+        }
         if (!stale && ((awaitingOurs && since < 60000) || since < 7000)) {
             awaitingOurs = false;
             stuck = 0;
@@ -454,6 +491,29 @@ public class MediaWatcher extends NotificationListenerService {
         if (since < 3000) return;
         pos++;
         play(this);
+    }
+
+    /** Titel des Songs, den wir gerade gestartet haben (aus unserer Songliste), oder null. */
+    static String expectedTitle(Context c) {
+        String id = currentId();
+        if (id == null) return null;
+        String v = titles(c).get(id);
+        return v == null ? null : v.split("\u0000")[0];
+    }
+
+    /** Nennt der Titel einen unserer Rapper, der in der laufenden Auswahl gar nicht vorkommt? */
+    static boolean otherRapper(String t, String artist, String author) {
+        for (String mem : members) {
+            String n = norm(mem);
+            if (hasWord(t, n) || hasWord(artist, n) || hasWord(author, n)) return false;
+        }
+        for (Rapper r : Rapper.LIST) {
+            if (r.isSpecial()) continue;
+            String n = norm(r.name);
+            if (n.length() < 3) continue;
+            if (hasWord(t, n) || hasWord(artist, n) || hasWord(author, n)) return true;
+        }
+        return false;
     }
 
     static java.util.Map<String, String> titles;

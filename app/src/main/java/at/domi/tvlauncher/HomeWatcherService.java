@@ -57,10 +57,18 @@ public class HomeWatcherService extends AccessibilityService {
     }
 
     /** Stick schlafen legen (wie Ausschalten mit der Fernbedienung). true = hat geklappt. */
-    static boolean sleepNow() {
+    static boolean sleepNow(Context c) {
         HomeWatcherService s = instance;
-        if (s == null || android.os.Build.VERSION.SDK_INT < 28) return false;
-        try { return s.performGlobalAction(8 /* GLOBAL_ACTION_LOCK_SCREEN */); } catch (Exception e) { return false; }
+        if (s != null && android.os.Build.VERSION.SDK_INT >= 28) {
+            try { if (s.performGlobalAction(8 /* GLOBAL_ACTION_LOCK_SCREEN */)) return true; } catch (Exception ignored) { }
+        }
+        return Admin.lock(c);
+    }
+
+    static void overlayStatus(final String text) {
+        final HomeWatcherService s = instance;
+        if (s == null) return;
+        s.h.post(new Runnable() { public void run() { if (s.overlay != null) s.overlay.setStatus(text); } });
     }
 
     static void overlayWaiting(final boolean on) {
@@ -87,10 +95,7 @@ public class HomeWatcherService extends AccessibilityService {
                 android.bluetooth.BluetoothDevice d = i.getParcelableExtra("android.bluetooth.device.extra.DEVICE");
                 if (JblBox.isJbl(d)) JblBox.connected = st == 2;
                 // Box kam mitten im Song dazu: YouTube weiterspielen lassen
-                if (st == 2 && JblBox.isJbl(d) && MediaWatcher.active) {
-                    h.postDelayed(new Runnable() { public void run() { MediaWatcher.resumePlay(); } }, 1500);
-                    h.postDelayed(new Runnable() { public void run() { MediaWatcher.resumePlay(); } }, 4000);
-                }
+                if (st == 2 && JblBox.isJbl(d) && MediaWatcher.active) MediaWatcher.boxJoined(HomeWatcherService.this);
                 if (st == 2 && JblBox.isJbl(d) && !JblBox.wanted) {
                     h.postDelayed(new Runnable() {
                         @Override

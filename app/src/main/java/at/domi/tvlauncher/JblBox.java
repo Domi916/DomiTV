@@ -23,6 +23,11 @@ final class JblBox {
     static volatile boolean manual = false;
     /** Aktueller Zustand (vom Bluetooth-System gemeldet). */
     static volatile boolean connected = false;
+    /** true, solange vor dem Start auf die Box gewartet wird. */
+    static volatile boolean waiting = false;
+    /** Wann der Song nach dem Warten gestartet wurde und ob die Box da schon verbunden war. */
+    static volatile long goAt = 0;
+    static volatile boolean boxAtGo = false;
 
     static boolean isJbl(BluetoothDevice d) {
         String n = d == null ? null : d.getName();
@@ -70,6 +75,9 @@ final class JblBox {
             public void run() {
                 if (done[0]) return;
                 done[0] = true;
+                waiting = false;
+                goAt = android.os.SystemClock.elapsedRealtime();
+                boxAtGo = connected;
                 then.run();
             }
         };
@@ -88,17 +96,35 @@ final class JblBox {
                             h.post(go);
                         } else {
                             wanted = true;
+                            waiting = true;
                             Method m = BluetoothA2dp.class.getMethod("connect", BluetoothDevice.class);
                             Log.i(TAG, "JBL verbinden (vor dem Start): " + m.invoke(proxy, target));
-                            // warten, bis sie verbunden ist (höchstens 7 Sekunden)
+                            HomeWatcherService.overlayStatus("JBL-Box verbindet …");
+                            // warten, bis sie verbunden ist (höchstens 15 Sekunden).
+                            // Ist die Box aus, meldet Bluetooth nach ein paar Sekunden "getrennt" -> dann sofort ohne Box.
                             final long t0 = android.os.SystemClock.elapsedRealtime();
+                            final boolean[] sawConnecting = {false};
                             h.post(new Runnable() {
                                 public void run() {
                                     if (done[0]) return;
-                                    boolean on = false;
-                                    try { on = proxy.getConnectedDevices().contains(target); } catch (Throwable ignored) { }
-                                    if (on) { connected = true; h.postDelayed(go, 700); return; }
-                                    if (android.os.SystemClock.elapsedRealtime() - t0 > 7000) { Log.i(TAG, "JBL nicht erreichbar, ohne Box weiter"); go.run(); return; }
+                                    int st = -1;
+                                    try { st = proxy.getConnectionState(target); } catch (Throwable ignored) { }
+                                    long dt = android.os.SystemClock.elapsedRealtime() - t0;
+                                    if (st == BluetoothProfile.STATE_CONNECTED) {
+                                        connected = true;
+                                        MediaWatcher.log(ctx, "JBL-Box verbunden nach " + dt / 100 / 10f + " s");
+                                        HomeWatcherService.overlayStatus("Lädt …");
+                                        h.postDelayed(go, 1200);   // Ton-Weg kurz zur Ruhe kommen lassen
+                                        return;
+                                    }
+                                    if (st == BluetoothProfile.STATE_CONNECTING) sawConnecting[0] = true;
+                                    boolean failed = sawConnecting[0] && st == BluetoothProfile.STATE_DISCONNECTED && dt > 2500;
+                                    if (failed || dt > 15000) {
+                                        MediaWatcher.log(ctx, "JBL-Box nicht erreichbar (" + (failed ? "aus/weg" : "Zeit um") + "), ohne Box weiter");
+                                        HomeWatcherService.overlayStatus("Lädt …");
+                                        go.run();
+                                        return;
+                                    }
                                     h.postDelayed(this, 300);
                                 }
                             });
@@ -112,7 +138,7 @@ final class JblBox {
                 @Override
                 public void onServiceDisconnected(int profile) { }
             }, BluetoothProfile.A2DP);
-            h.postDelayed(go, 9000); // Sicherheit
+            h.postDelayed(go, 17000); // Sicherheit
         } catch (Throwable e) {
             go.run();
         }

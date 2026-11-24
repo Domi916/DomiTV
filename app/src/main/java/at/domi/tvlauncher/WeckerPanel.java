@@ -97,11 +97,13 @@ final class WeckerPanel {
             if (sel < 2) on = true;          // Zeit ändern = Wecker an
         } else if ("ok".equals(k) && sel == 3) {
             Wecker.testIn(a, 60);
-            a.showToast("Test-Wecker in 1 Minute – schalt jetzt den Fernseher mit der Fire-TV-Fernbedienung aus");
             close();
+            if (Admin.askIfNeeded(a)) a.showToast("Bitte einmal erlauben – dann läuft der Test in 1 Minute");
+            else a.showToast("Test-Wecker in 1 Minute – schalt jetzt den Fernseher aus");
             return;
         } else if ("ok".equals(k)) {
             Wecker.set(a, on, h, m);
+            if (on) Admin.askIfNeeded(a);
             a.showToast(on ? "Wecker an: " + Wecker.text(a) + " – dein Tagesmix weckt dich" : "Wecker aus");
             close();
             a.buildCards();

@@ -534,6 +534,8 @@ final class LyricsOverlay {
         root.setBackgroundColor(on ? 0x00000000 : Color.BLACK);
     }
 
+    void setStatus(String s) { if (status != null) status.setText(s); }
+
     void switching() {
         if (root == null || !added) return;
         status.setText("Nächster Song …");

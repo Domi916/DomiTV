@@ -72,9 +72,9 @@ public class Wecker extends BroadcastReceiver {
         // Der Fernseher geht nur an, wenn der Stick AUFWACHT (dann schickt er per HDMI-CEC "einschalten").
         // Ist der Stick noch wach (Fernseher nur ausgeschaltet), legen wir ihn kurz schlafen und wecken ihn wieder.
         boolean awake = pm != null && pm.isInteractive();
-        boolean slept = awake && HomeWatcherService.sleepNow();
+        boolean slept = awake && HomeWatcherService.sleepNow(app);
         final String diag = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.ROOT).format(new java.util.Date())
-                + " · Stick war " + (awake ? "wach" : "im Schlaf") + (awake ? (slept ? ", kurz schlafen gelegt" : ", Schlafen ging nicht") : "");
+                + " · Stick war " + (awake ? "wach" : "im Schlaf") + (awake ? (slept ? ", kurz schlafen gelegt" : ", Schlafen ging nicht (Android " + android.os.Build.VERSION.SDK_INT + ")") : "");
         MediaWatcher.log(app, "Wecker: " + diag);
         long wakeAt = slept ? 6000 : 0;
         h.postDelayed(new Runnable() {
