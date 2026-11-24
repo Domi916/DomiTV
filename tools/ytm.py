@@ -38,7 +38,9 @@ def own_history(yt):
     for sec in sections:
         shelf = sec.get("musicShelfRenderer")
         if not shelf:
-            print("   Abschnitt übersprungen:", list(sec.keys())[:3])
+            import re as _re
+            txt = " | ".join(_re.findall(r'"text":\s*"([^"]{2,80})"', json.dumps(sec)))[:300]
+            print("   Abschnitt übersprungen:", list(sec.keys())[:3], txt)
             continue
         title = ""
         try:
