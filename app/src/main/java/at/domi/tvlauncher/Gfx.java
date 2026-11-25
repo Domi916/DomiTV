@@ -169,7 +169,7 @@ final class Gfx {
 
     /** Kleine Symbole: Haus, Regler, Pfeil, Play. */
     static class Icon extends View {
-        static final int HOME = 0, SETTINGS = 1, CHEVRON = 2, PLAY = 3, SPEAKER = 4, PARTY = 5;
+        static final int HOME = 0, SETTINGS = 1, CHEVRON = 2, PLAY = 3, SPEAKER = 4, PARTY = 5, ALARM = 6;
         final int type;
         final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         final Path path = new Path();
@@ -217,6 +217,11 @@ final class Gfx {
                 c.drawRoundRect(r, 3, 3, p);
                 c.drawCircle(12, 14.5f, 3.2f, p);
                 c.drawCircle(12, 7.8f, 1.2f, p);
+            } else if (type == ALARM) {
+                // Wecker: Zifferblatt mit zwei Glocken
+                c.drawCircle(12, 13, 7, p);
+                c.drawLine(12, 9.5f, 12, 13, p); c.drawLine(12, 13, 14.8f, 14.5f, p);
+                c.drawLine(3.8f, 7, 7, 4, p); c.drawLine(20.2f, 7, 17, 4, p);
             } else if (type == CHEVRON) {
                 path.moveTo(6, 9); path.lineTo(12, 15); path.lineTo(18, 9);
                 c.drawPath(path, p);

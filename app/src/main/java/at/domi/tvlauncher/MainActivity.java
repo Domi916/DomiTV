@@ -134,11 +134,22 @@ public class MainActivity extends Activity {
     // ---------- Ansichten ----------
     Quiz quiz;
     WeckerPanel wecker;
-    FrameLayout vidRow;
+    FrameLayout newRow;
     View head7v;
-    RapCard[] vidCards = new RapCard[0];
-    List<YtFeed.Video> vids = new ArrayList<>();
-    int vSel = 0;
+    RapCard[] newCards = new RapCard[0];
+    final List<NewItem> news = new ArrayList<>();
+    int nSel = 0;
+    long lastRowStep = 0;
+    static final long ROW_STEP_MS = 350;
+
+    /** Eine Karte in "Neue Songs": angekündigter Drop, Release oder einzelner neuer Song. */
+    static class NewItem {
+        Drops.Drop drop;
+        Album album;
+        String songId;
+        int rapper;
+        TextView badge;
+    }
     TextView profTop, profSub, statV;
     FrameLayout profBox;
     FrameLayout root, bgWrap, kbWrap, ringWrap, lift, heroWrap, dock, cont, cardsRow, intro, header, rapStage, rapRow, rapRow2, albumRow;
@@ -186,10 +197,10 @@ public class MainActivity extends Activity {
     final List<TextView> words = new ArrayList<>();
     TextView greet, date, time, toast, contSub, iSub;
     Gfx.Icon chev;
-    FrameLayout btnHome, btnSettings, btnBox;
+    FrameLayout btnHome, btnSettings, btnBox, btnAlarm;
     TextView weather;
     View mood;
-    Gfx.Icon icHome, icSettings, icBox;
+    Gfx.Icon icHome, icSettings, icBox, icAlarm;
     ObjectAnimator kenBurns;
     final List<ObjectAnimator> ringAnims = new ArrayList<>();
 
@@ -468,6 +479,11 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(px(52), px(52));
         blp.rightMargin = px(12);
         pill.addView(btnParty, blp);
+        btnAlarm = iconButton(Gfx.Icon.ALARM);
+        icAlarm = (Gfx.Icon) btnAlarm.getChildAt(0);
+        LinearLayout.LayoutParams bla = new LinearLayout.LayoutParams(px(52), px(52));
+        bla.rightMargin = px(12);
+        pill.addView(btnAlarm, bla);
         btnHome = iconButton(Gfx.Icon.HOME);
         icHome = (Gfx.Icon) btnHome.getChildAt(0);
         btnSettings = iconButton(Gfx.Icon.SETTINGS);
@@ -560,11 +576,11 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams cl4 = new LinearLayout.LayoutParams(-2, -2);
         cl4.leftMargin = px(18);
         head4.addView(sub4, cl4);
-        cont.addView(head4, atD(0, 650, -2, -2));
+        cont.addView(head4, atD(0, 950, -2, -2));
         head4v = head4;
         albumRow = new FrameLayout(this);
         albumRow.setClipChildren(false);
-        cont.addView(albumRow, atD(0, 720, 20000, 260));
+        cont.addView(albumRow, atD(0, 1020, 20000, 260));
         albums = Album.load(this, true);
         albumCards = new RapCard[albums.size()];
         for (int i = 0; i < albums.size(); i++) {
@@ -580,11 +596,11 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams cl5 = new LinearLayout.LayoutParams(-2, -2);
         cl5.leftMargin = px(18);
         head5.addView(sub5, cl5);
-        cont.addView(head5, atD(0, 950, -2, -2));
+        cont.addView(head5, atD(0, 1250, -2, -2));
         head5v = head5;
         sngRow = new FrameLayout(this);
         sngRow.setClipChildren(false);
-        cont.addView(sngRow, atD(0, 1020, 60000, 260));
+        cont.addView(sngRow, atD(0, 1320, 60000, 260));
         singles = Album.load(this, false);
         // nur die neuesten 90 – mehr Karten machen die Startseite träge
         if (singles.size() > 90) singles = new ArrayList<>(singles.subList(0, 90));
@@ -593,11 +609,11 @@ public class MainActivity extends Activity {
             sngCards[i] = buildAlbumCard(singles.get(i));
             sngRow.addView(sngCards[i].view, atD(i * 236, 0, 210, 210));
         }
-        cont.addView(head3, atD(0, 1250, -2, -2));
+        cont.addView(head3, atD(0, 1550, -2, -2));
         head3v = head3;
         rapRow2 = new FrameLayout(this);
         rapRow2.setClipChildren(false);
-        cont.addView(rapRow2, atD(0, 1320, 2000, 260));
+        cont.addView(rapRow2, atD(0, 1620, 2000, 260));
         for (int r = Rapper.OWN; r < RAP.length; r++) {
             rapCards[r] = buildRapCard(RAP[r]);
             rapRow2.addView(rapCards[r].view, atD((r - Rapper.OWN) * 348, 0, 320, 190));
@@ -611,31 +627,30 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams cl6 = new LinearLayout.LayoutParams(-2, -2);
         cl6.leftMargin = px(18);
         head6.addView(sub6, cl6);
-        cont.addView(head6, atD(0, 1550, -2, -2));
+        cont.addView(head6, atD(0, 1850, -2, -2));
         head6v = head6;
         moodRow = new FrameLayout(this);
         moodRow.setClipChildren(false);
-        cont.addView(moodRow, atD(0, 1620, 2000, 260));
+        cont.addView(moodRow, atD(0, 1920, 2000, 260));
         moodCards = new RapCard[Moods.ROW];
         for (int i = 0; i < moodCards.length; i++) {
             moodCards[i] = buildMoodCard(i);
             moodRow.addView(moodCards[i].view, atD(i * 430, 0, 400, 190));
         }
-        // --- Neu auf YouTube ---
+        // --- Neue Songs ---
         LinearLayout head7 = new LinearLayout(this);
         head7.setOrientation(LinearLayout.HORIZONTAL);
         head7.setBaselineAligned(true);
-        head7.addView(text("Neu auf YouTube", 34, "Bold", TXT, -0.025f));
-        TextView sub7 = text("Videos deiner Rapper", 22, "Medium", Gfx.a(TXT, 0.55f), 0);
+        head7.addView(text("Neue Songs", 34, "Bold", TXT, -0.025f));
+        TextView sub7 = text("Frisch erschienen von deinen Rappern", 22, "Medium", Gfx.a(TXT, 0.55f), 0);
         LinearLayout.LayoutParams cl7 = new LinearLayout.LayoutParams(-2, -2);
         cl7.leftMargin = px(18);
         head7.addView(sub7, cl7);
-        cont.addView(head7, atD(0, 1850, -2, -2));
+        cont.addView(head7, atD(0, 650, -2, -2));
         head7v = head7;
-        vidRow = new FrameLayout(this);
-        vidRow.setClipChildren(false);
-        cont.addView(vidRow, atD(0, 1920, 12000, 260));
-        buildVidRow();
+        newRow = new FrameLayout(this);
+        newRow.setClipChildren(false);
+        cont.addView(newRow, atD(0, 720, 12000, 260));
 
         // --- Pfeil unten ---
         chev = new Gfx.Icon(this, Gfx.Icon.CHEVRON);
@@ -805,7 +820,9 @@ public class MainActivity extends Activity {
         }
     }
 
-    RapCard buildAlbumCard(Album a) {
+    RapCard buildAlbumCard(Album a) { return buildAlbumCard(a, true); }
+
+    RapCard buildAlbumCard(Album a, boolean labels) {
         Rapper r = RAP[a.rapper];
         RapCard rc = new RapCard();
         FrameLayout f = new FrameLayout(this);
@@ -836,9 +853,9 @@ public class MainActivity extends Activity {
             wl.gravity = Gravity.BOTTOM | Gravity.START;
             wl.leftMargin = px(16);
             wl.bottomMargin = px(14);
-            f.addView(who, wl);
+            if (labels) f.addView(who, wl);
         }
-        if (!cov) f.addView(text(a.typeLabel(), 14, "Bold", Gfx.w(0.7f), 0.28f), atD(22, 22, -2, -2));
+        if (!cov && labels) f.addView(text(a.typeLabel(), 14, "Bold", Gfx.w(0.7f), 0.28f), atD(22, 22, -2, -2));
         TextView nm = text(a.title, a.title.length() > 12 ? 22 : 28, "Black", Color.WHITE, -0.02f);
         nm.setMaxLines(2);
         nm.setEllipsize(TextUtils.TruncateAt.END);
@@ -851,7 +868,7 @@ public class MainActivity extends Activity {
         sl.gravity = Gravity.BOTTOM | Gravity.START;
         sl.leftMargin = px(22);
         sl.bottomMargin = px(22);
-        if (!cov) { f.addView(nm, nl); f.addView(sub, sl); }
+        if (!cov && labels) { f.addView(nm, nl); f.addView(sub, sl); }
         FrameLayout play = new FrameLayout(this);
         play.setBackground(Gfx.round(r.c1, px(25)));
         Gfx.Icon pi = new Gfx.Icon(this, Gfx.Icon.PLAY);
@@ -1296,15 +1313,14 @@ public class MainActivity extends Activity {
         for (int i = 0; i < albumCards.length; i++) focusRap(albumCards[i], "alb".equals(zone) && i == aSel, anim);
         for (int i = 0; i < sngCards.length; i++) focusRap(sngCards[i], "sng".equals(zone) && i == sSel, anim);
         for (int i = 0; i < moodCards.length; i++) focusRap(moodCards[i], "mood".equals(zone) && i == mSel, anim);
-        for (int i = 0; i < vidCards.length; i++) focusRap(vidCards[i], "vid".equals(zone) && i == vSel, anim);
-        if (vidRow != null) {
-            float vx = -Math.max(0, vSel - 3) * 430;
-            mv(vidRow, anim, 500).translationX(px(vx));
-            if (!anim) vidRow.setTranslationX(px(vx));
-        }
+        for (int i = 0; i < newCards.length; i++) focusRap(newCards[i], "new".equals(zone) && i == nSel, anim);
+        float nx = -Math.max(0, nSel - 5) * 236;
+        mv(newRow, anim, 500).translationX(px(nx));
+        if (!anim) newRow.setTranslationX(px(nx));
+        updateCovers(newCards, nSel);
         updateCovers(albumCards, aSel);
         updateCovers(sngCards, sSel);
-        if ("vid".equals(zone) && vSel < vids.size() && vids.get(vSel).rapper >= 0) setRapper(vids.get(vSel).rapper, anim);
+        if ("new".equals(zone) && nSel < news.size()) setRapper(news.get(nSel).rapper, anim);
         else if ("sng".equals(zone) && sSel < singles.size()) setRapper(singles.get(sSel).rapper, anim);
         else if ("alb".equals(zone) && aSel < albums.size()) setRapper(albums.get(aSel).rapper, anim);
         else if (isRapZone(zone)) setRapper(rSel, anim);
@@ -1323,8 +1339,9 @@ public class MainActivity extends Activity {
             btnParty.setBackground(Gfx.round(f ? 0xffff3dd2 : 0x66ff3dd2, px(26)));
             icParty.setColor(f ? 0xff1a0014 : 0xffffd6f6);
         }
-        focusBtn(btnHome, icHome, "top".equals(zone) && tSel == 2, anim);
-        focusBtn(btnSettings, icSettings, "top".equals(zone) && tSel == 3, anim);
+        focusBtn(btnAlarm, icAlarm, "top".equals(zone) && tSel == 2, anim);
+        focusBtn(btnHome, icHome, "top".equals(zone) && tSel == 3, anim);
+        focusBtn(btnSettings, icSettings, "top".equals(zone) && tSel == 4, anim);
 
         float bx;
         if ("apps".equals(zone)) bx = 96 + 28 + sel * 312 + 140 - 360;
@@ -1551,42 +1568,27 @@ public class MainActivity extends Activity {
 
     String shownMode = "";
 
-    static boolean isRapZone(String z) { return "rap".equals(z) || "rap2".equals(z) || "alb".equals(z) || "sng".equals(z) || "mood".equals(z) || "vid".equals(z); }
+    static boolean isRapZone(String z) { return "rap".equals(z) || "rap2".equals(z) || "alb".equals(z) || "sng".equals(z) || "mood".equals(z) || "new".equals(z); }
 
-    float contShift(String z) { return "vid".equals(z) ? -1830 : "mood".equals(z) ? -1530 : "rap2".equals(z) ? -1230 : "sng".equals(z) ? -930 : "alb".equals(z) ? -630 : -330; }
+    /** Reihen auf der Startseite von oben nach unten. */
+    static final String[] ROWS = {"cont", "rap", "new", "alb", "sng", "rap2", "mood"};
+
+    static int rowIndex(String z) {
+        for (int i = 0; i < ROWS.length; i++) if (ROWS[i].equals(z)) return i;
+        return -1;
+    }
+
+    float contShift(String z) { return -330 - 300 * Math.max(0, rowIndex(z) - 1); }
 
     void setMode(String z, boolean anim) {
         if (z.equals(shownMode) && anim) return;
         // Reihen, die oben aus dem Bild rutschen, ausblenden
-        boolean vd = "vid".equals(z);
-        boolean md = "mood".equals(z) || vd;
-        if (head6v != null) {
-            head6v.animate().alpha(vd ? 0f : 1f).setDuration(anim ? 400 : 0).setStartDelay(0).start();
-            moodRow.animate().alpha(vd ? 0f : 1f).setDuration(anim ? 400 : 0).setStartDelay(0).start();
-        }
-        float topA = md || "rap2".equals(z) || "alb".equals(z) || "sng".equals(z) ? 0f : 1f;
-        float midA = md || "rap2".equals(z) || "sng".equals(z) ? 0f : 1f;
-        float albA = md || "rap2".equals(z) ? 0f : 1f;
-        if (head3v != null) {
-            float r2 = vd ? 0f : 1f;
-            head3v.animate().alpha(r2).setDuration(anim ? 400 : 0).setStartDelay(0).start();
-            rapRow2.animate().alpha(r2).setDuration(anim ? 400 : 0).setStartDelay(0).start();
-        }
-        float sngA = md ? 0f : 1f;
-        if (head5v != null) {
-            head5v.animate().alpha(sngA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
-            sngRow.animate().alpha(sngA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
-        }
-        if (head4v != null) {
-            head4v.animate().alpha(albA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
-            albumRow.animate().alpha(albA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
-        }
-        if (contHead != null) {
-            contHead.animate().alpha(topA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
-            cardsRow.animate().alpha(topA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
-            head2v.animate().alpha(midA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
-            rapRow.animate().alpha(midA).setDuration(anim ? 400 : 0).setStartDelay(0).start();
-        }
+        View[][] rows = {{contHead, cardsRow}, {head2v, rapRow}, {head7v, newRow}, {head4v, albumRow},
+                {head5v, sngRow}, {head3v, rapRow2}, {head6v, moodRow}};
+        int at = rowIndex(z);
+        for (int i = 0; i < rows.length; i++)
+            for (View v : rows[i])
+                if (v != null) v.animate().alpha(i <= at - 2 ? 0f : 1f).setDuration(anim ? 400 : 0).setStartDelay(0).start();
         if (isRapZone(z) && isRapZone(shownMode)) {
             shownMode = z;
             cont.animate().translationY(px(contShift(z))).setDuration(anim ? 600 : 0)
@@ -1862,36 +1864,7 @@ public class MainActivity extends Activity {
             c.right = ago(prefs.getLong("lastRapperTs", System.currentTimeMillis()));
             cards.add(0, c);
         }
-        // "Neu erschienen": neue Songs deiner Rapper (höchstens 3 Karten)
         if (ytApp != null && ytApp.pkg != null) {
-            int n = 0;
-            for (String[] ns : Library.newSongs(this)) {
-                if (n++ >= 3) break;
-                Card c = new Card();
-                c.app = ytApp;
-                c.kind = "new";
-                c.rapper = Integer.parseInt(ns[0]);
-                c.songId = ns[1];
-                c.title = LyricsOverlay.cleanTitle(ns[2], RAP[c.rapper].name);
-                c.sub = "Neu von " + RAP[c.rapper].name;
-                c.right = ago(Long.parseLong(ns[3]));
-                cards.add(Math.min(cards.size(), lr >= 0 ? 1 : 0), c);
-            }
-            // Drops: angekündigte Releases mit Countdown (ganz vorne, wenn bald / gerade raus)
-            int dp = 0;
-            for (Drops.Drop d : Drops.cached(this)) {
-                if (d.at - System.currentTimeMillis() > 60L * 86400000L) continue;   // erst 60 Tage vorher
-                Card c = new Card();
-                c.app = ytApp;
-                c.kind = "drop";
-                c.drop = d;
-                c.rapper = d.rapper;
-                c.tag = d.out() ? (d.tracks.isEmpty() ? "Heute" : "Neu da") : "Drop";
-                c.title = d.title;
-                c.sub = d.artist + " · " + (d.out() && !d.tracks.isEmpty() ? "OK zum Hören" : Drops.countdown(d));
-                c.right = "";
-                cards.add(Math.min(cards.size(), dp++), c);
-            }
             // Zeitreise: heute vor 1 Jahr / vor einem Monat / Song der Woche
             String[] tw = Library.timeTravel(this);
             if (tw != null) {
@@ -1906,7 +1879,7 @@ public class MainActivity extends Activity {
                     c.title = tw[3];
                     c.sub = tw[2] + " · dann " + RAP[ri].name + "-Shuffle";
                     c.right = "";
-                    cards.add(Math.min(cards.size(), dp + (lr >= 0 ? 1 : 0) + 1), c);
+                    cards.add(Math.min(cards.size(), lr >= 0 ? 1 : 0), c);
                 }
             }
             // Tagesmix (ganz vorne)
@@ -1919,17 +1892,6 @@ public class MainActivity extends Activity {
                 c.sub = "30 Songs · Favoriten, Neues, lange nicht gehört";
                 c.right = "";
                 cards.add(0, c);
-            }
-            // Musik-Wecker
-            {
-                Card c = new Card();
-                c.app = ytApp;
-                c.kind = "wecker";
-                c.tag = "Wecker";
-                c.title = Wecker.on(this) ? "Wecker " + Wecker.text(this) : "Musik-Wecker";
-                c.sub = Wecker.on(this) ? "An · Tagesmix weckt dich" : "Aus · OK zum Einstellen";
-                c.right = "";
-                cards.add(c);
             }
             // Song-Quiz
             {
@@ -1968,6 +1930,114 @@ public class MainActivity extends Activity {
         }
         for (int i = 0; i < cards.size(); i++) cardsRow.addView(buildCard(cards.get(i)), atD(i * 436, 0, 400, 225));
         if (cSel >= cards.size()) cSel = 0;
+        buildNewRow();
+    }
+
+    // =====================================================================
+    // Neue Songs
+    // =====================================================================
+    void buildNewRow() {
+        if (newRow == null) return;
+        newRow.removeAllViews();
+        news.clear();
+        java.util.Set<String> seen = new java.util.HashSet<>(), titles = new java.util.HashSet<>();
+        // 1. angekündigte / gerade erschienene Drops
+        for (Drops.Drop d : Drops.cached(this)) {
+            if (d.at - System.currentTimeMillis() > 60L * 86400000L) continue;   // erst 60 Tage vorher
+            NewItem n = new NewItem();
+            n.drop = d;
+            n.rapper = d.rapper;
+            news.add(n);
+            seen.addAll(d.tracks);
+            titles.add(d.rapper + MediaWatcher.norm(d.title));
+        }
+        // 2. einzelne Songs, die seit dem letzten Mal neu dazugekommen sind
+        List<Releases.Item> rel = Releases.cached(this);
+        for (String[] ns : Library.newSongs(this)) {
+            int r = Integer.parseInt(ns[0]);
+            boolean inRelease = false;
+            for (Releases.Item it : rel) if (it.album.tracks.contains(ns[1])) inRelease = true;
+            if (inRelease || seen.contains(ns[1]) || news.size() >= 10) continue;
+            Album a = new Album(r, LyricsOverlay.cleanTitle(ns[2], RAP[r].name));
+            a.type = "single";
+            a.tracks.add(ns[1]);
+            NewItem n = new NewItem();
+            n.album = a;
+            n.songId = ns[1];
+            n.rapper = r;
+            news.add(n);
+            seen.add(ns[1]);
+        }
+        // 3. die neuesten Releases, neueste zuerst
+        final java.util.Map<NewItem, Long> dates = new java.util.HashMap<>();
+        for (Releases.Item it : rel) {
+            if (titles.contains(it.album.rapper + MediaWatcher.norm(it.album.title))) continue;
+            NewItem n = new NewItem();
+            n.album = it.album;
+            n.rapper = it.album.rapper;
+            news.add(n);
+            dates.put(n, it.at);
+        }
+        newCards = new RapCard[news.size()];
+        for (int i = 0; i < news.size(); i++) {
+            NewItem n = news.get(i);
+            String badge = n.drop != null ? dropBadge(n.drop) : n.songId != null ? "Neu" : Releases.when(dates.get(n));
+            newCards[i] = buildNewCard(n, badge);
+            newRow.addView(newCards[i].view, atD(i * 236, 0, 210, 210));
+        }
+        if (nSel >= news.size()) nSel = Math.max(0, news.size() - 1);
+        int vis = news.isEmpty() ? View.GONE : View.VISIBLE;
+        head7v.setVisibility(vis);
+        newRow.setVisibility(vis);
+    }
+
+    String dropBadge(Drops.Drop d) {
+        return !d.out() ? Drops.countdown(d) : d.tracks.isEmpty() ? "Heute" : "Neu da";
+    }
+
+    /** Quadratische Karte: Cover, oben wann, unten Titel und Rapper. */
+    RapCard buildNewCard(NewItem n, String badge) {
+        Album a = n.album;
+        if (a == null) {
+            a = new Album(n.drop.rapper, n.drop.title);
+            a.type = n.drop.type;
+        }
+        String cover = a.cover;
+        RapCard rc = buildAlbumCard(a, false);
+        FrameLayout f = rc.view;
+        int pos = 0;
+        if (n.drop != null) {
+            Bitmap b = Drops.cover(this, n.drop);
+            if (b != null) {
+                ImageView iv = new ImageView(this);
+                iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                iv.setImageBitmap(b);
+                f.addView(iv, pos++, new FrameLayout.LayoutParams(-1, -1));
+            }
+        } else if (cover != null) pos = 1;
+        View shade = new View(this);
+        shade.setBackground(Gfx.grad(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{0xee000000, 0x66000000, 0x00000000}, 0));
+        FrameLayout.LayoutParams shl = new FrameLayout.LayoutParams(-1, px(130));
+        shl.gravity = Gravity.BOTTOM;
+        f.addView(shade, pos++, shl);
+        LinearLayout txt = new LinearLayout(this);
+        txt.setOrientation(LinearLayout.VERTICAL);
+        TextView nm = text(a.title, 20, "Bold", Color.WHITE, -0.02f);
+        nm.setSingleLine(true);
+        nm.setEllipsize(TextUtils.TruncateAt.END);
+        txt.addView(nm);
+        txt.addView(text(RAP[n.rapper].name, 15, "SemiBold", Gfx.w(0.75f), 0));
+        FrameLayout.LayoutParams tl = new FrameLayout.LayoutParams(-1, -2);
+        tl.gravity = Gravity.BOTTOM;
+        tl.leftMargin = px(16); tl.rightMargin = px(16); tl.bottomMargin = px(14);
+        f.addView(txt, pos++, tl);
+        TextView tag = text(badge, 14, "SemiBold", Color.WHITE, 0);
+        tag.setGravity(Gravity.CENTER);
+        tag.setPadding(px(10), 0, px(10), 0);
+        tag.setBackground(Gfx.round(0xaa000000, px(14)));
+        f.addView(tag, pos, atD(12, 14, -2, 28));
+        n.badge = tag;
+        return rc;
     }
 
     View buildCard(Card c) {
@@ -2113,10 +2183,8 @@ public class MainActivity extends Activity {
     }
 
     void tickDrops() {
-        for (Card c : cards) {
-            if (c.drop == null || c.subView == null) continue;
-            c.subView.setText(c.drop.artist + " · " + (c.drop.out() && !c.drop.tracks.isEmpty() ? "OK zum Hören" : Drops.countdown(c.drop)));
-        }
+        for (NewItem n : news)
+            if (n.drop != null && n.badge != null) n.badge.setText(dropBadge(n.drop));
     }
 
     void clockTick() {
@@ -2412,7 +2480,9 @@ public class MainActivity extends Activity {
             default: break;
         }
         if (k == null) return super.dispatchKeyEvent(e);
-        if (e.getAction() == KeyEvent.ACTION_DOWN) key(k);
+        // Gedrückt gehaltene Hoch/Runter-Taste auf der Startseite zählt nur einmal
+        boolean held = e.getRepeatCount() > 0 && ("up".equals(k) || "down".equals(k)) && quiz == null && wecker == null;
+        if (e.getAction() == KeyEvent.ACTION_DOWN && !held) key(k);
         return true; // Zurück schließt den Startbildschirm nie
     }
 
@@ -2424,6 +2494,13 @@ public class MainActivity extends Activity {
         if (launching) return;
         if (introRunning()) { skipIntro(); return; }
         int n = APPS.length;
+        // Hoch/runter höchstens eine Reihe pro kurzem Moment: sonst springt es gleich nach dem
+        // Starten (Stick noch langsam, gedrückt gehaltene Taste) mehrere Reihen weiter
+        if ("up".equals(k) || "down".equals(k)) {
+            long now = SystemClock.uptimeMillis();
+            if (now - lastRowStep < ROW_STEP_MS) return;
+            lastRowStep = now;
+        }
         if ("apps".equals(zone)) {
             if ("left".equals(k)) sel = Math.max(0, sel - 1);
             else if ("right".equals(k)) sel = Math.min(n - 1, sel + 1);
@@ -2442,8 +2519,7 @@ public class MainActivity extends Activity {
                 else if (c.drop != null) openDrop(c.drop, c.view);
                 else if ("quiz".equals(c.kind)) { quiz = new Quiz(this); quiz.open(root); }
                 else if ("daily".equals(c.kind)) openDaily(c.view);
-                else if ("wecker".equals(c.kind)) { wecker = new WeckerPanel(this); wecker.open(root); }
-                else if (c.rapper >= 0) openRapper(RAP[c.rapper], c.view, "new".equals(c.kind) || "tw".equals(c.kind) ? c.songId : null);
+                else if (c.rapper >= 0) openRapper(RAP[c.rapper], c.view, "tw".equals(c.kind) ? c.songId : null);
                 else openAppFx(c.app, c.view);
             }
         } else if ("rap".equals(zone)) {
@@ -2452,16 +2528,28 @@ public class MainActivity extends Activity {
             else if ("right".equals(k)) rSel = Math.min(Rapper.OWN - 1, rSel + 1);
             else if ("up".equals(k)) zone = "cont";
             else if ("down".equals(k)) {
-                if (!albums.isEmpty()) zone = "alb";
+                if (!news.isEmpty()) zone = "new";
+                else if (!albums.isEmpty()) zone = "alb";
                 else if (!singles.isEmpty()) zone = "sng";
                 else { zone = "rap2"; rSel = Math.min(RAP.length - 1, rSel + Rapper.OWN); }
             }
             else if ("back".equals(k)) zone = "apps";
             else if ("ok".equals(k)) openRapper(RAP[rSel], rapCards[rSel].view);
+        } else if ("new".equals(zone)) {
+            if ("left".equals(k)) nSel = Math.max(0, nSel - 1);
+            else if ("right".equals(k)) nSel = Math.max(0, Math.min(news.size() - 1, nSel + 1));
+            else if ("up".equals(k)) zone = "rap";
+            else if ("down".equals(k)) {
+                if (!albums.isEmpty()) zone = "alb";
+                else if (!singles.isEmpty()) zone = "sng";
+                else { zone = "rap2"; rSel = Rapper.OWN; }
+            }
+            else if ("back".equals(k)) zone = "apps";
+            else if ("ok".equals(k) && nSel < news.size()) openNew(news.get(nSel), newCards[nSel].view);
         } else if ("alb".equals(zone)) {
             if ("left".equals(k)) aSel = Math.max(0, aSel - 1);
             else if ("right".equals(k)) aSel = Math.min(albums.size() - 1, aSel + 1);
-            else if ("up".equals(k)) zone = "rap";
+            else if ("up".equals(k)) zone = news.isEmpty() ? "rap" : "new";
             else if ("down".equals(k)) {
                 if (!singles.isEmpty()) zone = "sng";
                 else { zone = "rap2"; rSel = Rapper.OWN; }
@@ -2471,7 +2559,7 @@ public class MainActivity extends Activity {
         } else if ("sng".equals(zone)) {
             if ("left".equals(k)) sSel = Math.max(0, sSel - 1);
             else if ("right".equals(k)) sSel = Math.min(singles.size() - 1, sSel + 1);
-            else if ("up".equals(k)) zone = albums.isEmpty() ? "rap" : "alb";
+            else if ("up".equals(k)) zone = !albums.isEmpty() ? "alb" : news.isEmpty() ? "rap" : "new";
             else if ("down".equals(k)) { zone = "rap2"; rSel = Rapper.OWN; }
             else if ("back".equals(k)) zone = "apps";
             else if ("ok".equals(k) && sSel < singles.size()) openAlbum(singles.get(sSel), sngCards[sSel].view);
@@ -2482,7 +2570,7 @@ public class MainActivity extends Activity {
             else if ("up".equals(k)) {
                 if (!singles.isEmpty()) zone = "sng";
                 else if (!albums.isEmpty()) zone = "alb";
-                else { zone = "rap"; rSel = Math.max(0, rSel - Rapper.OWN); }
+                else { zone = news.isEmpty() ? "rap" : "new"; rSel = Math.max(0, rSel - Rapper.OWN); }
             }
             else if ("down".equals(k)) zone = "mood";
             else if ("back".equals(k)) zone = "apps";
@@ -2491,23 +2579,17 @@ public class MainActivity extends Activity {
             if ("left".equals(k)) mSel = Math.max(0, mSel - 1);
             else if ("right".equals(k)) mSel = Math.min(moodCards.length - 1, mSel + 1);
             else if ("up".equals(k)) { zone = "rap2"; if (rSel < Rapper.OWN) rSel = Rapper.OWN; }
-            else if ("down".equals(k) && vidCards.length > 0) zone = "vid";
             else if ("back".equals(k)) zone = "apps";
             else if ("ok".equals(k)) openMood(mSel, moodCards[mSel].view);
-        } else if ("vid".equals(zone)) {
-            if ("left".equals(k)) vSel = Math.max(0, vSel - 1);
-            else if ("right".equals(k)) vSel = Math.min(vidCards.length - 1, vSel + 1);
-            else if ("up".equals(k)) zone = "mood";
-            else if ("back".equals(k)) zone = "apps";
-            else if ("ok".equals(k) && vSel < vids.size()) openVideo(vids.get(vSel), vidCards[vSel].view);
         } else if ("top".equals(zone)) {
             if ("left".equals(k)) tSel = Math.max(0, tSel - 1);
-            else if ("right".equals(k)) tSel = Math.min(3, tSel + 1);
+            else if ("right".equals(k)) tSel = Math.min(4, tSel + 1);
             else if ("down".equals(k) || "back".equals(k)) zone = "apps";
             else if ("ok".equals(k)) {
                 if (tSel == 0) { toggleBox(); applyAll(true); return; }
                 if (tSel == 1) { toggleParty(); applyAll(true); return; }
-                if (tSel == 2) openAmazonHome(); else openSettings();
+                if (tSel == 2) { wecker = new WeckerPanel(this); wecker.open(root); }
+                else if (tSel == 3) openAmazonHome(); else openSettings();
                 zone = "apps";
             }
         }
@@ -2688,26 +2770,30 @@ public class MainActivity extends Activity {
     /** Am Release-Tag: einmal automatisch abspielen, wenn Domi TV startet. */
     void autoDrop() {
         if (launching || zone == null || !"apps".equals(zone)) return;
-        for (Card c : cards) {
-            Drops.Drop d = c.drop;
+        for (int i = 0; i < news.size(); i++) {
+            Drops.Drop d = news.get(i).drop;
             if (d == null || !d.out() || d.tracks.isEmpty()) continue;
             if (System.currentTimeMillis() - d.at > 36L * 3600000L) continue;
             if (prefs.getBoolean("dropAuto_" + d.key(), false)) continue;
             showToast("Heute erschienen: " + d.artist + " – " + d.title);
-            openDrop(d, c.view);
+            openDrop(d, newCards[i].view);
             return;
         }
+    }
+
+    void openNew(NewItem n, View src) {
+        if (n.drop != null) openDrop(n.drop, src);
+        else if (n.songId != null) openRapper(RAP[n.rapper], src, n.songId);
+        else openAlbum(n.album, src);
     }
 
     void refreshDrops() {
         new Thread(new Runnable() {
             public void run() {
-                final boolean feed = YtFeed.refresh(getApplicationContext());
-                if (feed) ui.post(new Runnable() { public void run() { if (!launching) { buildVidRow(); applyAll(false); } } });
                 boolean yt = YtmSync.run(getApplicationContext());
                 Stats.compute(getApplicationContext());
                 ui.post(new Runnable() { public void run() { showStats(); if (shownRapper >= 0) profile(shownRapper); } });
-                final boolean changed = Drops.refresh(getApplicationContext()) | yt;
+                final boolean changed = Drops.refresh(getApplicationContext()) | Releases.refresh(getApplicationContext()) | yt;
                 ui.post(new Runnable() {
                     public void run() {
                         if (changed && !launching) { buildCards(); applyAll(false); }
@@ -2738,110 +2824,6 @@ public class MainActivity extends Activity {
         });
     }
 
-    /** Ein Video aus "Neu auf YouTube" ganz normal in YouTube öffnen. */
-    void openVideo(final YtFeed.Video v, View src) {
-        if (launching) return;
-        Rapper r = v.rapper >= 0 ? Rapper.LIST[v.rapper] : Rapper.LIST[0];
-        launchFx(src, r.c1, r.c2, v.artist, new Callable<Boolean>() {
-            public Boolean call() {
-                AppDef yt = AppDef.byId("youtube");
-                if (yt == null || yt.pkg == null) { showToast("YouTube nicht gefunden"); return false; }
-                MediaWatcher.stop();
-                Intent i = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.youtube.com/watch?v=" + v.id));
-                i.setPackage(yt.pkg);
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(i);
-                overridePendingTransition(0, 0);
-                return true;
-            }
-        });
-    }
-
-    RapCard buildVidCard(final YtFeed.Video v) {
-        RapCard rc = new RapCard();
-        FrameLayout f = new FrameLayout(this);
-        final float rad = px(24);
-        f.setOutlineProvider(new ViewOutlineProvider() {
-            @Override
-            public void getOutline(View vv, Outline o) { o.setRoundRect(0, 0, vv.getWidth(), vv.getHeight(), rad); }
-        });
-        f.setClipToOutline(true);
-        f.setBackgroundColor(0xff15151a);
-        final ImageView iv = new ImageView(this);
-        iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        f.addView(iv, new FrameLayout.LayoutParams(-1, -1));
-        View sc = new View(this);
-        sc.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x00000000, 0x22000000, 0xee000000}));
-        f.addView(sc, new FrameLayout.LayoutParams(-1, -1));
-        TextView t = text(v.title, 19, "Bold", Color.WHITE, 0);
-        t.setSingleLine(false);
-        t.setMaxLines(2);
-        t.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        f.addView(t, atD(18, 150, 364, 54));
-        Rapper r = v.rapper >= 0 ? Rapper.LIST[v.rapper] : Rapper.LIST[0];
-        TextView w = text(v.artist.toUpperCase(Locale.ROOT) + "  ·  " + YtFeed.ago(v.at), 13, "Bold", r.c1, 0.18f);
-        f.addView(w, atD(18, 16, 364, 24));
-        FrameLayout play = new FrameLayout(this);
-        play.setBackground(Gfx.round(r.c1, px(25)));
-        Gfx.Icon pi = new Gfx.Icon(this, Gfx.Icon.PLAY);
-        pi.setColor(Color.WHITE);
-        FrameLayout.LayoutParams pl = new FrameLayout.LayoutParams(px(22), px(22));
-        pl.gravity = Gravity.CENTER;
-        pl.leftMargin = px(3);
-        play.addView(pi, pl);
-        play.setAlpha(0f);
-        f.addView(play, atD(400 - 66, 70, 50, 50));
-        View ring = new View(this);
-        GradientDrawable rg = Gfx.round(Color.TRANSPARENT, rad);
-        rg.setStroke(Math.max(2, px(3)), Gfx.w(0.95f));
-        ring.setBackground(rg);
-        ring.setAlpha(0f);
-        f.addView(ring, new FrameLayout.LayoutParams(-1, -1));
-        f.setAlpha(0.62f);
-        rc.view = f;
-        rc.ring = ring;
-        rc.play = play;
-        // Vorschaubild im Hintergrund laden
-        bg.execute(new Runnable() {
-            public void run() {
-                Bitmap b = null;
-                try {
-                    java.io.File cf = new java.io.File(getCacheDir(), "yt_" + v.id + ".jpg");
-                    if (!cf.exists()) {
-                        java.net.HttpURLConnection h = (java.net.HttpURLConnection) new java.net.URL("https://i.ytimg.com/vi/" + v.id + "/mqdefault.jpg").openConnection();
-                        h.setConnectTimeout(6000);
-                        h.setReadTimeout(8000);
-                        InputStream in = h.getInputStream();
-                        java.io.FileOutputStream o = new java.io.FileOutputStream(cf);
-                        byte[] buf = new byte[16384];
-                        int n;
-                        while ((n = in.read(buf)) > 0) o.write(buf, 0, n);
-                        o.close();
-                        in.close();
-                    }
-                    BitmapFactory.Options op = new BitmapFactory.Options();
-                    op.inPreferredConfig = Bitmap.Config.RGB_565;
-                    b = BitmapFactory.decodeFile(cf.getPath(), op);
-                } catch (Exception ignored) { }
-                final Bitmap fb = b;
-                ui.post(new Runnable() { public void run() { if (fb != null) { iv.setImageBitmap(fb); iv.setAlpha(0f); iv.animate().alpha(1f).setDuration(250).start(); } } });
-            }
-        });
-        return rc;
-    }
-
-    void buildVidRow() {
-        if (vidRow == null) return;
-        vidRow.removeAllViews();
-        vids = new ArrayList<>(YtFeed.cached(this));
-        vidCards = new RapCard[vids.size()];
-        for (int i = 0; i < vids.size(); i++) {
-            vidCards[i] = buildVidCard(vids.get(i));
-            vidRow.addView(vidCards[i].view, atD(i * 430, 0, 400, 225));
-        }
-        head7v.setVisibility(vids.isEmpty() ? View.GONE : View.VISIBLE);
-        vSel = Math.min(vSel, Math.max(0, vids.size() - 1));
-    }
 
     void openMood(final int i, View src) {
         if (launching) return;
@@ -3173,7 +3155,7 @@ public class MainActivity extends Activity {
         picCache.evictAll();
         coverCache.evictAll();
         for (ImageView v : new ImageView[]{rapPicA, rapPicB, svA, svB}) if (v != null) v.setImageDrawable(null);
-        for (RapCard[] row : new RapCard[][]{albumCards, sngCards})
+        for (RapCard[] row : new RapCard[][]{albumCards, sngCards, newCards})
             for (RapCard rc : row) if (rc != null && rc.cover != null) { rc.cover.setImageDrawable(null); rc.coverLoaded = false; }
         if (rapPulse != null) rapPulse.pause();
         System.gc();
@@ -3185,6 +3167,7 @@ public class MainActivity extends Activity {
         if (shownRapper >= 0 && rapPicCount(shownRapper) > 0) showRapPicAsync(shownRapper, 0, false, 0);
         updateCovers(albumCards, aSel);
         updateCovers(sngCards, sSel);
+        updateCovers(newCards, nSel);
     }
 
     @Override

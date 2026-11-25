@@ -199,6 +199,60 @@ def drops():
     json.dump(out, open(os.path.join(ROOT, "drops.json"), "w"), ensure_ascii=False, indent=0)
 
 
+def releases():
+    """assets/releases.json: die neuesten Songs/Releases deiner Rapper (mit Datum) für die Reihe "Neue Songs".
+    Datum von Deezer + iTunes, abgespielt werden die offiziellen YouTube-Songs aus assets/albums."""
+    today = datetime.date.today()
+    key = lambda t: norm(re.sub(r"\(.*?\)|\[.*?\]", "", re.sub(r" - (Single|EP)$", "", t or "")))
+    out = []
+    for name in ("Ken Carson", "Bleood", "Protect", "OsamaSon", "Nettspend", "slattuhs"):
+        p = os.path.join(ALB, slug(name) + ".json")
+        if not os.path.exists(p):
+            continue
+        dates = {}
+        try:
+            d = deezer("https://api.deezer.com/search/artist?" + urllib.parse.urlencode({"q": name}))
+            a = next((x for x in d.get("data") or [] if norm(x.get("name")) == norm(name)), None)
+            if a:
+                for r in deezer(f"https://api.deezer.com/artist/{a['id']}/albums?limit=300").get("data") or []:
+                    k, rd = key(r.get("title")), r.get("release_date") or ""
+                    if k and rd:
+                        dates[k] = min(rd, dates.get(k, rd))
+        except Exception as e:
+            print("  Deezer-Releases:", name, e)
+        try:
+            d = itunes_get("https://itunes.apple.com/search?" + urllib.parse.urlencode(
+                {"term": name, "entity": "musicArtist", "limit": 5, "country": "US"}))
+            a = next((x for x in d.get("results") or [] if norm(x.get("artistName")) == norm(name)), None)
+            if a:
+                u = f"https://itunes.apple.com/lookup?id={a['artistId']}&entity=album&limit=200&sort=recent&country=US"
+                for r in itunes_get(u).get("results") or []:
+                    k, rd = key(r.get("collectionName")), (r.get("releaseDate") or "")[:10]
+                    if r.get("wrapperType") == "collection" and k and rd:
+                        dates.setdefault(k, rd)
+        except Exception as e:
+            print("  iTunes-Releases:", name, e)
+        mine = []
+        for al in json.load(open(p)):
+            rd = dates.get(key(al["title"]))
+            if rd and rd <= today.isoformat():
+                mine.append({"artist": name, "title": al["title"], "date": rd, "type": al.get("type", "album"),
+                             "cover": al.get("cover"), "tracks": al["tracks"]})
+        mine.sort(key=lambda x: x["date"], reverse=True)
+        # pro Rapper: die letzten 3 aus dem letzten Jahr, mindestens aber das neueste
+        year = (today - datetime.timedelta(days=365)).isoformat()
+        pick = [x for x in mine[:3] if x["date"] >= year] or mine[:1]
+        for x in pick:
+            print(f"  Neu: {name} – {x['title']} ({x['date']})")
+        if not pick:
+            print(f"  Neu: {name} – kein Datum gefunden")
+        out += pick
+    out.sort(key=lambda x: x["date"], reverse=True)
+    if out:   # bei API-Ausfall die alte Liste behalten
+        json.dump(out, open(os.path.join(ROOT, "releases.json"), "w"), ensure_ascii=False, indent=0)
+
+
 if __name__ == "__main__":
     moods()
     drops()
+    releases()
