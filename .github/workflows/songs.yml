@@ -46,6 +46,6 @@ jobs:
           # ytm.json, drops.json und releases.json holt die App selbst aus dem Netz -> dafür kein neues Update bauen
           if git diff --cached --quiet -- app/src/main/assets/songs app/src/main/assets/albums app/src/main/assets/covers app/src/main/assets/moods.json; then BUILD=0; fi
           git commit -m "Songlisten aktualisiert"
-          git pull --rebase origin main
+          git pull --rebase origin "$GITHUB_REF_NAME"
           git push
           if [ "$BUILD" = 1 ]; then gh workflow run build.yml --ref main; fi

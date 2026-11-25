@@ -142,11 +142,10 @@ public class MainActivity extends Activity {
     long lastRowStep = 0;
     static final long ROW_STEP_MS = 350;
 
-    /** Eine Karte in "Neue Songs": angekündigter Drop, Release oder einzelner neuer Song. */
+    /** Eine Karte in "Neue Songs": angekündigter Drop oder Release. */
     static class NewItem {
         Drops.Drop drop;
         Album album;
-        String songId;
         int rapper;
         TextView badge;
     }
@@ -1940,7 +1939,7 @@ public class MainActivity extends Activity {
         if (newRow == null) return;
         newRow.removeAllViews();
         news.clear();
-        java.util.Set<String> seen = new java.util.HashSet<>(), titles = new java.util.HashSet<>();
+        java.util.Set<String> titles = new java.util.HashSet<>();
         // 1. angekündigte / gerade erschienene Drops
         for (Drops.Drop d : Drops.cached(this)) {
             if (d.at - System.currentTimeMillis() > 60L * 86400000L) continue;   // erst 60 Tage vorher
@@ -1948,27 +1947,10 @@ public class MainActivity extends Activity {
             n.drop = d;
             n.rapper = d.rapper;
             news.add(n);
-            seen.addAll(d.tracks);
             titles.add(d.rapper + MediaWatcher.norm(d.title));
         }
-        // 2. einzelne Songs, die seit dem letzten Mal neu dazugekommen sind
         List<Releases.Item> rel = Releases.cached(this);
-        for (String[] ns : Library.newSongs(this)) {
-            int r = Integer.parseInt(ns[0]);
-            boolean inRelease = false;
-            for (Releases.Item it : rel) if (it.album.tracks.contains(ns[1])) inRelease = true;
-            if (inRelease || seen.contains(ns[1]) || news.size() >= 10) continue;
-            Album a = new Album(r, LyricsOverlay.cleanTitle(ns[2], RAP[r].name));
-            a.type = "single";
-            a.tracks.add(ns[1]);
-            NewItem n = new NewItem();
-            n.album = a;
-            n.songId = ns[1];
-            n.rapper = r;
-            news.add(n);
-            seen.add(ns[1]);
-        }
-        // 3. die neuesten Releases, neueste zuerst
+        // 2. die neuesten Releases (nur mit echtem Erscheinungsdatum, keine alten Leaks), neueste zuerst
         final java.util.Map<NewItem, Long> dates = new java.util.HashMap<>();
         for (Releases.Item it : rel) {
             if (titles.contains(it.album.rapper + MediaWatcher.norm(it.album.title))) continue;
@@ -1981,7 +1963,7 @@ public class MainActivity extends Activity {
         newCards = new RapCard[news.size()];
         for (int i = 0; i < news.size(); i++) {
             NewItem n = news.get(i);
-            String badge = n.drop != null ? dropBadge(n.drop) : n.songId != null ? "Neu" : Releases.when(dates.get(n));
+            String badge = n.drop != null ? dropBadge(n.drop) : Releases.when(dates.get(n));
             newCards[i] = buildNewCard(n, badge);
             newRow.addView(newCards[i].view, atD(i * 236, 0, 210, 210));
         }
@@ -2783,7 +2765,6 @@ public class MainActivity extends Activity {
 
     void openNew(NewItem n, View src) {
         if (n.drop != null) openDrop(n.drop, src);
-        else if (n.songId != null) openRapper(RAP[n.rapper], src, n.songId);
         else openAlbum(n.album, src);
     }
 

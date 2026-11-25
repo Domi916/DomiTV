@@ -363,6 +363,21 @@ public class MediaWatcher extends NotificationListenerService {
             // lädt zu lange -> YouTube sichtbar und bedienbar machen (Profil-Auswahl, Werbung …)
             if (active && awaitingOurs && since > 5000 && !waitShown) { waitShown = true; HomeWatcherService.overlayWaiting(true); }
             if (waitShown && (!active || !awaitingOurs)) { waitShown = false; HomeWatcherService.overlayWaiting(false); }
+            // Wir hängen noch an einer alten YouTube-Sitzung, eine andere spielt schon: zu der wechseln
+            if (active && awaitingOurs && since > 4000) {
+                try {
+                    PlaybackState cur = current == null ? null : current.getPlaybackState();
+                    if (cur == null || cur.getState() != PlaybackState.STATE_PLAYING)
+                        for (MediaController w : watched.keySet()) {
+                            PlaybackState ws = w.getPlaybackState();
+                            if (ws != null && ws.getState() == PlaybackState.STATE_PLAYING) {
+                                current = w;
+                                applyState(ws);
+                                break;
+                            }
+                        }
+                } catch (Exception ignored) { }
+            }
             // Song läuft schon, wurde aber nicht erkannt (z. B. gleicher Titel wie vorher): nochmal prüfen
             if (active && awaitingOurs && since > 4000 && current != null) {
                 try {
