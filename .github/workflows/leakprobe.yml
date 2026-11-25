@@ -1,0 +1,12 @@
+name: leakprobe
+on:
+  push:
+    branches: [leakprobe]
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: pip install -q -U yt-dlp
+      - run: python3 tools/leaks.py --probe
+      - run: cat tools/leaks_cache.json
