@@ -1,0 +1,142 @@
+--------- beginning of main
+--------- beginning of system
+11-25 20:27:33.215  3243  3243 I DomiTV  : Gerät stark: false
+11-25 20:27:33.217  3243  3243 I DomiTV  : netflix -> null
+11-25 20:27:33.217  3243  3243 I DomiTV  : youtube -> null
+11-25 20:27:33.217  3243  3243 I DomiTV  : prime -> null
+11-25 20:27:33.217  3243  3243 I DomiTV  : disney -> null
+11-25 20:27:33.217  3243  3243 I DomiTV  : spotify -> null
+--------- beginning of crash
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: FATAL EXCEPTION: AsyncDvrDbTask-0
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: Process: com.android.tv, PID: 3762
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: java.lang.RuntimeException: An error occurred while executing doInBackground()
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at android.os.AsyncTask$3.done(AsyncTask.java:354)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at java.util.concurrent.FutureTask.finishCompletion(FutureTask.java:383)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at java.util.concurrent.FutureTask.setException(FutureTask.java:252)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:271)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at java.lang.Thread.run(Thread.java:764)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: Caused by: android.database.sqlite.SQLiteException: no such column: failed_reason (code 1 SQLITE_ERROR): , while compiling: SELECT _id, priority, type, input_id, channel_id, program_id, program_title, start_time_utc_millis, end_time_utc_millis, season_number, episode_number, episode_title, program_description, program_long_description, program_poster_art_uri, program_thumbnail_uri, state, failed_reason, series_recording_id FROM schedules
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.nativePrepareStatement(Native Method)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.acquirePreparedStatement(SQLiteConnection.java:903)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.prepare(SQLiteConnection.java:514)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at android.database.sqlite.SQLiteSession.prepare(SQLiteSession.java:588)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at android.database.sqlite.SQLiteProgram.<init>(SQLiteProgram.java:58)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at android.database.sqlite.SQLiteQuery.<init>(SQLiteQuery.java:37)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at android.database.sqlite.SQLiteDirectCursorDriver.query(SQLiteDirectCursorDriver.java:46)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at android.database.sqlite.SQLiteDatabase.rawQueryWithFactory(SQLiteDatabase.java:1408)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:399)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:294)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at com.android.tv.dvr.provider.DvrDatabaseHelper.query(DvrDatabaseHelper.java:276)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:128)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:115)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask.doInBackground(AsyncDvrDbTask.java:65)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at android.os.AsyncTask$2.call(AsyncTask.java:333)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	... 3 more
+11-25 20:29:11.874  3243  4355 I DomiTV  : Wetter: ☁  0° 
+11-25 20:30:45.531  3243  3243 I DomiTV  : netflix -> null
+11-25 20:30:45.531  3243  3243 I DomiTV  : youtube -> null
+11-25 20:30:45.531  3243  3243 I DomiTV  : prime -> null
+11-25 20:30:45.531  3243  3243 I DomiTV  : disney -> null
+11-25 20:30:45.531  3243  3243 I DomiTV  : spotify -> null
+11-25 20:30:50.582  3243  3243 I DomiTV  : netflix -> null
+11-25 20:30:50.582  3243  3243 I DomiTV  : youtube -> null
+11-25 20:30:50.582  3243  3243 I DomiTV  : prime -> null
+11-25 20:30:50.582  3243  3243 I DomiTV  : disney -> null
+11-25 20:30:50.582  3243  3243 I DomiTV  : spotify -> null
+11-25 20:30:52.796  3243  3243 I DomiTV  : Tastenfilter aktiv, flags=32
+11-25 20:30:57.233  3243  3243 I DomiTV  : Fenster: at.domi.tvlauncher / android.widget.FrameLayout
+11-25 20:30:57.234  3243  3243 I DomiTV  : Fenster: at.domi.tvlauncher / android.widget.FrameLayout
+11-25 20:30:57.247  3243  4931 I DomiTV  : Songtext: overseas / Ken Carson Zeilen=33 offset=0
+11-25 20:31:17.630  3243  4947 I DomiTV  : Songtext: friend or foe / bleood Zeilen=59 offset=0
+11-25 20:31:29.331  3243  4958 I DomiTV  : Songtext: stressed / Nettspend Zeilen=36 offset=0
+11-25 20:31:50.533  3243  4989 I DomiTV  : Update: installiert 49, neu 156
+11-25 20:31:54.681  3243  3243 I DomiTV  : Update-Status -1 null
+11-25 20:31:55.099  3243  3243 I DomiTV  : Fenster: com.google.android.packageinstaller / android.widget.FrameLayout
+11-25 20:31:55.807  3243  3243 I DomiTV  : Fenster: com.google.android.packageinstaller / android.app.AlertDialog
+11-25 20:31:56.027  3243  3243 I DomiTV  : Fenster: com.google.android.packageinstaller / com.android.packageinstaller.PackageInstallerActivity
+11-25 20:32:03.422  3243  5031 I DomiTV  : Songtext: Lose It / Ken Carson Zeilen=37 offset=0
+11-25 20:32:13.083  3243  3243 I DomiTV  : Shuffle: Shuffle beendet
+11-25 20:32:13.086  3243  3243 I DomiTV  : netflix -> null
+11-25 20:32:13.086  3243  3243 I DomiTV  : youtube -> null
+11-25 20:32:13.086  3243  3243 I DomiTV  : prime -> null
+11-25 20:32:13.086  3243  3243 I DomiTV  : disney -> null
+11-25 20:32:13.086  3243  3243 I DomiTV  : spotify -> null
+11-25 20:32:13.270  3243  3243 I DomiTV  : Fenster: at.domi.tvlauncher / at.domi.tvlauncher.MainActivity
+11-25 20:32:13.270  3243  3243 I DomiTV  : Fenster: at.domi.tvlauncher / at.domi.tvlauncher.MainActivity
+11-25 20:32:23.071  3243  3243 I DomiTV  : netflix -> null
+11-25 20:32:23.071  3243  3243 I DomiTV  : youtube -> null
+11-25 20:32:23.071  3243  3243 I DomiTV  : prime -> null
+11-25 20:32:23.071  3243  3243 I DomiTV  : disney -> null
+11-25 20:32:23.071  3243  3243 I DomiTV  : spotify -> null
+11-25 20:32:23.273  3243  5101 I DomiTV  : Songtext: Betray Ya / Protect Zeilen=16 offset=0
+11-25 20:32:24.298  3243  5101 I DomiTV  : Songtext: Lil O The Impaler / OsamaSon Zeilen=40 offset=0
+11-25 20:32:25.289  3243  5101 I DomiTV  : Songtext: u not a demon / Nettspend Zeilen=41 offset=0
+11-25 20:32:26.902  3243  5101 I DomiTV  : Songtext: trimmithy turner / bleood Zeilen=52 offset=0
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: FATAL EXCEPTION: AsyncDvrDbTask-0
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: Process: com.android.tv, PID: 5128
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: java.lang.RuntimeException: An error occurred while executing doInBackground()
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at android.os.AsyncTask$3.done(AsyncTask.java:354)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at java.util.concurrent.FutureTask.finishCompletion(FutureTask.java:383)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at java.util.concurrent.FutureTask.setException(FutureTask.java:252)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:271)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at java.lang.Thread.run(Thread.java:764)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: Caused by: android.database.sqlite.SQLiteException: no such column: failed_reason (code 1 SQLITE_ERROR): , while compiling: SELECT _id, priority, type, input_id, channel_id, program_id, program_title, start_time_utc_millis, end_time_utc_millis, season_number, episode_number, episode_title, program_description, program_long_description, program_poster_art_uri, program_thumbnail_uri, state, failed_reason, series_recording_id FROM schedules
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.nativePrepareStatement(Native Method)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.acquirePreparedStatement(SQLiteConnection.java:903)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.prepare(SQLiteConnection.java:514)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at android.database.sqlite.SQLiteSession.prepare(SQLiteSession.java:588)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at android.database.sqlite.SQLiteProgram.<init>(SQLiteProgram.java:58)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at android.database.sqlite.SQLiteQuery.<init>(SQLiteQuery.java:37)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at android.database.sqlite.SQLiteDirectCursorDriver.query(SQLiteDirectCursorDriver.java:46)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at android.database.sqlite.SQLiteDatabase.rawQueryWithFactory(SQLiteDatabase.java:1408)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:399)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:294)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at com.android.tv.dvr.provider.DvrDatabaseHelper.query(DvrDatabaseHelper.java:276)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:128)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:115)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask.doInBackground(AsyncDvrDbTask.java:65)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at android.os.AsyncTask$2.call(AsyncTask.java:333)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+11-25 20:32:32.939  5128  5148 E AndroidRuntime: 	... 3 more
+11-25 20:32:36.213  3243  5101 I DomiTV  : Songtext: kriss kross / Nettspend Zeilen=56 offset=0
+11-25 20:32:41.214  3243  5101 I DomiTV  : Songtext: happy tree friends / bleood Zeilen=34 offset=0
+11-25 20:32:44.741  3243  5101 I DomiTV  : Songtext: halftime / Nettspend Zeilen=52 offset=0
+11-25 20:32:48.211  3243  5101 I DomiTV  : Songtext: #DamnBae / PROTECT Zeilen=50 offset=0
+11-25 20:32:51.937  3243  5101 I DomiTV  : Songtext: DEMON HOME / OsamaSon Zeilen=33 offset=0
+11-25 20:32:56.685  3243  5101 I DomiTV  : Songtext: No Rules / OsamaSon Zeilen=64 offset=0
+11-25 20:32:59.199  3243  5101 I DomiTV  : Songtext: Pop / OsamaSon Zeilen=47 offset=0
+11-25 20:33:02.648  3243  5101 I DomiTV  : Songtext: Pots / Ken Carson Zeilen=33 offset=0
+11-25 20:33:06.420  3243  5101 I DomiTV  : Songtext: 12 oz rasta mouse / bleood Zeilen=23 offset=0
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: FATAL EXCEPTION: AsyncDvrDbTask-0
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: Process: com.android.tv, PID: 5383
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: java.lang.RuntimeException: An error occurred while executing doInBackground()
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at android.os.AsyncTask$3.done(AsyncTask.java:354)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at java.util.concurrent.FutureTask.finishCompletion(FutureTask.java:383)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at java.util.concurrent.FutureTask.setException(FutureTask.java:252)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:271)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at java.lang.Thread.run(Thread.java:764)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: Caused by: android.database.sqlite.SQLiteException: no such column: failed_reason (code 1 SQLITE_ERROR): , while compiling: SELECT _id, priority, type, input_id, channel_id, program_id, program_title, start_time_utc_millis, end_time_utc_millis, season_number, episode_number, episode_title, program_description, program_long_description, program_poster_art_uri, program_thumbnail_uri, state, failed_reason, series_recording_id FROM schedules
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.nativePrepareStatement(Native Method)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.acquirePreparedStatement(SQLiteConnection.java:903)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.prepare(SQLiteConnection.java:514)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at android.database.sqlite.SQLiteSession.prepare(SQLiteSession.java:588)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at android.database.sqlite.SQLiteProgram.<init>(SQLiteProgram.java:58)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at android.database.sqlite.SQLiteQuery.<init>(SQLiteQuery.java:37)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at android.database.sqlite.SQLiteDirectCursorDriver.query(SQLiteDirectCursorDriver.java:46)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at android.database.sqlite.SQLiteDatabase.rawQueryWithFactory(SQLiteDatabase.java:1408)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:399)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:294)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at com.android.tv.dvr.provider.DvrDatabaseHelper.query(DvrDatabaseHelper.java:276)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:128)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:115)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask.doInBackground(AsyncDvrDbTask.java:65)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at android.os.AsyncTask$2.call(AsyncTask.java:333)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+11-25 20:33:10.104  5383  5403 E AndroidRuntime: 	... 3 more

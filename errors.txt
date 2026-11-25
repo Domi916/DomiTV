@@ -1,0 +1,100 @@
+11-25 20:27:32.360  2775  3047 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:33.215  3243  3243 I DomiTV  : Gerät stark: false
+11-25 20:27:33.217  3243  3243 I DomiTV  : netflix -> null
+11-25 20:27:33.217  3243  3243 I DomiTV  : youtube -> null
+11-25 20:27:33.217  3243  3243 I DomiTV  : prime -> null
+11-25 20:27:33.217  3243  3243 I DomiTV  : disney -> null
+11-25 20:27:33.217  3243  3243 I DomiTV  : spotify -> null
+11-25 20:27:34.081  2402  2885 W zgi     : java.util.concurrent.TimeoutException: Timed out waiting for Task
+11-25 20:27:34.358  2775  3383 W FA-SVC  : Failed to get dsid. appId, exception type, exception: com.google.android.tungsten.setupwraith, java.lang.ClassNotFoundException, java.lang.ClassNotFoundException: com.google.android.gms.ads.social.GmsDoritosProvider
+11-25 20:27:36.756  2402  2925 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:37.636  2402  2925 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:39.950  2402  3076 W zgm     : java.util.concurrent.TimeoutException: Timed out waiting for Task
+11-25 20:27:40.173  2402  3485 W PhenotypeFlagCommitter: java.util.concurrent.TimeoutException: Timed out waiting for Task
+11-25 20:27:40.332  3448  3534 W KeyStore: KeyStore exception
+11-25 20:27:40.332  3448  3534 W KeyStore: android.os.ServiceSpecificException:  (code 7)
+11-25 20:27:40.332  3448  3534 W KeyStore: 	at android.os.Parcel.createException(Parcel.java:1964)
+11-25 20:27:40.332  3448  3534 W KeyStore: 	at android.os.Parcel.readException(Parcel.java:1918)
+11-25 20:27:40.332  3448  3534 W KeyStore: 	at android.os.Parcel.readException(Parcel.java:1868)
+11-25 20:27:40.777  2775  2983 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:41.210  2775  2983 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:41.294  3448  3534 W KeyStore: KeyStore exception
+11-25 20:27:41.294  3448  3534 W KeyStore: android.os.ServiceSpecificException:  (code 7)
+11-25 20:27:41.294  3448  3534 W KeyStore: 	at android.os.Parcel.createException(Parcel.java:1964)
+11-25 20:27:41.294  3448  3534 W KeyStore: 	at android.os.Parcel.readException(Parcel.java:1918)
+11-25 20:27:41.294  3448  3534 W KeyStore: 	at android.os.Parcel.readException(Parcel.java:1868)
+11-25 20:27:42.240  2775  2887 W FontLog : java.util.concurrent.TimeoutException: Waited 10000 milliseconds (plus 34 milliseconds, 95087 nanoseconds delay) for aqge@279fa82[status=PENDING]
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: FATAL EXCEPTION: AsyncDvrDbTask-0
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: java.lang.RuntimeException: An error occurred while executing doInBackground()
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: 	at java.util.concurrent.FutureTask.setException(FutureTask.java:252)
+11-25 20:27:44.190  3762  3832 E AndroidRuntime: Caused by: android.database.sqlite.SQLiteException: no such column: failed_reason (code 1 SQLITE_ERROR): , while compiling: SELECT _id, priority, type, input_id, channel_id, program_id, program_title, start_time_utc_millis, end_time_utc_millis, season_number, episode_number, episode_title, program_description, program_long_description, program_poster_art_uri, program_thumbnail_uri, state, failed_reason, series_recording_id FROM schedules
+11-25 20:27:45.633  3894  3894 E CarrierIdProvider: read carrier list from ota pb failure: java.io.FileNotFoundException: /data/misc/carrierid/carrier_list.pb (No such file or directory)
+11-25 20:27:51.091  2775  3201 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:51.199  2775  3201 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:53.689  2402  2969 W Nearby  : java.lang.IllegalStateException: BluetoothAdapter not ready yet!
+11-25 20:27:53.820  2402  3611 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:53.836  2402  2961 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:53.917  2402  2961 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:53.925  2402  3611 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:55.908  2402  3611 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:56.013  2402  3611 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:56.053  2775  3990 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:56.088  2775  3990 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:57.712  2402  3611 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:27:57.806  2402  3611 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:28:17.476  2402  2969 W Nearby  : java.lang.IllegalStateException: BluetoothAdapter not ready yet!
+11-25 20:28:27.559  2402  2969 W GLSUser : java.io.IOException: Invalid scope
+11-25 20:28:27.900  2402  2969 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:28:27.950  2402  2969 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:28:28.011  2402  2969 W GLSUser : [AppCertManager] IOException while requesting key: 
+11-25 20:28:28.011  2402  2969 W GLSUser : java.io.IOException: Invalid device key response.
+11-25 20:29:11.874  3243  4355 I DomiTV  : Wetter: ☁  0° 
+11-25 20:29:27.225  2402  2961 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:29:27.285  2402  2961 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:29:27.664  2402  2961 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:29:27.692  2402  2961 W Conscrypt: Could not set socket write timeout: java.net.SocketException: Socket closed
+11-25 20:29:56.976  2402  2925 W GLSUser : java.io.IOException: Invalid scope
+11-25 20:29:57.017  2402  2925 W GLSUser : [AppCertManager] IOException while requesting key: 
+11-25 20:29:57.017  2402  2925 W GLSUser : java.io.IOException: Invalid device key response.
+11-25 20:30:45.531  3243  3243 I DomiTV  : netflix -> null
+11-25 20:30:45.531  3243  3243 I DomiTV  : youtube -> null
+11-25 20:30:45.531  3243  3243 I DomiTV  : prime -> null
+11-25 20:30:45.531  3243  3243 I DomiTV  : disney -> null
+11-25 20:30:45.531  3243  3243 I DomiTV  : spotify -> null
+11-25 20:30:50.582  3243  3243 I DomiTV  : netflix -> null
+11-25 20:30:50.582  3243  3243 I DomiTV  : youtube -> null
+11-25 20:30:50.582  3243  3243 I DomiTV  : prime -> null
+11-25 20:30:50.582  3243  3243 I DomiTV  : disney -> null
+11-25 20:30:50.582  3243  3243 I DomiTV  : spotify -> null
+11-25 20:30:52.796  3243  3243 I DomiTV  : Tastenfilter aktiv, flags=32
+11-25 20:30:57.233  3243  3243 I DomiTV  : Fenster: at.domi.tvlauncher / android.widget.FrameLayout
+11-25 20:30:57.234  3243  3243 I DomiTV  : Fenster: at.domi.tvlauncher / android.widget.FrameLayout
+11-25 20:30:57.247  3243  4931 I DomiTV  : Songtext: overseas / Ken Carson Zeilen=33 offset=0
+11-25 20:31:17.630  3243  4947 I DomiTV  : Songtext: friend or foe / bleood Zeilen=59 offset=0
+11-25 20:31:29.331  3243  4958 I DomiTV  : Songtext: stressed / Nettspend Zeilen=36 offset=0
+11-25 20:31:50.533  3243  4989 I DomiTV  : Update: installiert 49, neu 156
+11-25 20:31:54.681  3243  3243 I DomiTV  : Update-Status -1 null
+11-25 20:31:55.099  3243  3243 I DomiTV  : Fenster: com.google.android.packageinstaller / android.widget.FrameLayout
+11-25 20:31:55.807  3243  3243 I DomiTV  : Fenster: com.google.android.packageinstaller / android.app.AlertDialog
+11-25 20:31:56.027  3243  3243 I DomiTV  : Fenster: com.google.android.packageinstaller / com.android.packageinstaller.PackageInstallerActivity
+11-25 20:32:03.422  3243  5031 I DomiTV  : Songtext: Lose It / Ken Carson Zeilen=37 offset=0
+11-25 20:32:13.083  3243  3243 I DomiTV  : Shuffle: Shuffle beendet
+11-25 20:32:13.086  3243  3243 I DomiTV  : netflix -> null
+11-25 20:32:13.086  3243  3243 I DomiTV  : youtube -> null
+11-25 20:32:13.086  3243  3243 I DomiTV  : prime -> null
+11-25 20:32:13.086  3243  3243 I DomiTV  : disney -> null
+11-25 20:32:13.086  3243  3243 I DomiTV  : spotify -> null
+11-25 20:32:13.270  3243  3243 I DomiTV  : Fenster: at.domi.tvlauncher / at.domi.tvlauncher.MainActivity
+11-25 20:32:13.270  3243  3243 I DomiTV  : Fenster: at.domi.tvlauncher / at.domi.tvlauncher.MainActivity
+11-25 20:32:23.071  3243  3243 I DomiTV  : netflix -> null
+11-25 20:32:23.071  3243  3243 I DomiTV  : youtube -> null
+11-25 20:32:23.071  3243  3243 I DomiTV  : prime -> null
+11-25 20:32:23.071  3243  3243 I DomiTV  : disney -> null
+11-25 20:32:23.071  3243  3243 I DomiTV  : spotify -> null
+11-25 20:32:23.273  3243  5101 I DomiTV  : Songtext: Betray Ya / Protect Zeilen=16 offset=0
+11-25 20:32:24.298  3243  5101 I DomiTV  : Songtext: Lil O The Impaler / OsamaSon Zeilen=40 offset=0
+11-25 20:32:25.289  3243  5101 I DomiTV  : Songtext: u not a demon / Nettspend Zeilen=41 offset=0
+11-25 20:32:26.902  3243  5101 I DomiTV  : Songtext: trimmithy turner / bleood Zeilen=52 offset=0
+11-25 20:32:31.811  2402  2969 W GLSUser : java.io.IOException: Invalid scope
+11-25 20:32:31.885  2402  2969 W GLSUser : [AppCertManager] IOException while requesting key: 
+11-25 20:32:31.885  2402  2969 W GLSUser : java.io.IOException: Invalid device key response.
