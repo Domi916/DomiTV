@@ -40,7 +40,7 @@ jobs:
           git config user.name "Domi TV Bot"
           git config user.email "bot@users.noreply.github.com"
           git add -A app/src/main/assets/songs app/src/main/assets/albums app/src/main/assets/covers \
-                     app/src/main/assets/moods.json app/src/main/assets/drops.json app/src/main/assets/releases.json app/src/main/assets/ytm.json tools/mood_cache.json
+                     app/src/main/assets/moods.json app/src/main/assets/drops.json app/src/main/assets/releases.json app/src/main/assets/ytm.json tools/mood_cache.json tools/leaks_cache.json
           if git diff --cached --quiet; then echo "keine Änderung"; exit 0; fi
           BUILD=1
           # ytm.json, drops.json und releases.json holt die App selbst aus dem Netz -> dafür kein neues Update bauen

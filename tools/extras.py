@@ -205,7 +205,8 @@ def releases():
     today = datetime.date.today()
     key = lambda t: norm(re.sub(r"\(.*?\)|\[.*?\]", "", re.sub(r" - (Single|EP)$", "", t or "")))
     out = []
-    for name in ("Ken Carson", "Bleood", "Protect", "OsamaSon", "Nettspend", "slattuhs"):
+    own = ("Ken Carson", "Bleood", "Protect", "OsamaSon", "Nettspend", "slattuhs")
+    for name in own + ("che", "Prettifun"):
         p = os.path.join(ALB, slug(name) + ".json")
         if not os.path.exists(p):
             continue
@@ -233,8 +234,18 @@ def releases():
         except Exception as e:
             print("  iTunes-Releases:", name, e)
         mine = []
-        for al in json.load(open(p)):
+        albums = json.load(open(p))
+        # Erscheinungsdatum in die Releases schreiben (für "EPs & Singles: Neueste zuerst")
+        for al in albums:
             rd = dates.get(key(al["title"]))
+            if rd:
+                al["date"] = rd
+        if any(al.get("date") for al in albums):
+            json.dump(albums, open(p, "w"), ensure_ascii=False)
+        if name not in own:
+            continue
+        for al in albums:
+            rd = al.get("date")
             if rd and rd <= today.isoformat():
                 mine.append({"artist": name, "title": al["title"], "date": rd, "type": al.get("type", "album"),
                              "cover": al.get("cover"), "tracks": al["tracks"]})
@@ -247,6 +258,12 @@ def releases():
         if not pick:
             print(f"  Neu: {name} – kein Datum gefunden")
         out += pick
+    # frische Leaks (unreleased) dazu
+    try:
+        from leaks import leaks
+        out += leaks()
+    except Exception as e:
+        print("  Leaks:", e)
     out.sort(key=lambda x: x["date"], reverse=True)
     if out:   # bei API-Ausfall die alte Liste behalten
         json.dump(out, open(os.path.join(ROOT, "releases.json"), "w"), ensure_ascii=False, indent=0)

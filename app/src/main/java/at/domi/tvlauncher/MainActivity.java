@@ -148,6 +148,8 @@ public class MainActivity extends Activity {
         Album album;
         int rapper;
         TextView badge;
+
+        boolean leak() { return album != null && "leak".equals(album.type); }
     }
     TextView profTop, profSub, statV;
     FrameLayout profBox;
@@ -1963,7 +1965,7 @@ public class MainActivity extends Activity {
         newCards = new RapCard[news.size()];
         for (int i = 0; i < news.size(); i++) {
             NewItem n = news.get(i);
-            String badge = n.drop != null ? dropBadge(n.drop) : Releases.when(dates.get(n));
+            String badge = n.drop != null ? dropBadge(n.drop) : (n.leak() ? "Leak · " : "") + Releases.when(dates.get(n));
             newCards[i] = buildNewCard(n, badge);
             newRow.addView(newCards[i].view, atD(i * 236, 0, 210, 210));
         }
@@ -1996,6 +1998,13 @@ public class MainActivity extends Activity {
                 iv.setImageBitmap(b);
                 f.addView(iv, pos++, new FrameLayout.LayoutParams(-1, -1));
             }
+        } else if (n.leak()) {
+            // Leak: Vorschaubild vom YouTube-Video
+            ImageView iv = new ImageView(this);
+            iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            iv.setAlpha(0f);
+            f.addView(iv, pos++, new FrameLayout.LayoutParams(-1, -1));
+            loadThumb(iv, a.tracks.get(0));
         } else if (cover != null) pos = 1;
         View shade = new View(this);
         shade.setBackground(Gfx.grad(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{0xee000000, 0x66000000, 0x00000000}, 0));
@@ -2016,10 +2025,53 @@ public class MainActivity extends Activity {
         TextView tag = text(badge, 14, "SemiBold", Color.WHITE, 0);
         tag.setGravity(Gravity.CENTER);
         tag.setPadding(px(10), 0, px(10), 0);
-        tag.setBackground(Gfx.round(0xaa000000, px(14)));
+        tag.setBackground(Gfx.round(n.leak() ? 0xd9000000 : 0xaa000000, px(14)));
+        if (n.leak()) tag.setTextColor(RAP[n.rapper].c1);
         f.addView(tag, pos, atD(12, 14, -2, 28));
         n.badge = tag;
         return rc;
+    }
+
+    /** Vorschaubild eines YouTube-Videos laden (einmal aus dem Netz, dann aus dem Speicher). */
+    void loadThumb(final ImageView iv, final String id) {
+        new Thread(new Runnable() {
+            public void run() {
+                Bitmap b = null;
+                try {
+                    java.io.File cf = new java.io.File(getCacheDir(), "yt_" + id + ".jpg");
+                    if (!cf.exists()) {
+                        for (String q : new String[]{"hq720", "mqdefault"}) {
+                            try {
+                                java.net.HttpURLConnection h = (java.net.HttpURLConnection)
+                                        new java.net.URL("https://i.ytimg.com/vi/" + id + "/" + q + ".jpg").openConnection();
+                                h.setConnectTimeout(6000);
+                                h.setReadTimeout(8000);
+                                if (h.getResponseCode() != 200) continue;
+                                InputStream in = h.getInputStream();
+                                java.io.FileOutputStream o = new java.io.FileOutputStream(cf);
+                                byte[] buf = new byte[16384];
+                                int k;
+                                while ((k = in.read(buf)) > 0) o.write(buf, 0, k);
+                                o.close();
+                                in.close();
+                                break;
+                            } catch (Exception ignored) { }
+                        }
+                    }
+                    BitmapFactory.Options op = new BitmapFactory.Options();
+                    op.inJustDecodeBounds = true;
+                    BitmapFactory.decodeFile(cf.getPath(), op);
+                    op.inJustDecodeBounds = false;
+                    op.inSampleSize = op.outWidth > 700 ? 2 : 1;
+                    op.inPreferredConfig = Bitmap.Config.RGB_565;
+                    b = BitmapFactory.decodeFile(cf.getPath(), op);
+                } catch (Exception ignored) { }
+                final Bitmap fb = b;
+                if (fb != null) ui.post(new Runnable() {
+                    public void run() { iv.setImageBitmap(fb); iv.animate().alpha(1f).setDuration(300).start(); }
+                });
+            }
+        }).start();
     }
 
     View buildCard(Card c) {
@@ -2765,6 +2817,8 @@ public class MainActivity extends Activity {
 
     void openNew(NewItem n, View src) {
         if (n.drop != null) openDrop(n.drop, src);
+        // Leak: erst der Leak, danach der Shuffle vom Rapper
+        else if (n.leak()) openRapper(RAP[n.rapper], src, n.album.tracks.get(0));
         else openAlbum(n.album, src);
     }
 

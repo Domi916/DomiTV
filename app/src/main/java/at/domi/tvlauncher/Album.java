@@ -16,6 +16,7 @@ final class Album {
     final String title;
     String cover; // Pfad in assets/ (covers/…jpg) oder null
     String type = "album"; // album | ep | single
+    String date = "";      // Erscheinungsdatum (yyyy-mm-dd), falls bekannt
 
     boolean isAlbum() { return "album".equals(type); }
 
@@ -61,6 +62,7 @@ final class Album {
                     JSONObject o = a.getJSONObject(i);
                     Album al = new Album(r, o.optString("title"));
                     al.cover = o.has("cover") ? o.optString("cover") : null;
+                    al.date = o.optString("date", "");
                     al.type = o.has("type") ? o.optString("type") : (t0(o) >= 5 ? "album" : t0(o) == 1 ? "single" : "ep");
                     if (al.isAlbum() != albums) continue;
                     JSONArray t = o.getJSONArray("tracks");
@@ -74,6 +76,13 @@ final class Album {
         List<Album> out = new ArrayList<>();
         for (int round = 0; round < 200; round++)
             for (List<Album> l : per) if (round < l.size()) out.add(l.get(round));
+        // EPs & Singles: wirklich neueste zuerst (nach Erscheinungsdatum, ohne Datum ans Ende)
+        if (!albums) java.util.Collections.sort(out, new java.util.Comparator<Album>() {
+            public int compare(Album x, Album y) {
+                if (x.date.isEmpty() != y.date.isEmpty()) return x.date.isEmpty() ? 1 : -1;
+                return y.date.compareTo(x.date);
+            }
+        });
         return out;
     }
 }

@@ -743,7 +743,7 @@ final class LyricsOverlay {
     static String cleanTitle(String t, String artist) {
         String s = t == null ? "" : t;
         s = s.replaceAll("[\\(\\[][^\\)\\]]*[\\)\\]]", " ");                // (Official Video) [..]
-        s = s.replaceAll("(?i)\\b(official|music|video|audio|visualizer|lyrics?|hd|4k)\\b", " ");
+        s = s.replaceAll("(?i)\\b(official|music|video|audio|visualizer|lyrics?|hd|4k|unreleased|leak|leaked|cdq|hq|v\\d)\\b", " ");
         s = s.replaceAll("(?i)\\s(ft\\.?|feat\\.?)\\s.*$", " ");
         String a = Pattern.quote(artist);
         s = s.replaceAll("(?i)^\\s*" + a + "\\s*[-–—:|]\\s*", "");
