@@ -34,10 +34,13 @@ def log(*a):
 
 
 def search(q, n, by_date):
-    pre = "ytsearchdate" if by_date else "ytsearch"
+    import urllib.parse
+    # neueste zuerst: YouTube-Suche "nach Upload-Datum sortiert, nur Videos"
+    src = ("https://www.youtube.com/results?search_query=" + urllib.parse.quote(q) + "&sp=CAISAhAB") if by_date \
+        else f"ytsearch{n}:{q}"
     try:
-        r = subprocess.run(["yt-dlp", "--flat-playlist", "-J", "--no-warnings",
-                            "--extractor-args", "youtubetab:approximate_date", f"{pre}{n}:{q}"],
+        r = subprocess.run(["yt-dlp", "--flat-playlist", "-J", "--no-warnings", "--playlist-end", str(n),
+                            "--extractor-args", "youtubetab:approximate_date", src],
                            capture_output=True, text=True, timeout=150)
         if r.returncode != 0 or not r.stdout.strip():
             log("  Suche fehlgeschlagen:", q, r.stderr.strip()[-200:])
@@ -52,7 +55,7 @@ def when(e):
     """Upload-Zeitpunkt (ungefähr, aus "vor 3 Tagen") als datetime, sonst None."""
     for k in ("timestamp", "release_timestamp"):
         if e.get(k):
-            return datetime.datetime.utcfromtimestamp(int(e[k]))
+            return datetime.datetime.fromtimestamp(int(e[k]), datetime.timezone.utc).replace(tzinfo=None)
     d = e.get("upload_date")
     if d and len(d) == 8:
         return datetime.datetime.strptime(d, "%Y%m%d")
@@ -100,7 +103,7 @@ def official_keys(artist):
 
 
 def leaks():
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     today = now.date().isoformat()
     cache = json.load(open(CACHE)) if os.path.exists(CACHE) else {}
     out = []
