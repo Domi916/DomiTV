@@ -35,8 +35,8 @@ def log(*a):
 
 def search(q, n, by_date):
     import urllib.parse
-    # neueste zuerst: YouTube-Suche "nach Upload-Datum sortiert, nur Videos"
-    src = ("https://www.youtube.com/results?search_query=" + urllib.parse.quote(q) + "&sp=CAISAhAB") if by_date \
+    # nur Videos aus diesem Monat (YouTube-Filter "Upload-Datum: Diesen Monat", "Typ: Video")
+    src = ("https://www.youtube.com/results?search_query=" + urllib.parse.quote(q) + "&sp=EgQIBBAB") if by_date \
         else f"ytsearch{n}:{q}"
     try:
         r = subprocess.run(["yt-dlp", "--flat-playlist", "-J", "--no-warnings", "--playlist-end", str(n),
@@ -86,6 +86,30 @@ def song_name(title, artist):
     return t
 
 
+JOIN = {"x", "and", "with", "ft", "feat", "featuring", "&", ",", "-", "–", "—", "|", ":", "•", "~"}
+
+
+def credited(title, artist):
+    """Steht der Rapper als Künstler im Titel ("Ken Carson - Song", "Song - Ken Carson", "Carti, Ken Carson - Song")?
+    Verhindert Treffer wie "Protect Your Home: Water Leak Alert"."""
+    t = re.sub(r"[\(\[\{【][^\)\]\}】]*[\)\]\}】]", " ", title or "")
+    t = LEAK.sub(" ", t).lower().replace(".", "")
+    tok = re.findall(r"[a-z0-9$'_]+|[-–—|:•~&,]", t)
+    art = re.findall(r"[a-z0-9$'_]+", artist.lower())
+    n = len(art)
+    for i in range(len(tok) - n + 1):
+        if tok[i:i + n] != art:
+            continue
+        before = tok[i - 1] if i > 0 else None
+        after = tok[i + n] if i + n < len(tok) else None
+        if (before is None or before in JOIN) and (after is None or after in JOIN):
+            return True
+        # "Ken Carson unreleased "Song"": Songname in Anführungszeichen
+        if before is None and re.search(r'["“][^"“”]{2,40}["”]', title or ""):
+            return True
+    return False
+
+
 def official_keys(artist):
     """Normierte Titel aller offiziellen Songs des Rappers (Songliste + Releases)."""
     keys = set()
@@ -111,7 +135,7 @@ def leaks():
         a = norm(name)
         official = official_keys(name)
         seen = {}
-        res = search(f"{name} unreleased", 30, True) + search(f"{name} leak", 30, True)
+        res = search(f"{name} unreleased", 40, True) + search(f"{name} leak", 40, True) + search(f"{name} leaked", 25, True)
         dated = sum(1 for e in res if when(e))
         log(f"{name}: {len(res)} Treffer, {dated} mit Datum")
         for e in res:
@@ -119,7 +143,7 @@ def leaks():
             dt, dur = when(e), e.get("duration")
             why = None
             if not vid or len(vid) != 11: why = "keine ID"
-            elif a not in norm(t) and a not in norm(e.get("channel")): why = "anderer Künstler"
+            elif not credited(t, name): why = "anderer Künstler"
             elif not LEAK.search(t): why = "kein Leak"
             elif BAD.search(t): why = "kein Song"
             elif dur and not (80 <= dur <= 420): why = f"Länge {dur}s"
@@ -153,8 +177,11 @@ def leaks():
                 for e in search(f"{name} {s['title']}", 20, False):
                     ek = norm(song_name(e.get("title"), name))
                     edt = when(e)
-                    if edt and ek and (ek == k or (len(k) > 4 and (k in ek or ek in k))) and \
-                            (a in norm(e.get("title")) or a in norm(e.get("channel"))):
+                    edur = e.get("duration")
+                    # Snippets zählen nicht: ein Song kann vorher angeteasert und erst jetzt geleakt sein
+                    if BAD.search(e.get("title") or "") or (edur and edur < 80):
+                        continue
+                    if edt and ek and (ek == k or (len(k) > 4 and (k in ek or ek in k))) and credited(e.get("title"), name):
                         first = min(first, edt)
                 old = (now - first).days > OLD_DAYS
                 c = cache[ck] = {"first": first.date().isoformat(), "old": old, "seen": today}
