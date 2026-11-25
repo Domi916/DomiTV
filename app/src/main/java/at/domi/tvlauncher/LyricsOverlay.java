@@ -841,6 +841,8 @@ final class LyricsOverlay {
                 if (!o.isNull("syncedLyrics") && o.optString("syncedLyrics").length() > 10) sc += 30;
                 if (o.optBoolean("instrumental")) sc -= 100;
                 if (videoDur > 0) sc -= Math.min(30, Math.abs(o.optDouble("duration", 0) * 1000 - videoDur) / 2000.0);
+                // andere Länge = andere Version: deren Zeiten passen nicht zum Takt
+                if (videoDur > 0 && Math.abs(o.optDouble("duration", 0) * 1000 - videoDur) > 8000) sc -= 25;
                 if (sc > bestScore) { bestScore = sc; best = o; }
             }
             if (best == null || bestScore < 20) return null;
