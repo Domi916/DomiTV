@@ -112,6 +112,11 @@ public class MediaWatcher extends NotificationListenerService {
         active = true;
         foreignInRow = 0;
         appCtx = c.getApplicationContext();
+        // Mediensteuerung nicht verbunden (z. B. nach einem Update): Android bitten, sie neu zu verbinden
+        if (instance == null) {
+            log(c, "Mediensteuerung nicht verbunden, verbinde neu");
+            try { requestRebind(new ComponentName(c, MediaWatcher.class)); } catch (Throwable ignored) { }
+        }
         unmuteHard(c);
         log(c, "Shuffle gestartet: " + (mood != null ? "Stimmung " + mood : r.name) + " (" + queue.size() + " Songs)");
         HomeWatcherService.overlayShow(index);
@@ -246,33 +251,41 @@ public class MediaWatcher extends NotificationListenerService {
     static final Handler mh = new Handler(Looper.getMainLooper());
     static final Runnable unmuteLater = new Runnable() { public void run() { unmute(); } };
 
+    /** Ton-Befehle in einem eigenen Thread: Hängt der Ton des Sticks (z. B. beim Wechsel zur Box),
+     *  darf das nie die Anzeige und die Fernbedienung einfrieren. */
+    static final java.util.concurrent.ExecutorService audio = java.util.concurrent.Executors.newSingleThreadExecutor();
+
+    static void volume(final Context c, final int dir, final boolean onlyIfMuted) {
+        if (c == null) return;
+        audio.execute(new Runnable() {
+            public void run() {
+                try {
+                    AudioManager am = (AudioManager) c.getSystemService(AUDIO_SERVICE);
+                    if (onlyIfMuted && !am.isStreamMute(AudioManager.STREAM_MUSIC)) return;
+                    am.adjustStreamVolume(AudioManager.STREAM_MUSIC, dir, 0);
+                } catch (Exception ignored) { }
+            }
+        });
+    }
+
     static void mute() {
         if (appCtx == null || muted) return;
-        try {
-            AudioManager am = (AudioManager) appCtx.getSystemService(AUDIO_SERVICE);
-            am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, 0);
-            muted = true;
-            mh.removeCallbacks(unmuteLater);
-            mh.postDelayed(unmuteLater, 9000); // Sicherheit: nie stumm hängen bleiben
-        } catch (Exception ignored) { }
+        volume(appCtx, AudioManager.ADJUST_MUTE, false);
+        muted = true;
+        mh.removeCallbacks(unmuteLater);
+        mh.postDelayed(unmuteLater, 9000); // Sicherheit: nie stumm hängen bleiben
     }
 
     /** Falls ein früherer Lauf stumm hängen geblieben ist: Ton sicher wieder an. */
     static void unmuteHard(Context c) {
-        try {
-            AudioManager am = (AudioManager) c.getSystemService(AUDIO_SERVICE);
-            if (am.isStreamMute(AudioManager.STREAM_MUSIC)) am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, 0);
-        } catch (Exception ignored) { }
+        volume(c.getApplicationContext(), AudioManager.ADJUST_UNMUTE, true);
         muted = false;
     }
 
     static void unmute() {
         mh.removeCallbacks(unmuteLater);
         if (appCtx == null || !muted) return;
-        try {
-            AudioManager am = (AudioManager) appCtx.getSystemService(AUDIO_SERVICE);
-            am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, 0);
-        } catch (Exception ignored) { }
+        volume(appCtx, AudioManager.ADJUST_UNMUTE, false);
         muted = false;
     }
 
@@ -443,6 +456,7 @@ public class MediaWatcher extends NotificationListenerService {
     public void onListenerDisconnected() {
         try { if (msm != null) msm.removeOnActiveSessionsChangedListener(sessions); } catch (Exception ignored) { }
         h.removeCallbacks(endCheck);
+        if (instance == this) instance = null;
         super.onListenerDisconnected();
     }
 

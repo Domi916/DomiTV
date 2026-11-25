@@ -149,10 +149,53 @@ public class HomeWatcherService extends AccessibilityService {
         }
     };
 
+    // ---------- Notausgang ----------
+    // Hängt der Haupt-Thread (z. B. weil Ton oder Bluetooth des Sticks blockieren), bliebe die Songtext-Anzeige
+    // eingefroren über allem liegen und keine Taste ginge mehr. Dann: Protokoll schreiben und Domi TV neu starten
+    // (Android startet den Dienst von selbst wieder, die Anzeige ist weg und die Fernbedienung geht wieder).
+    static volatile long mainBeat = SystemClock.uptimeMillis();
+    private final Handler beatH = new Handler(Looper.getMainLooper());
+    private final Runnable beat = new Runnable() {
+        public void run() { mainBeat = SystemClock.uptimeMillis(); beatH.postDelayed(this, 1000); }
+    };
+    private static Thread dog;
+    static final long FREEZE_MS = 8000;
+
+    private void startWatchdog() {
+        beatH.removeCallbacks(beat);
+        beatH.post(beat);
+        if (dog != null) return;
+        final java.io.File log = new java.io.File(getFilesDir(), "shuffle.log");
+        dog = new Thread(new Runnable() {
+            public void run() {
+                while (true) {
+                    try { Thread.sleep(2000); } catch (InterruptedException e) { return; }
+                    long stuck = SystemClock.uptimeMillis() - mainBeat;
+                    LyricsOverlay o = instance == null ? null : instance.overlay;
+                    boolean shown = MediaWatcher.active || (o != null && o.added);
+                    if (!shown || stuck < FREEZE_MS) continue;
+                    StringBuilder sb = new StringBuilder("EINGEFROREN seit " + stuck / 1000 + " s, Domi TV startet neu. Haupt-Thread:\n");
+                    StackTraceElement[] st = Looper.getMainLooper().getThread().getStackTrace();
+                    for (int i = 0; i < Math.min(30, st.length); i++) sb.append("    at ").append(st[i]).append('\n');
+                    Log.e(TAG, sb.toString());
+                    try {
+                        java.io.FileWriter w = new java.io.FileWriter(log, true);
+                        w.write(new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.ROOT).format(new java.util.Date()) + " " + sb);
+                        w.close();
+                    } catch (Throwable ignored) { }
+                    android.os.Process.killProcess(android.os.Process.myPid());
+                }
+            }
+        }, "DomiTV-Wachhund");
+        dog.setDaemon(true);
+        dog.start();
+    }
+
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
         instance = this;
+        startWatchdog();
         try {
             android.accessibilityservice.AccessibilityServiceInfo info = getServiceInfo();
             info.flags |= android.accessibilityservice.AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS;
