@@ -1,22 +1,22 @@
 [
 {
 "artist": "Ken Carson",
+"title": "Whats Up",
+"date": "2026-11-21",
+"type": "leak",
+"cover": null,
+"tracks": [
+"CK73U6MfHUA"
+]
+},
+{
+"artist": "Ken Carson",
 "title": "Switching The Mode",
 "date": "2026-11-21",
 "type": "leak",
 "cover": null,
 "tracks": [
 "MXPwVtoavOc"
-]
-},
-{
-"artist": "Ken Carson",
-"title": "Real Business",
-"date": "2026-11-21",
-"type": "leak",
-"cover": null,
-"tracks": [
-"xCPZPmNy6NE"
 ]
 },
 {
@@ -37,16 +37,6 @@
 "cover": "covers/slattuhs_6.jpg",
 "tracks": [
 "B0NwKHAiXPI"
-]
-},
-{
-"artist": "OsamaSon",
-"title": "fuck ya body",
-"date": "2026-11-13",
-"type": "leak",
-"cover": null,
-"tracks": [
-"rXo1u9jBjAY"
 ]
 },
 {
@@ -71,16 +61,6 @@
 },
 {
 "artist": "Nettspend",
-"title": "IG Thot",
-"date": "2026-11-06",
-"type": "leak",
-"cover": null,
-"tracks": [
-"8oocdTFurEM"
-]
-},
-{
-"artist": "Nettspend",
 "title": "AP",
 "date": "2026-11-06",
 "type": "leak",
@@ -90,13 +70,13 @@
 ]
 },
 {
-"artist": "OsamaSon",
-"title": "Too Exposed",
-"date": "2026-11-05",
+"artist": "Nettspend",
+"title": "IG Thot",
+"date": "2026-11-06",
 "type": "leak",
 "cover": null,
 "tracks": [
-"Jq5wDa4-ypI"
+"8oocdTFurEM"
 ]
 },
 {
@@ -107,6 +87,16 @@
 "cover": null,
 "tracks": [
 "UXdgMPM5Fn8"
+]
+},
+{
+"artist": "OsamaSon",
+"title": "Too Exposed",
+"date": "2026-11-05",
+"type": "leak",
+"cover": null,
+"tracks": [
+"Jq5wDa4-ypI"
 ]
 },
 {
@@ -240,18 +230,8 @@
 },
 {
 "artist": "Ken Carson",
-"title": "Possession",
-"date": "2026-07-10",
-"type": "single",
-"cover": "covers/ken_carson_18.jpg",
-"tracks": [
-"LJNp06rjfUg"
-]
-},
-{
-"artist": "Ken Carson",
 "title": "xperiment",
-"date": "2026-07-03",
+"date": "2026-07-06",
 "type": "album",
 "cover": "covers/ken_carson_1.jpg",
 "tracks": [
@@ -328,6 +308,16 @@
 "cover": "covers/protect_5.jpg",
 "tracks": [
 "diNEhHKRRKw"
+]
+},
+{
+"artist": "Ken Carson",
+"title": "the acronym",
+"date": "2025-12-11",
+"type": "single",
+"cover": "covers/ken_carson_10.jpg",
+"tracks": [
+"s2cZAbja5qo"
 ]
 }
 ]
