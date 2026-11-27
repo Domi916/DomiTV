@@ -40,6 +40,16 @@
 ]
 },
 {
+"artist": "OsamaSon",
+"title": "fuck ya body",
+"date": "2026-11-13",
+"type": "leak",
+"cover": null,
+"tracks": [
+"rXo1u9jBjAY"
+]
+},
+{
 "artist": "Nettspend",
 "title": "pirate token",
 "date": "2026-11-13",
@@ -61,16 +71,6 @@
 },
 {
 "artist": "Nettspend",
-"title": "AP",
-"date": "2026-11-06",
-"type": "leak",
-"cover": null,
-"tracks": [
-"WChrkoVihDQ"
-]
-},
-{
-"artist": "Nettspend",
 "title": "IG Thot",
 "date": "2026-11-06",
 "type": "leak",
@@ -80,23 +80,13 @@
 ]
 },
 {
-"artist": "OsamaSon",
-"title": "kill da bih",
-"date": "2026-11-05",
+"artist": "Nettspend",
+"title": "AP",
+"date": "2026-11-06",
 "type": "leak",
 "cover": null,
 "tracks": [
-"UXdgMPM5Fn8"
-]
-},
-{
-"artist": "OsamaSon",
-"title": "Too Exposed",
-"date": "2026-11-05",
-"type": "leak",
-"cover": null,
-"tracks": [
-"Jq5wDa4-ypI"
+"WChrkoVihDQ"
 ]
 },
 {
@@ -230,8 +220,18 @@
 },
 {
 "artist": "Ken Carson",
+"title": "Possession",
+"date": "2026-07-10",
+"type": "single",
+"cover": "covers/ken_carson_18.jpg",
+"tracks": [
+"LJNp06rjfUg"
+]
+},
+{
+"artist": "Ken Carson",
 "title": "xperiment",
-"date": "2026-07-06",
+"date": "2026-07-03",
 "type": "album",
 "cover": "covers/ken_carson_1.jpg",
 "tracks": [
@@ -308,16 +308,6 @@
 "cover": "covers/protect_5.jpg",
 "tracks": [
 "diNEhHKRRKw"
-]
-},
-{
-"artist": "Ken Carson",
-"title": "the acronym",
-"date": "2025-12-11",
-"type": "single",
-"cover": "covers/ken_carson_10.jpg",
-"tracks": [
-"s2cZAbja5qo"
 ]
 }
 ]
