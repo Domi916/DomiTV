@@ -60,6 +60,36 @@
 ]
 },
 {
+"artist": "Nettspend",
+"title": "Glo",
+"date": "2026-11-12",
+"type": "leak",
+"cover": null,
+"tracks": [
+"Szlc2-VJ6-o"
+]
+},
+{
+"artist": "OsamaSon",
+"title": "destroy lonely and",
+"date": "2026-11-07",
+"type": "leak",
+"cover": null,
+"tracks": [
+"pjLN0T21GRM"
+]
+},
+{
+"artist": "Nettspend",
+"title": "High Without UUU",
+"date": "2026-11-07",
+"type": "leak",
+"cover": null,
+"tracks": [
+"gPdOmQ1FOu4"
+]
+},
+{
 "artist": "slattuhs",
 "title": "2 many cr00kz",
 "date": "2026-11-06",
@@ -67,26 +97,6 @@
 "cover": "covers/slattuhs_7.jpg",
 "tracks": [
 "IzN3rd581Mk"
-]
-},
-{
-"artist": "Nettspend",
-"title": "IG Thot",
-"date": "2026-11-06",
-"type": "leak",
-"cover": null,
-"tracks": [
-"8oocdTFurEM"
-]
-},
-{
-"artist": "Nettspend",
-"title": "AP",
-"date": "2026-11-06",
-"type": "leak",
-"cover": null,
-"tracks": [
-"WChrkoVihDQ"
 ]
 },
 {
@@ -223,7 +233,7 @@
 "title": "Possession",
 "date": "2026-07-10",
 "type": "single",
-"cover": "covers/ken_carson_18.jpg",
+"cover": "covers/ken_carson_17.jpg",
 "tracks": [
 "LJNp06rjfUg"
 ]
